@@ -1,0 +1,345 @@
+2005-03-15 09:52:55  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   D /projects/filer
+	   A /trunk (from /projects/filer:19)
+
+	* create trunk
+
+2005-03-13 19:00:46  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /projects/filer/Filer/Dialog.pm
+	   M /projects/filer/Filer/FilePane.pm
+	   M /projects/filer/Filer/FileTreePane.pm
+	   M /projects/filer/Filer/Mime.pm
+	   M /projects/filer/Filer/Properties.pm
+	   M /projects/filer/Filer/Search.pm
+	   M /projects/filer/lib.pl
+
+	* clean up dialogs
+	* fixed Archive handling
+	* use FileChooserDialogs
+	* other things I forgot by now :)
+
+2005-03-12 10:30:50  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /projects/filer/Filer/Bookmarks.pm
+
+	* rewrite Bookmarks module
+
+2005-03-12 10:14:57  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   A /projects/filer/AUTHORS
+	   M /projects/filer/Makefile
+
+	* add AUTHORS file
+
+2005-03-12 10:10:38  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /projects/filer/Filer/Archive.pm
+	   M /projects/filer/Filer/Bookmarks.pm
+	   M /projects/filer/Filer/Config.pm
+	   M /projects/filer/Filer/Copy.pm
+	   M /projects/filer/Filer/DND.pm
+	   M /projects/filer/Filer/Delete.pm
+	   M /projects/filer/Filer/Dialog.pm
+	   M /projects/filer/Filer/DirWalk.pm
+	   M /projects/filer/Filer/FileCopy.pm
+	   M /projects/filer/Filer/FilePane.pm
+	   M /projects/filer/Filer/FileTreePane.pm
+	   M /projects/filer/Filer/Mime.pm
+	   M /projects/filer/Filer/Move.pm
+	   M /projects/filer/Filer/ProgressDialog.pm
+	   M /projects/filer/Filer/Properties.pm
+	   M /projects/filer/Filer/Search.pm
+	   M /projects/filer/filer.pl
+	   M /projects/filer/lib.pl
+
+	* update copyright headers
+
+2005-03-11 21:29:19  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /projects/filer/filer.pl
+
+	* jump to $VERSION 0.0.8
+
+2005-03-11 21:27:26  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /projects/filer/Filer/Copy.pm
+	   M /projects/filer/lib.pl
+
+	* fix copying of files and directories inside the same directory
+
+2005-03-09 17:33:50  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /projects/filer/Filer/FileCopy.pm
+	   M /projects/filer/Filer/Mime.pm
+
+	* Filer/FileCopy.pm: use constants
+	* Filer/Mime.pm: tweaks
+
+2005-03-09 15:47:22  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /projects/filer/Filer/Mime.pm
+
+	* Filer/Mime.pm: get_icons() changes
+
+2005-03-09 15:44:36  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /projects/filer/Filer/Mime.pm
+
+	* Filer/Mime.pm: improve set_default_command() method
+
+2005-03-09 15:30:23  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   A /projects/filer/start-ide.sh
+
+	* open all source files in nedit
+
+2005-03-09 15:27:31  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /projects/filer/Filer/Archive.pm
+	   M /projects/filer/Filer/Config.pm
+	   M /projects/filer/Filer/Copy.pm
+	   M /projects/filer/Filer/DND.pm
+	   M /projects/filer/Filer/Delete.pm
+	   M /projects/filer/Filer/Dialog.pm
+	   M /projects/filer/Filer/DirWalk.pm
+	   M /projects/filer/Filer/FileCopy.pm
+	   M /projects/filer/Filer/FilePane.pm
+	   M /projects/filer/Filer/FileTreePane.pm
+	   M /projects/filer/Filer/Mime.pm
+	   M /projects/filer/Filer/Move.pm
+	   M /projects/filer/Filer/Properties.pm
+	   M /projects/filer/Filer/Search.pm
+	   M /projects/filer/lib.pl
+
+	* remove whitespace at end of lines
+
+2005-03-09 15:21:26  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /projects/filer/Filer/Copy.pm
+
+	* Filer/Copy.pm: small tweak
+
+2005-03-09 11:51:09  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /projects/filer/Filer/Copy.pm
+	   A /projects/filer/Filer/DND.pm
+	   M /projects/filer/Filer/DirWalk.pm
+	   M /projects/filer/Filer/FileCopy.pm
+	   M /projects/filer/Filer/FilePane.pm
+	   M /projects/filer/Filer/FileTreePane.pm
+	   M /projects/filer/Filer/Move.pm
+	   M /projects/filer/lib.pl
+
+	* use constants instead of 0,1,-1 to indicate failure, success and aborting.
+	* add Drag'n Drop module.
+
+2005-03-08 21:22:43  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /projects/filer/Filer/DirWalk.pm
+	   M /projects/filer/lib.pl
+
+	* lib.pl: fix rename_cb()
+	* Filer/DirWalk.pm: more cleanups.
+
+2005-03-08 16:09:52  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /projects/filer/Filer/DirWalk.pm
+	   M /projects/filer/Filer/Mime.pm
+
+	* DirWalk.pm: get rid of $r, check return result within if statements.
+	* Mimme.pm: small modifications
+
+2005-03-08 15:41:08  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /projects/filer/Filer/Mime.pm
+
+	* code cleanup
+
+2005-03-06 13:30:44  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   D /projects/filer/TEST
+
+	* remove TEST file
+
+2005-03-06 13:30:26  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   A /projects/filer/TEST
+
+	* added TEST file
+
+2005-03-06 13:26:31  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   A /projects
+	   A /projects/filer
+	   A /projects/filer/COPYING
+	   A /projects/filer/Filer
+	   A /projects/filer/Filer/Archive.pm
+	   A /projects/filer/Filer/Bookmarks.pm
+	   A /projects/filer/Filer/Config.pm
+	   A /projects/filer/Filer/Copy.pm
+	   A /projects/filer/Filer/Delete.pm
+	   A /projects/filer/Filer/Dialog.pm
+	   A /projects/filer/Filer/DirWalk.pm
+	   A /projects/filer/Filer/FileCopy.pm
+	   A /projects/filer/Filer/FilePane.pm
+	   A /projects/filer/Filer/FileTreePane.pm
+	   A /projects/filer/Filer/Mime.pm
+	   A /projects/filer/Filer/Move.pm
+	   A /projects/filer/Filer/ProgressDialog.pm
+	   A /projects/filer/Filer/Properties.pm
+	   A /projects/filer/Filer/Search.pm
+	   A /projects/filer/Makefile
+	   A /projects/filer/filer.pl
+	   A /projects/filer/icons
+	   A /projects/filer/icons/blockdevice.png
+	   A /projects/filer/icons/chardevice.png
+	   A /projects/filer/icons/default.png
+	   A /projects/filer/icons/desktop.png
+	   A /projects/filer/icons/exec.png
+	   A /projects/filer/icons/folder.png
+	   A /projects/filer/icons/link.png
+	   A /projects/filer/icons/mimetypes
+	   A /projects/filer/icons/mimetypes/applix.png
+	   A /projects/filer/icons/mimetypes/ascii.png
+	   A /projects/filer/icons/mimetypes/audio.png
+	   A /projects/filer/icons/mimetypes/binary.png
+	   A /projects/filer/icons/mimetypes/bz2.png
+	   A /projects/filer/icons/mimetypes/cdbo_list.png
+	   A /projects/filer/icons/mimetypes/cdimage.png
+	   A /projects/filer/icons/mimetypes/cdr.png
+	   A /projects/filer/icons/mimetypes/cdtrack.png
+	   A /projects/filer/icons/mimetypes/colorscm.png
+	   A /projects/filer/icons/mimetypes/colorset.png
+	   A /projects/filer/icons/mimetypes/core.png
+	   A /projects/filer/icons/mimetypes/deb.png
+	   A /projects/filer/icons/mimetypes/doc.png
+	   A /projects/filer/icons/mimetypes/document.png
+	   A /projects/filer/icons/mimetypes/document2.png
+	   A /projects/filer/icons/mimetypes/dvi.png
+	   A /projects/filer/icons/mimetypes/empty.png
+	   A /projects/filer/icons/mimetypes/encrypted.png
+	   A /projects/filer/icons/mimetypes/exec_wine.png
+	   A /projects/filer/icons/mimetypes/file_locked.png
+	   A /projects/filer/icons/mimetypes/file_temporary.png
+	   A /projects/filer/icons/mimetypes/font.png
+	   A /projects/filer/icons/mimetypes/font_bitmap.png
+	   A /projects/filer/icons/mimetypes/font_truetype.png
+	   A /projects/filer/icons/mimetypes/font_type1.png
+	   A /projects/filer/icons/mimetypes/gettext.png
+	   A /projects/filer/icons/mimetypes/gf.png
+	   A /projects/filer/icons/mimetypes/html.png
+	   A /projects/filer/icons/mimetypes/image.png
+	   A /projects/filer/icons/mimetypes/image2.png
+	   A /projects/filer/icons/mimetypes/images.png
+	   A /projects/filer/icons/mimetypes/info.png
+	   A /projects/filer/icons/mimetypes/java_src.png
+	   A /projects/filer/icons/mimetypes/karbon.png
+	   A /projects/filer/icons/mimetypes/karbon_karbon.png
+	   A /projects/filer/icons/mimetypes/kchart_chrt.png
+	   A /projects/filer/icons/mimetypes/kexi_kexi.png
+	   A /projects/filer/icons/mimetypes/kformula_kfo.png
+	   A /projects/filer/icons/mimetypes/kivio_flw.png
+	   A /projects/filer/icons/mimetypes/kmultiple.png
+	   A /projects/filer/icons/mimetypes/kpresenter_kpr.png
+	   A /projects/filer/icons/mimetypes/krita_kra.png
+	   A /projects/filer/icons/mimetypes/kspread_ksp.png
+	   A /projects/filer/icons/mimetypes/kugar_kud.png
+	   A /projects/filer/icons/mimetypes/kugardata.png
+	   A /projects/filer/icons/mimetypes/kword_kwd.png
+	   A /projects/filer/icons/mimetypes/log.png
+	   A /projects/filer/icons/mimetypes/make.png
+	   A /projects/filer/icons/mimetypes/man.png
+	   A /projects/filer/icons/mimetypes/message.png
+	   A /projects/filer/icons/mimetypes/metafont.png
+	   A /projects/filer/icons/mimetypes/midi.png
+	   A /projects/filer/icons/mimetypes/mime-cdr.png
+	   A /projects/filer/icons/mimetypes/mime-colorset.png
+	   A /projects/filer/icons/mimetypes/mime-postscript.png
+	   A /projects/filer/icons/mimetypes/mime-resource.png
+	   A /projects/filer/icons/mimetypes/mime-template_source.png
+	   A /projects/filer/icons/mimetypes/mime_ascii.png
+	   A /projects/filer/icons/mimetypes/mime_empty.png
+	   A /projects/filer/icons/mimetypes/mime_koffice.png
+	   A /projects/filer/icons/mimetypes/misc.png
+	   A /projects/filer/icons/mimetypes/misc_doc.png
+	   A /projects/filer/icons/mimetypes/mozilla_doc.png
+	   A /projects/filer/icons/mimetypes/netscape.png
+	   A /projects/filer/icons/mimetypes/netscape_doc.png
+	   A /projects/filer/icons/mimetypes/news.png
+	   A /projects/filer/icons/mimetypes/pdf-document.png
+	   A /projects/filer/icons/mimetypes/pdf.png
+	   A /projects/filer/icons/mimetypes/php.png
+	   A /projects/filer/icons/mimetypes/pk.png
+	   A /projects/filer/icons/mimetypes/postscript.png
+	   A /projects/filer/icons/mimetypes/ps.png
+	   A /projects/filer/icons/mimetypes/quicktime.png
+	   A /projects/filer/icons/mimetypes/readme.png
+	   A /projects/filer/icons/mimetypes/real.png
+	   A /projects/filer/icons/mimetypes/real_doc.png
+	   A /projects/filer/icons/mimetypes/recycled.png
+	   A /projects/filer/icons/mimetypes/resource.png
+	   A /projects/filer/icons/mimetypes/rpm.png
+	   A /projects/filer/icons/mimetypes/shellscript.png
+	   A /projects/filer/icons/mimetypes/soffice.png
+	   A /projects/filer/icons/mimetypes/sound.png
+	   A /projects/filer/icons/mimetypes/source.png
+	   A /projects/filer/icons/mimetypes/source_c.png
+	   A /projects/filer/icons/mimetypes/source_cpp.png
+	   A /projects/filer/icons/mimetypes/source_f.png
+	   A /projects/filer/icons/mimetypes/source_h.png
+	   A /projects/filer/icons/mimetypes/source_j.png
+	   A /projects/filer/icons/mimetypes/source_java.png
+	   A /projects/filer/icons/mimetypes/source_l.png
+	   A /projects/filer/icons/mimetypes/source_moc.png
+	   A /projects/filer/icons/mimetypes/source_o.png
+	   A /projects/filer/icons/mimetypes/source_p.png
+	   A /projects/filer/icons/mimetypes/source_php.png
+	   A /projects/filer/icons/mimetypes/source_pl.png
+	   A /projects/filer/icons/mimetypes/source_py.png
+	   A /projects/filer/icons/mimetypes/source_s.png
+	   A /projects/filer/icons/mimetypes/source_y.png
+	   A /projects/filer/icons/mimetypes/spreadsheet.png
+	   A /projects/filer/icons/mimetypes/tar.png
+	   A /projects/filer/icons/mimetypes/template_source.png
+	   A /projects/filer/icons/mimetypes/tex.png
+	   A /projects/filer/icons/mimetypes/tgz.png
+	   A /projects/filer/icons/mimetypes/trash.png
+	   A /projects/filer/icons/mimetypes/txt.png
+	   A /projects/filer/icons/mimetypes/txt2.png
+	   A /projects/filer/icons/mimetypes/unknown.png
+	   A /projects/filer/icons/mimetypes/vcalendar.png
+	   A /projects/filer/icons/mimetypes/vcard.png
+	   A /projects/filer/icons/mimetypes/vectorgfx.png
+	   A /projects/filer/icons/mimetypes/video.png
+	   A /projects/filer/icons/mimetypes/widget_doc.png
+	   A /projects/filer/icons/mimetypes/wordprocessing.png
+	   A /projects/filer/icons/mimetypes/zip.png
+	   A /projects/filer/icons/pipe.png
+	   A /projects/filer/icons/socket.png
+	   A /projects/filer/icons/symlink.png
+	   A /projects/filer/lib.pl
+
+	* initial import
+

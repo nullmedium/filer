@@ -32,16 +32,13 @@ use warnings;
 use lib "$libpath";
 require "lib.pl";
 
-$VERSION = '0.0.8';
+$VERSION = '0.0.9-svn';
 
 use constant LEFT => 0;
 use constant RIGHT => 1;
 
 Glib->install_exception_handler(sub {
-	my ($x) = @_;
-
-	Filer::Dialog->msgbox_error($x);
-
+	Filer::Dialog->msgbox_error($_[0]);
 	return 1;
 });
 

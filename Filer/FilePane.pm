@@ -44,6 +44,7 @@ Memoize::memoize("calculate_size");
 Memoize::memoize("Stat::lsMode::format_mode");
 Memoize::memoize("File::MimeInfo::mimetype");
 Memoize::memoize("File::MimeInfo::describe");
+Memoize::memoize("Cwd::abs_path");
 
 sub new {
 	my ($class,$side) = @_;
@@ -143,14 +144,15 @@ sub get_type {
 
 sub show_popup_menu {
 	my ($self,$e) = @_;
+
+	return if ($self->count_selected_items == 0);
+
 	my $item;
 	my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
 	my $popup_menu = $item_factory->get_widget('<main>');
-	my $bookmarks_menu = new Gtk2::Menu;
 	my $commands_menu = new Gtk2::Menu;
 
-	my @menu_items =
-	(
+	my @menu_items = (
 	{ path => '/Copy',					callback => \&main::copy_cb,				item_type => '<Item>'},
 	{ path => '/Move',					callback => \&main::move_cb,				item_type => '<Item>'},
 	{ path => '/Rename',					callback => \&main::rename_cb,				item_type => '<Item>'},
@@ -175,7 +177,34 @@ sub show_popup_menu {
 
 	$item_factory->create_items(undef, @menu_items);
 
-	if ($self->count_selected_items > 1) {
+	if ($self->count_selected_items == 1) {
+		$item = $item_factory->get_item('/Bookmarks');
+		$item->set_submenu(&main::get_bookmarks_menu);
+
+		$item = new Gtk2::SeparatorMenuItem;
+		$commands_menu->add($item);
+
+		$item = $item_factory->get_item('/Open');
+		$item->set_submenu($commands_menu);
+
+		if (-e $self->[SELECTED_ITEM]) {
+        		my $mime = new Filer::Mime;
+        		my $type = File::MimeInfo::Magic::mimetype($self->[SELECTED_ITEM]);
+
+        		foreach ($mime->get_commands($type)) {
+                		$item = new Gtk2::MenuItem(File::Basename::basename($_));
+                		$item->signal_connect("activate", sub {
+                        		my $command = $_[1];
+                        		system("$command '$self->[SELECTED_ITEM]' & exit");
+                		}, $_);
+                		$commands_menu->add($item);
+        		}
+		}
+
+		$item = new Gtk2::MenuItem('Other ...');
+		$item->signal_connect("activate", sub {	$self->open_file_with });
+		$commands_menu->add($item);
+	} else {
 		$item_factory->delete_item('/Rename');
 		$item_factory->delete_item('/MkDir');
 		$item_factory->delete_item('/Bookmarks');
@@ -184,71 +213,11 @@ sub show_popup_menu {
 		$item_factory->delete_item('/Archive');
 		$item_factory->delete_item('/Set Icon');
 		$item_factory->delete_item('/Refresh');
+		$item_factory->delete_item('/Properties');
 		$item_factory->delete_item('/sep2');
 		$item_factory->delete_item('/sep3');
 		$item_factory->delete_item('/sep4');
-	} else {
-		# Bookmarks Menu
-
-		$item = $item_factory->get_item('/Bookmarks');
-		$item->set_submenu($bookmarks_menu);
-
-		$item = new Gtk2::MenuItem("Set Bookmark");
-		$item->signal_connect("activate", sub {
-			my $bookmarks = new Filer::Bookmarks;
-			foreach (@{$self->get_selected_items}) {
-				if (-d $_) {
-					$bookmarks->set_bookmark($_);
-				}
-			}
-		});
-		$bookmarks_menu->add($item);
-
-		$item = new Gtk2::MenuItem("Remove Bookmark");
-		$item->signal_connect("activate", sub {
-			my $bookmarks = new Filer::Bookmarks;
-			foreach (@{$self->get_selected_items}) {
-				if (-d $_) {
-					$bookmarks->remove_bookmark($_);
-				}
-			}
-		});
-		$bookmarks_menu->add($item);
-
-		$item = new Gtk2::SeparatorMenuItem;
-		$bookmarks_menu->add($item);
-
-		my $bookmarks = new Filer::Bookmarks;
-		foreach ($bookmarks->get_bookmarks) {
-			$item = new Gtk2::MenuItem($_);
-			$item->signal_connect("activate", sub {	$self->open_path($_[1]) }, $_);
-			$bookmarks_menu->add($item);
-		}
-
-		$item = $item_factory->get_item('/Open');
-		$item->set_submenu($commands_menu);
-
-		if (-e $self->[SELECTED_ITEM]) {
-			# Open Menu
-			my $mime = new Filer::Mime;
-			my $type = File::MimeInfo::Magic::mimetype($self->[SELECTED_ITEM]);
-
-			foreach ($mime->get_commands($type)) {
-				$item = new Gtk2::MenuItem(File::Basename::basename($_));
-				$item->signal_connect("activate", sub {
-					my $command = $_[1];
-					system("$command '$self->[SELECTED_ITEM]' & exit");
-				}, $_);
-				$commands_menu->add($item);
-			}
-		}
-
-		$item = new Gtk2::SeparatorMenuItem;
-		$commands_menu->add($item);
-
-		$item = new Gtk2::MenuItem('Other ...');
-		$item->signal_connect("activate", sub {	$self->open_file_with });
-		$commands_menu->add($item);
+		$item_factory->delete_item('/sep5');
 	}
 
 	$popup_menu->show_all;
@@ -579,9 +548,9 @@ sub open_path {
 		$files_count = $files_count_total - scalar(grep { $_ =~ /^\.+\w+/ } @files);
 	}
 
-	use Time::HiRes qw( gettimeofday tv_interval );
-
-	my $t0 = [gettimeofday];
+# 	use Time::HiRes qw( gettimeofday tv_interval );
+# 
+# 	my $t0 = [gettimeofday];
 
 	foreach my $file (@dirs,@files) {
 		if ($file =~ /^\.+\w+/ and $show_hidden == 0) {
@@ -592,7 +561,7 @@ sub open_path {
 		my $type = File::MimeInfo::mimetype("$filepath/$file");
 		my $mypixbuf = $self->[MIMEICONS]->{'default'};
 
-		my $size = &calculate_size($stat[7]);
+		my $size = calculate_size($stat[7]);
 		my $ctime = localtime($stat[10]);
 		my $uid = getpwuid($stat[4]);
 		my $gid = getgrgid($stat[5]);
@@ -611,16 +580,14 @@ sub open_path {
 			$self->init_icons();
 		}
 
-		if (defined $type) {
-			$type = File::MimeInfo::describe($type, "");
-		}
+		$type = File::MimeInfo::describe($type);
 
 		$self->[TREEMODEL]->set($self->[TREEMODEL]->append, 0, $mypixbuf, 1, $file, 2, $type, 3, $size, 4, $ctime, 5, $uid, 6, $gid, 7, $mode, 8, $target, 9, $abspath);
 	}
 
-	my $t1 = [gettimeofday];
-	my $elapsed = tv_interval ( $t0, $t1 );
-	print "time to load: $elapsed\n";
+# 	my $t1 = [gettimeofday];
+# 	my $elapsed = tv_interval ( $t0, $t1 );
+# 	print "time to load: $elapsed\n";
 
 	$total_size = &calculate_size($total_size);
 

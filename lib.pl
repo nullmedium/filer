@@ -60,7 +60,7 @@ use constant SELECT => 0;
 use constant UNSELECT => 1;
 
 sub main_window {
-	my ($window,$hbox,$button,$accel_group,$item_factory,$toolbar);
+	my ($window,$hbox,$button,$accel_group,$toolbar);
 
 	my @menu_items	=
 	(
@@ -84,6 +84,7 @@ sub main_window {
 	{ path => '/_Edit/sep', 											item_type => '<Separator>'},
 	{ path => '/_Edit/Select',			accelerator => 'KP_Add',	callback => \&select_cb,	item_type => '<Item>'},
 	{ path => '/_Edit/Unselect',			accelerator => 'KP_Subtract',	callback => \&unselect_cb,	item_type => '<Item>'},
+	{ path => '/_Bookmarks',											item_type => '<Item>'},
 	{ path => '/_Options/Mode/Norton Commander Style',				callback => \&ncmc_cb,		item_type => '<RadioItem>'},
 	{ path => '/_Options/Mode/MS Explorer Style',					callback => \&explorer_cb,	item_type => '<RadioItem>'},
 	{ path => '/_Options/sep',											item_type => '<Separator>'},
@@ -107,14 +108,13 @@ sub main_window {
 	$accel_group = new Gtk2::AccelGroup;
 	$window->add_accel_group($accel_group);
 
-	$item_factory = new Gtk2::ItemFactory("Gtk2::MenuBar", '<main>', $accel_group);
-	$item_factory->create_items(undef, @menu_items);
-	$widgets->{vbox}->pack_start($item_factory->get_widget('<main>'), 0, 0, 0);
+	$widgets->{item_factory} = new Gtk2::ItemFactory("Gtk2::MenuBar", '<main>', $accel_group);
+	$widgets->{item_factory}->create_items(undef, @menu_items);
+	$widgets->{vbox}->pack_start($widgets->{item_factory}->get_widget('<main>'), 0, 0, 0);
 
 	$toolbar = new Gtk2::Toolbar;
 	$toolbar->set_style('text');
 	$toolbar->append_item('Open Terminal', 'Open Terminal', undef, undef, \&open_terminal_cb);
-	$toolbar->append_item('Bookmarks', 'Bookmarks', undef, undef, \&bookmarks_cb);
 	$widgets->{sync_button} = $toolbar->append_item('Synchronize', 'Synchronize', undef, undef, \&synchronize_cb);
 
 	$widgets->{vbox}->pack_start($toolbar, 0, 0, 0);
@@ -163,8 +163,11 @@ sub main_window {
 	$widgets->{statusbar} = new Gtk2::Statusbar;
 	$widgets->{vbox}->pack_start($widgets->{statusbar}, 0, 0, 0);
 
-	my $i1 = $item_factory->get_item("/Options/Mode/Norton Commander Style");
-	my $i2 = $item_factory->get_item("/Options/Mode/MS Explorer Style");
+	my $bookmarks = $widgets->{item_factory}->get_item("/Bookmarks");
+	$bookmarks->set_submenu(&get_bookmarks_menu());
+
+	my $i1 = $widgets->{item_factory}->get_item("/Options/Mode/Norton Commander Style");
+	my $i2 = $widgets->{item_factory}->get_item("/Options/Mode/MS Explorer Style");
 
 	$i2->set_group($i1->get_group);
 
@@ -191,7 +194,51 @@ sub main_window {
 
 	&switch_mode;
 
-	$item_factory->get_item("/Options/Show Hidden Files")->set_active($config->get_option('ShowHiddenFiles'));
+	$widgets->{item_factory}->get_item("/Options/Show Hidden Files")->set_active($config->get_option('ShowHiddenFiles'));
+}
+
+sub get_bookmarks_menu {
+	my $menu = new Gtk2::Menu;
+	my $menuitem;
+
+	$menuitem = new Gtk2::MenuItem("Set Bookmark");
+	$menuitem->signal_connect("activate", sub {
+		my $bookmarks = new Filer::Bookmarks;
+		$bookmarks->set_bookmark($active_pane->get_selected_item);
+
+		my $menu = $widgets->{item_factory}->get_item("/Bookmarks");
+		$menu->set_submenu(&get_bookmarks_menu());
+	});
+	$menuitem->show;
+	$menu->add($menuitem);
+
+	$menuitem = new Gtk2::MenuItem("Remove Bookmark");
+	$menuitem->signal_connect("activate", sub {
+		my $bookmarks = new Filer::Bookmarks;
+		$bookmarks->remove_bookmark($active_pane->get_selected_item);
+
+		my $menu = $widgets->{item_factory}->get_item("/Bookmarks");
+		$menu->set_submenu(&get_bookmarks_menu());
+	});
+	$menuitem->show;
+	$menu->add($menuitem);
+
+	$menuitem = new Gtk2::SeparatorMenuItem;
+	$menuitem->show;
+	$menu->add($menuitem);
+
+	my $bookmarks = new Filer::Bookmarks;
+	foreach ($bookmarks->get_bookmarks) {
+		$menuitem = new Gtk2::MenuItem($_);
+		$menuitem->signal_connect("activate", sub {
+			my $p = ($config->get_option("Mode") == NORTON_COMMANDER_MODE) ? $active_pane : $pane->[RIGHT];
+			$p->open_path($_[1]);
+		},$_);
+		$menuitem->show;
+		$menu->add($menuitem);
+	}
+
+	return $menu;
 }
 
 sub init_config {
@@ -199,9 +246,7 @@ sub init_config {
 }
 
 sub window_event_cb {
-	my ($w,$e) = @_;
-
-	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Tab'})) {
+	if (($_[1]->type eq "key-press" and $_[1]->keyval == $Gtk2::Gdk::Keysyms{'Tab'})) {
 		$inactive_pane->set_focus;
 		return 1;
 	}
@@ -264,27 +309,17 @@ sub open_terminal_cb {
 }
 
 sub ncmc_cb {
-	my ($item) = $_[2];
-
-	if ($item->get_active) {
-		$config->set_option('Mode', NORTON_COMMANDER_MODE);
-	}
-
+	# check if item is checked
+	$config->set_option('Mode', NORTON_COMMANDER_MODE) if ($_[2]->get_active);
 	&switch_mode;
-
 	return 1;
 }
 
 
 sub explorer_cb {
-	my ($item) = $_[2];
-
-	if ($item->get_active) {
-		$config->set_option('Mode', EXPLORER_MODE);
-	}
-
+	# check if item is checked
+	$config->set_option('Mode', EXPLORER_MODE) if ($_[2]->get_active);
 	&switch_mode;
-
 	return 1;
 }
 
@@ -299,13 +334,9 @@ sub switch_mode {
 }
 
 sub hidden_cb {
-	my ($item) = $_[2];
-
-	$config->set_option('ShowHiddenFiles', ($item->get_active) ? 1 : 0);
-
+	$config->set_option('ShowHiddenFiles', ($_[2]->get_active) ? 1 : 0);
 	$pane->[LEFT]->refresh;
 	$pane->[RIGHT]->refresh;
-
 	return 1;
 }
 
@@ -316,49 +347,7 @@ sub file_ass_cb {
 sub refresh_cb {
 	$pane->[LEFT]->refresh;
 	$pane->[RIGHT]->refresh;
-
 	return 1;
-}
-
-sub bookmarks_cb {
-	my ($w,$e) = @_;
-
-	my $bookmarks = new Filer::Bookmarks;
-	my $menu = new Gtk2::Menu;
-	my $menuitem;
-
-	$menuitem = new Gtk2::MenuItem("Set Bookmark");
-	$menuitem->signal_connect("activate", sub {
-		my $bookmarks = new Filer::Bookmarks;
-		$bookmarks->set_bookmark($active_pane->get_pwd);
-	});
-	$menuitem->show;
-	$menu->add($menuitem);
-
-	$menuitem = new Gtk2::MenuItem("Remove Bookmark");
-	$menuitem->signal_connect("activate", sub {
-		my $bookmarks = new Filer::Bookmarks;
-		$bookmarks->remove_bookmark($active_pane->get_pwd);
-	});
-	$menuitem->show;
-	$menu->add($menuitem);
-
-	$menuitem = new Gtk2::SeparatorMenuItem;
-	$menuitem->show;
-	$menu->add($menuitem);
-
-	foreach ($bookmarks->get_bookmarks) {
-		$menuitem = new Gtk2::MenuItem($_);
-		$menuitem->signal_connect("activate", sub {
-			my $p = ($config->get_option("Mode") == NORTON_COMMANDER_MODE) ? $active_pane : $pane->[RIGHT];
-			$p->open_path($_[1]);
-		},$_);
-		$menuitem->show;
-		$menu->add($menuitem);
-	}
-
-	$menu->show;
-	$menu->popup(undef,undef,undef,undef,undef,undef);
 }
 
 sub synchronize_cb {
