@@ -1,3 +1,14 @@
+2005-03-31 11:21:52  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/ChangeLog
+	   M /trunk/Filer/DND.pm
+	   M /trunk/Filer/FilePane.pm
+	   M /trunk/Filer/FileTreePane.pm
+
+	* DND changes (path entry above listviews accepts drags)
+	* update changelog
+
 2005-03-29 21:20:41  Jens Luedicke <jens.luedicke@gmail.com>
 
 	* Changed paths:
