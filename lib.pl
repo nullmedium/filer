@@ -343,7 +343,7 @@ sub switch_mode {
 	my $opt = $config->get_option('Mode');
 
 	if ($opt == EXPLORER_MODE) {
-		$widgets->{list2}->get_location_bar->reparent($widgets->{location_bar});	
+		$widgets->{list2}->get_location_bar->reparent($widgets->{location_bar});
 
 		$widgets->{sync_button}->set("visible", 0);
 		$widgets->{tree}->get_vbox->set("visible", 1);
@@ -352,7 +352,7 @@ sub switch_mode {
 		$pane->[LEFT] = $widgets->{tree};
 
 	} elsif ($opt == NORTON_COMMANDER_MODE) {
-		$widgets->{list2}->get_location_bar->reparent($widgets->{list2}->get_location_bar_parent);	
+		$widgets->{list2}->get_location_bar->reparent($widgets->{list2}->get_location_bar_parent);
 
 		$widgets->{sync_button}->set("visible", 1);
 		$widgets->{tree}->get_vbox->set("visible", 0);
@@ -555,7 +555,7 @@ sub move_cb {
 	my $f = sub {
 		my ($files,$target) = @_;
 		my $move = new Filer::Move;
-
+	
 		$move->set_total(&files_count);
 		$move->show;
 
@@ -651,7 +651,7 @@ sub rename_cb {
 sub delete_cb {
 	return if ($active_pane->count_selected_items == 0);
 	return if (not defined $active_pane->get_selected_item);
-	
+
 	if ($config->get_option("ConfirmDelete") == 1) {
 		return if (Filer::Dialog->yesno_dialog("Delete selected files?") eq 'no');
 	}
@@ -683,7 +683,7 @@ sub delete_cb {
 
 			open(TRASHINFO, ">$ENV{HOME}/.local/share/Trash/info/" . basename($_) . ".trashinfo");
 			print TRASHINFO "[Trash Info]\nPath=$_\nDeletionDate=" . `date +%Y-%m-%d-T%H:%M:%S`;
-			close(TRASHINFO);			
+			close(TRASHINFO);
 		}
 	} else {
 		my $delete = Filer::Delete->new;

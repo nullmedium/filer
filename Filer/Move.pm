@@ -139,7 +139,7 @@ sub move {
 
 		return $dirwalk->walk($source);
 	}
-	
+
 	return Filer::DirWalk::SUCCESS;
 }
 

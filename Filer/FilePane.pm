@@ -128,7 +128,7 @@ sub new {
 	$self->[TREEVIEW]->append_column($col);
 
 	$i = 2;
-	foreach (qw(Type Size Date Owner Group Mode Link)) {
+	foreach (qw(Type Size Date Owner Group Mode Link Path)) {
 		$cell = new Gtk2::CellRendererText;
 		$col = Gtk2::TreeViewColumn->new_with_attributes($_, $cell, text => $i++);
 		$col->set_resizable(1);
@@ -157,8 +157,11 @@ sub get_location_bar {
 
 sub show_popup_menu {
 	my ($self,$e) = @_;
+	my ($p,$d) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
 
-	return if ($self->count_selected_items == 0);
+	if (defined $p) {
+		$self->[TREESELECTION]->select_iter($self->[TREEMODEL]->get_iter($p));
+	}
 
 	my $item;
 	my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
@@ -191,6 +194,7 @@ sub show_popup_menu {
 	$item_factory->create_items(undef, @menu_items);
 
 	if ($self->count_selected_items == 1) {
+	
 		$item = $item_factory->get_item('/Bookmarks');
 		$item->set_submenu(&main::get_bookmarks_menu);
 
@@ -245,18 +249,8 @@ sub selection_changed_cb {
 	$self->[SELECTED_ITEM] = $self->get_selected_items->[0];
 
 	if ($c > 1) {
-# 		my $size = 0;
-# 		for (@{$self->get_selected_items}) {
-# 			$size += (lstat($_))[7] if (-R $_);
-# 		}
-# 	
-# 		$main::widgets->{statusbar}->push(1, "$c files selected (Size: " . &calculate_size($size) . ")");
-
 		$main::widgets->{statusbar}->push(1, "$c files selected");
 	}
-
-# 	my $clipboard = Gtk2::Clipboard->get_for_display(Gtk2::Gdk::Display->get_default, undef);
-# 	$clipboard->set_text(join("", map { "file://$_\n" } @{$self->get_selected_items}) . pack("x", 1));
 
 	return 1;
 }

@@ -102,6 +102,12 @@ sub get_type {
 
 sub show_popup_menu {
 	my ($self,$e) = @_;
+	my ($p,$d) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
+
+	if (defined $p) {
+		$self->[TREESELECTION]->select_iter($self->[TREEMODEL]->get_iter($p));
+	}
+
 	my $item;
 	my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
 	my $popup_menu = $item_factory->get_widget('<main>');
