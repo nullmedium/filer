@@ -155,8 +155,6 @@ sub set_commands {
 
 sub set_default_command {
 	my ($self,$type,$command) = @_;
-	my $mime = $self->get;
-
 	my @commands = $self->get_commands($type);
 	my @new = ();
 

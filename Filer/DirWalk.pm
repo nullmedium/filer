@@ -64,61 +64,46 @@ sub onForEach {
 
 sub walk {
 	my ($self,$path) = @_;
-	my $dirname_path = dirname($path);
-	my $basename_path = basename($path);
-	my $r;
 
-	$r = &{$self->{onBeginWalk}}($path);
-
-	if ($r != 1) {
-		return $r;
+	if (&{$self->{onBeginWalk}}($path) != 1) {
+		return -1;
 	}
 
 	if (-l $path) {
-		my $r = &{$self->{onLink}}($path);
-
-		if ($r != 1) {
-			return $r;
+		if (&{$self->{onLink}}($path) != 1) {
+			return -1;
 		}
 	} elsif (-d $path) {
-		$r = &{$self->{onDirEnter}}($path);
 
-		if ($r != 1) {
-			return $r;
+		if (&{$self->{onDirEnter}}($path) != 1) {
+			return -1;
 		}
 
 		opendir(DIR, $path) || return 0;
-		my @dir_contents = sort readdir(DIR);
-		closedir(DIR);
 
-		@dir_contents = @dir_contents[2 .. $#dir_contents]; # no . and ..
-
-		foreach my $f (@dir_contents) {
-			my $r;
-
-			$r = &{$self->{onForEach}}("$path/$f");
-
-			if ($r == 0) {
+		foreach my $f (readdir(DIR)) {
+	
+			if ($f eq "." or $f eq "..") {
 				next;
 			}
 
-			$r = $self->walk("$path/$f");
+			if (&{$self->{onForEach}}("$path/$f") == 0) {
+				next;
+			}
 
-			if ($r != 1) {
-				return $r;
+			if ($self->walk("$path/$f") != 1) {
+				return -1;
 			}
 		}
 
-		$r = &{$self->{onDirLeave}}($path);
+		closedir(DIR);
 
-		if ($r != 1) {
-			return $r;
+		if (&{$self->{onDirLeave}}($path) != 1) {
+			return -1;
 		}
 	} else {
-		$r = &{$self->{onFile}}($path);
-
-		if ($r != 1) {
-			return $r;
+		if (&{$self->{onFile}}($path) != 1) {
+			return -1;
 		}
 	}
 
