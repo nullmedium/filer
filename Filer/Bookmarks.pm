@@ -24,7 +24,7 @@ sub new {
 	my $self = bless {}, $class;
 
 	if (! -e "$ENV{HOME}/.filer/bookmarks") {
-		$self->store({});
+		$self->store([]);
 	}
 
 	return $self;
@@ -42,22 +42,30 @@ sub get {
 
 sub get_bookmarks {
 	my ($self) = @_;
-	my $bookmarks = $self->get;
-	return sort keys %{$bookmarks};
+	return sort @{$self->get};
 }
 
 sub set_bookmark {
 	my ($self,$path) = @_;
-	my $bookmarks = $self->get;
-	$bookmarks->{$path} = 1;
-	$self->store($bookmarks);
+	my @bookmarks = $self->get_bookmarks;
+
+	push @bookmarks, $path;
+	
+	$self->store(\@bookmarks);
 }
 
 sub remove_bookmark {
 	my ($self,$path) = @_;
-	my $bookmarks = $self->get;
-	delete $bookmarks->{$path};
-	$self->store($bookmarks);
+	my @bookmarks = $self->get_bookmarks;
+	my @b = ();
+
+	foreach (@bookmarks) {
+		if ($_ ne $path) {
+			push @b, $_;
+		}
+	}
+	
+	$self->store(\@b);
 }
 
 1;
