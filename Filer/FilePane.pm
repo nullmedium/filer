@@ -35,6 +35,9 @@ use constant OVERRIDES		=> 10;
 use constant MIMEICONS		=> 11;
 use constant FOLDER_STATUS	=> 12;
 
+use constant LOCATION_BAR	=> 13;
+use constant HBOX		=> 14;
+
 Memoize::memoize("calculate_size");
 Memoize::memoize("Stat::lsMode::format_mode");
 Memoize::memoize("File::MimeInfo::mimetype");
@@ -51,14 +54,17 @@ sub new {
 
 	$self->[VBOX] = new Gtk2::VBox(0,0);
 
-	$hbox = new Gtk2::HBox(0,0);
-	$self->[VBOX]->pack_start($hbox, 0, 1, 0);
+	$self->[LOCATION_BAR] = new Gtk2::HBox(0,0);
+	$self->[VBOX]->pack_start($self->[LOCATION_BAR], 0, 1, 0);
+
+	$self->[HBOX] = new Gtk2::HBox(0,0);
+	$self->[LOCATION_BAR]->pack_start($self->[HBOX], 1, 1, 0);
 
 # 	$button = new Gtk2::Button("Up");
 # 	$button->signal_connect("clicked", sub {
 # 		$self->open_path(Cwd::abs_path($self->[FILEPATH] . "/.."));
 # 	});
-# 	$hbox->pack_start($button, 0, 1, 0);
+# 	$self->[HBOX]->pack_start($button, 0, 1, 0);
 
 	$self->[PATH_ENTRY] = new Gtk2::Entry;
 	$self->[PATH_ENTRY]->signal_connect('key-press-event', sub {
@@ -66,13 +72,13 @@ sub new {
 			$self->open_file($self->[PATH_ENTRY]->get_text);
 		}
 	});
-	$hbox->pack_start($self->[PATH_ENTRY], 1, 1, 0);
+	$self->[HBOX]->pack_start($self->[PATH_ENTRY], 1, 1, 0);
 
 	$button = new Gtk2::Button("Go");
 	$button->signal_connect("clicked", sub {
 		$self->open_file($self->[PATH_ENTRY]->get_text)
 	});
-	$hbox->pack_start($button, 0, 1, 0);
+	$self->[HBOX]->pack_start($button, 0, 1, 0);
 
 	$scrolled_window = new Gtk2::ScrolledWindow;
 	$scrolled_window->set_policy('automatic','automatic');
@@ -131,6 +137,16 @@ sub new {
 sub get_type {
 	my ($self) = @_;
 	return "LIST";
+}
+
+sub get_location_bar_parent {
+	my ($self) = @_;
+	return $self->[LOCATION_BAR];
+}
+
+sub get_location_bar {
+	my ($self) = @_;
+	return $self->[HBOX];
 }
 
 sub show_popup_menu {

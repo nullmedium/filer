@@ -126,6 +126,9 @@ sub main_window {
 
 	$widgets->{vbox}->pack_start($toolbar, 0, 0, 0);
 
+	$widgets->{location_bar} = new Gtk2::HBox(0,0);
+	$widgets->{vbox}->pack_start($widgets->{location_bar}, 0, 0, 0);
+
 	$pane = [];
 	$widgets->{hpaned} = new Gtk2::HPaned();
 	$widgets->{hbox} = new Gtk2::HBox(0,0);
@@ -344,6 +347,17 @@ sub switch_mode {
 	$widgets->{list1}->get_vbox->set("visible", ($opt == NORTON_COMMANDER_MODE) ? 1 : 0);
 
 	$pane->[LEFT] = ($opt == NORTON_COMMANDER_MODE) ? $widgets->{list1} : $widgets->{tree};
+
+	if ($opt == EXPLORER_MODE) {
+
+		my $widget = $widgets->{list2}->get_location_bar;
+		$widget->reparent($widgets->{location_bar});	
+
+	} elsif ($opt == NORTON_COMMANDER_MODE) {
+
+		my $widget = $widgets->{list2}->get_location_bar;
+		$widget->reparent($widgets->{list2}->get_location_bar_parent);	
+	}
 }
 
 sub hidden_cb {
