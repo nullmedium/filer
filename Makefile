@@ -8,6 +8,7 @@ install:
 	install -m 644 ./Filer/*.pm ${PREFIX}/lib/filer/Filer
 	install -m 644 ./icons/*.png ${PREFIX}/lib/filer/icons
 	install -m 644 ./icons/mimetypes/*.png ${PREFIX}/lib/filer/icons/mimetypes
+	install -d ${PREFIX}/bin
 	install -m 755 filer.pl ${PREFIX}/bin/filer
 	install -m 644 lib.pl ${PREFIX}/lib/filer
 

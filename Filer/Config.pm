@@ -30,6 +30,10 @@ sub new {
 		rename("$ENV{HOME}/.filer", $self->{cfg_home});
 	}
 
+	if (! -e File::BaseDir::xdg_config_home) {
+		mkdir(File::BaseDir::xdg_config_home);
+	}
+
 	if (! -e $self->{cfg_home}) {
 		mkdir($self->{cfg_home});
 	}
