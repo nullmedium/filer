@@ -22,6 +22,8 @@ use warnings;
 use constant ICON => 0;
 use constant COMMANDS => 1;
 
+use constant MIME => 2;
+
 sub new {
 	my ($class,$side) = @_;
 	my $self = bless {}, $class;
@@ -99,12 +101,11 @@ sub delete_mimetype {
 sub get_icon {
 	my ($self,$type) = @_;
 	my $mime = $self->get;
-	my $icon = $mime->{$type}->[ICON];
 
-	if ($icon) {
+	if (defined $mime->{$type}->[ICON]) {
 		return $mime->{$type}->[ICON];
 	} else {
-		return $mime->{'default'}->[ICON];
+		return $mime->{default}->[ICON];
 	}
 }
 
@@ -141,15 +142,7 @@ sub get_commands {
 	my ($self,$type) = @_;
 	my $mime = $self->get;
 
-	if (defined $mime->{$type}) {
-		if (defined $mime->{$type}->[COMMANDS]) {
-			return @{$mime->{$type}->[COMMANDS]};
-		} else {
-			return ();
-		}
-	} else {
-		return ();
-	}
+	return @{$mime->{$type}->[COMMANDS]};
 }
 
 sub set_commands {
@@ -164,28 +157,23 @@ sub set_default_command {
 	my ($self,$type,$command) = @_;
 	my $mime = $self->get;
 
-	my $pos = -1;
 	my @commands = $self->get_commands($type);
+	my @new = ();
 
 	for (0 .. $#commands) {
-		if ($commands[$_] eq $command) {
-			$pos = $_;
+		if ($commands[$_] ne $command) {
+			push @new, $commands[$_];
 		}
 	}
 
-	if ($pos != -1) {
-		splice @commands, $pos, 1;
-	}
-
-	$mime->{$type}->[COMMANDS] = [ $command, @commands ];
-	$self->store($mime);
+	$self->set_commands($type, [ $command, @new ]);
 }
 
 sub get_default_command {
 	my ($self,$type,$command) = @_;
 	my $mime = $self->get;
 
-	return @{$mime->{$type}->[COMMANDS]}[0];
+	return $mime->{$type}->[COMMANDS]->[0];
 }
 
 sub set_icon_dialog {
