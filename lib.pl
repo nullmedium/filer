@@ -504,9 +504,29 @@ sub copy_cb {
 sub move_cb {
 	return if ($active_pane->count_selected_items == 0);
 
-	my $move = new Filer::Move;
-	my @files = ();
-	my $target;
+	my $f = sub {
+		my ($files,$target) = @_;
+		my $move = new Filer::Move;
+
+		$move->set_total(&files_count);
+		$move->show;
+
+		foreach (@{$files}) {
+			my $r = $move->move($_, $target);
+
+			if ($r == Filer::DirWalk::FAILED) {
+				Filer::Dialog->msgbox_error("Moving of $_ to " . $inactive_pane->get_pwd . " failed!");
+				last;
+			} elsif ($r == Filer::DirWalk::ABORTED) {
+				Filer::Dialog->msgbox_info("Moving of $_ to " . $inactive_pane->get_pwd . " aborted!");
+				last;
+			}
+		}
+
+		$move->destroy;
+		$active_pane->refresh;
+		$inactive_pane->refresh;
+	};
 
 	if ($active_pane->count_selected_items == 1) {
 		my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
@@ -520,36 +540,15 @@ sub move_cb {
 		$dialog->show_all;
 
 		if ($dialog->run eq 'ok') {
-			@files = ($source_entry->get_text);
-			$target = $dest_entry->get_text;
-		} else {
-			return;
+			&{$f}([$source_entry->get_text], $dest_entry->get_text);
 		}
+
+		$dialog->destroy;
 	} else {
 		return if (Filer::Dialog->yesno_dialog("Move selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
 
-		@files = @{$active_pane->get_selected_items};
-		$target = $inactive_pane->get_pwd;
+		&{$f}($active_pane->get_selected_items, $inactive_pane->get_pwd);
 	}
-	
-	$move->set_total(&files_count);
-	$move->show;
-
-	foreach (@files) {
-		my $r = $move->move($_, $target);
-
-		if ($r == Filer::DirWalk::FAILED) {
-			Filer::Dialog->msgbox_error("Moving of $_ to " . $inactive_pane->get_pwd . " failed!");
-			last;
-		} elsif ($r == Filer::DirWalk::ABORTED) {
-			Filer::Dialog->msgbox_info("Moving of $_ to " . $inactive_pane->get_pwd . " aborted!");
-			last;
-		}
-	}
-
-	$move->destroy;
-	$active_pane->refresh;
-	$inactive_pane->refresh;
 }
 
 sub rename_cb {

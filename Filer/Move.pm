@@ -62,19 +62,17 @@ sub destroy {
 
 sub move {
 	my ($self,$source,$dest) = @_;
-	my $dirname_source = dirname($source);
-	my $dirname_dest = dirname($dest);
-	my $basename_source = basename($source);
+	my $r;
 
 	return Filer::DirWalk::FAILED if ($source eq $dest);
 
-	if ($dirname_dest ne '.') {
-		$dest = Cwd::abs_path("$dest/$basename_source");
+	if (dirname($dest) ne '.') {
+		$r = rename($source,Cwd::abs_path("$dest/" . basename($source)));
 	} else {
-		$dest = Cwd::abs_path("$dirname_source/$dest");
+		$r = rename($source,Cwd::abs_path(dirname($source) . "/$dest"));
 	}
 
-	if (!rename($source,$dest)) {
+	if (!$r) {
 		my $dirwalk = new Filer::DirWalk;
 
 		$dirwalk->onBeginWalk(sub {
