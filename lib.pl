@@ -16,6 +16,8 @@
 
 our ($VERSION,$libpath,$widgets,$pane,$active_pane,$inactive_pane,$config,$stat_cache);
 
+# use utf8;
+
 use strict;
 use warnings;
 
@@ -88,10 +90,11 @@ sub main_window {
 	{ path => '/_Options/Mode/Norton Commander Style',				callback => \&ncmc_cb,		item_type => '<RadioItem>'},
 	{ path => '/_Options/Mode/MS Explorer Style',					callback => \&explorer_cb,	item_type => '<RadioItem>'},
 	{ path => '/_Options/sep',											item_type => '<Separator>'},
-	{ path => '/_Options/Show Hidden Files',	accelerator => '<control>H',	callback => \&hidden_cb,	item_type => '<CheckItem>'},
 	{ path => '/_Options/Ask confirmation for/Copying',				callback => \&ask_copy_cb,	item_type => '<CheckItem>'},
 	{ path => '/_Options/Ask confirmation for/Moving',				callback => \&ask_move_cb,	item_type => '<CheckItem>'},
 	{ path => '/_Options/Ask confirmation for/Deleting',				callback => \&ask_delete_cb,	item_type => '<CheckItem>'},
+	{ path => '/_Options/Move files to Trash when deleting',			callback => \&move_to_trash_cb,	item_type => '<CheckItem>'},
+	{ path => '/_Options/Show Hidden Files',	accelerator => '<control>H',	callback => \&hidden_cb,	item_type => '<CheckItem>'},
 	{ path => '/_Options/sep',											item_type => '<Separator>'},
 	{ path => '/_Options/File Associations',					callback => \&file_ass_cb,	item_type => '<Item>'},
 	{ path => '/_Help',												item_type => '<LastBranch>'},
@@ -198,6 +201,7 @@ sub main_window {
 	&switch_mode;
 
 	$widgets->{item_factory}->get_item("/Options/Show Hidden Files")->set_active($config->get_option('ShowHiddenFiles'));
+	$widgets->{item_factory}->get_item("/Options/Move files to Trash when deleting")->set_active($config->get_option('MoveToTrash'));
 	$widgets->{item_factory}->get_item("/Options/Ask confirmation for/Copying")->set_active($config->get_option('ConfirmCopy'));
 	$widgets->{item_factory}->get_item("/Options/Ask confirmation for/Moving")->set_active($config->get_option('ConfirmMove'));
 	$widgets->{item_factory}->get_item("/Options/Ask confirmation for/Deleting")->set_active($config->get_option('ConfirmDelete'));
@@ -348,6 +352,11 @@ sub hidden_cb {
 	return 1;
 }
 
+sub move_to_trash_cb {
+	$config->set_option('MoveToTrash', ($_[2]->get_active) ? 1 : 0);
+	return 1;
+}
+
 sub ask_copy_cb {
 	$config->set_option('ConfirmCopy', ($_[2]->get_active) ? 1 : 0);
 }
@@ -456,58 +465,107 @@ sub search_cb {
 	new Filer::Search;
 }
 
+# sub copy_cb {
+# 	return if ($active_pane->count_selected_items == 0);
+# 
+# 	if ($active_pane->count_selected_items == 1) {
+# 		if ($config->get_option("ConfirmCopy") == 1) {
+# 			my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
+# 
+# 			$dialog->set_title("Copy");
+# 			$source_label->set_markup("<b>Copy: </b>");
+# 			$source_entry->set_text($active_pane->get_selected_item);
+# 			$dest_label->set_markup("<b>to: </b>");
+# 			$dest_entry->set_text($inactive_pane->get_pwd);
+# 
+# 			$dialog->show_all;
+# 
+# 			if ($dialog->run eq 'ok') {
+# 				my $source = $source_entry->get_text;
+# 				my $dest = $dest_entry->get_text;
+# 				$dialog->destroy;
+# 
+# 				return if ($source eq $dest);
+# 
+# 				my $copy = Filer::Copy->new;
+# 				$copy->set_total(&files_count);
+# 				$copy->show;
+# 
+# 				my $r = $copy->copy($source,$dest);
+# 
+# 				if ($r == Filer::DirWalk::FAILED) {
+# 					Filer::Dialog->msgbox_error("Copying of $source to $dest failed!");
+# 				} elsif ($r == Filer::DirWalk::ABORTED) {
+# 					Filer::Dialog->msgbox_info("Copying of $source to $dest aborted!");
+# 				}
+# 
+# 				$copy->destroy;
+# 
+# 				&refresh_cb;
+# 			}
+# 
+# 			$dialog->destroy;
+# 		} else {
+# 			my $source = $active_pane->get_selected_item;
+# 			my $dest = $inactive_pane->get_pwd;
+# 
+# 			return if ($source eq $dest);
+# 
+# 			my $copy = Filer::Copy->new;
+# 			$copy->set_total(&files_count);
+# 			$copy->show;
+# 
+# 			my $r = $copy->copy($source,$dest);
+# 
+# 			if ($r == Filer::DirWalk::FAILED) {
+# 				Filer::Dialog->msgbox_error("Copying of $source to $dest failed!");
+# 			} elsif ($r == Filer::DirWalk::ABORTED) {
+# 				Filer::Dialog->msgbox_info("Copying of $source to $dest aborted!");
+# 			}
+# 
+# 			$copy->destroy;
+# 		}
+# 	} else {
+# 		if ($config->get_option("ConfirmCopy") == 1) {
+# 			return if (Filer::Dialog->yesno_dialog("Copy selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
+# 		}
+# 
+# 		my $copy = Filer::Copy->new;
+# 		$copy->set_total(&files_count);
+# 		$copy->show;
+# 
+# 		foreach (@{$active_pane->get_selected_items}) {
+# 			last if ($_ eq $inactive_pane->get_pwd);
+# 
+# 			my $r = $copy->copy($_, $inactive_pane->get_pwd);
+# 
+# 			if ($r == Filer::DirWalk::FAILED) {
+# 				Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed!");
+# 				last;
+# 			} elsif ($r == Filer::DirWalk::ABORTED) {
+# 				Filer::Dialog->msgbox_info("Copying of $_ to " . $inactive_pane->get_pwd . " aborted!");
+# 				last;
+# 			}
+# 		}
+# 
+# 		$copy->destroy;
+# 	}
+# 
+# 	$inactive_pane->refresh;
+# }
+
 sub copy_cb {
 	return if ($active_pane->count_selected_items == 0);
 
-	if ($active_pane->count_selected_items == 1) {
-		my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
+	my $f = sub {
+		my ($files,$target) = @_;
+		my $copy = new Filer::Copy;
 
-		$dialog->set_title("Copy");
-		$source_label->set_markup("<b>Copy: </b>");
-		$source_entry->set_text($active_pane->get_selected_item);
-		$dest_label->set_markup("<b>to: </b>");
-		$dest_entry->set_text($inactive_pane->get_pwd);
-
-		$dialog->show_all;
-
-		if ($dialog->run eq 'ok') {
-			my $source = $source_entry->get_text;
-			my $dest = $dest_entry->get_text;
-			$dialog->destroy;
-
-			return if ($source eq $dest);
-
-			my $copy = Filer::Copy->new;
-			$copy->set_total(&files_count);
-			$copy->show;
-
-			my $r = $copy->copy($source,$dest);
-
-			if ($r == Filer::DirWalk::FAILED) {
-				Filer::Dialog->msgbox_error("Copying of $source to $dest failed!");
-			} elsif ($r == Filer::DirWalk::ABORTED) {
-				Filer::Dialog->msgbox_info("Copying of $source to $dest aborted!");
-			}
-
-			$copy->destroy;
-
-			&refresh_cb;
-		}
-
-		$dialog->destroy;
-	} else {
-		if ($config->get_option("ConfirmCopy") == 1) {
-			return if (Filer::Dialog->yesno_dialog("Copy selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
-		}
-
-		my $copy = Filer::Copy->new;
 		$copy->set_total(&files_count);
 		$copy->show;
 
-		foreach (@{$active_pane->get_selected_items}) {
-			last if ($_ eq $inactive_pane->get_pwd);
-
-			my $r = $copy->copy($_, $inactive_pane->get_pwd);
+		foreach (@{$files}) {
+			my $r = $copy->copy($_, $target);
 
 			if ($r == Filer::DirWalk::FAILED) {
 				Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed!");
@@ -520,6 +578,35 @@ sub copy_cb {
 
 		$copy->destroy;
 		$inactive_pane->refresh;
+	};
+
+	if ($active_pane->count_selected_items == 1) {
+		my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
+
+		if ($config->get_option("ConfirmCopy") == 1) {
+
+			$dialog->set_title("Copy");
+			$source_label->set_markup("<b>Copy: </b>");
+			$source_entry->set_text($active_pane->get_selected_item);
+			$dest_label->set_markup("<b>to: </b>");
+			$dest_entry->set_text($inactive_pane->get_pwd);
+
+			$dialog->show_all;
+
+			if ($dialog->run eq 'ok') {
+				&{$f}([$source_entry->get_text], $dest_entry->get_text);
+			}
+
+			$dialog->destroy;
+		} else {
+			&{$f}([$active_pane->get_selected_item], $inactive_pane->get_pwd);
+		}
+	} else {
+		if ($config->get_option("ConfirmCopy") == 1) {
+			return if (Filer::Dialog->yesno_dialog("Copy selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
+		}
+
+		&{$f}($active_pane->get_selected_items, $inactive_pane->get_pwd);
 	}
 }
 
@@ -553,19 +640,24 @@ sub move_cb {
 	if ($active_pane->count_selected_items == 1) {
 		my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
 
-		$dialog->set_title("Move");
-		$source_label->set_markup("<b>Move: </b>");
-		$source_entry->set_text($active_pane->get_selected_item);
-		$dest_label->set_markup("<b>to: </b>");
-		$dest_entry->set_text($inactive_pane->get_pwd);
+		if ($config->get_option("ConfirmMove") == 1) {
 
-		$dialog->show_all;
+			$dialog->set_title("Move");
+			$source_label->set_markup("<b>Move: </b>");
+			$source_entry->set_text($active_pane->get_selected_item);
+			$dest_label->set_markup("<b>to: </b>");
+			$dest_entry->set_text($inactive_pane->get_pwd);
 
-		if ($dialog->run eq 'ok') {
-			&{$f}([$source_entry->get_text], $dest_entry->get_text);
+			$dialog->show_all;
+
+			if ($dialog->run eq 'ok') {
+				&{$f}([$source_entry->get_text], $dest_entry->get_text);
+			}
+
+			$dialog->destroy;
+		} else {
+			&{$f}([$active_pane->get_selected_item], $inactive_pane->get_pwd);
 		}
-
-		$dialog->destroy;
 	} else {
 		if ($config->get_option("ConfirmMove") == 1) {
 			return if (Filer::Dialog->yesno_dialog("Move selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
@@ -622,23 +714,55 @@ sub delete_cb {
 		return if (Filer::Dialog->yesno_dialog("Delete selected files?") eq 'no');
 	}
 
-	my $delete = Filer::Delete->new;
-	$delete->set_total(&files_count);
-	$delete->show;
+	if ($config->get_option("MoveToTrash") == 1) {
 
-	foreach (@{$active_pane->get_selected_items}) {
-		my $r = $delete->delete($_);
-
-		if ($r == Filer::DirWalk::FAILED) {
-			Filer::Dialog->msgbox_info("Deleting of $_ failed!");
-			last;
-		} elsif ($r == Filer::DirWalk::ABORTED) {
-			Filer::Dialog->msgbox_info("Deleting of $_ aborted!");
-			last;
+		if (! -e "$ENV{HOME}/.local/share/Trash") {
+			return Filer::Dialog->msgbox_info("$ENV{HOME}/.local/share/Trash doesn't exist!");
 		}
+
+		if (! -W "$ENV{HOME}/.local/share/Trash/files") {
+			return Filer::Dialog->msgbox_info("$ENV{HOME}/.local/share/Trash/files not writable!");
+		}
+
+		if (! -W "$ENV{HOME}/.local/share/Trash/info") {
+			return Filer::Dialog->msgbox_info("$ENV{HOME}/.local/share/Trash/info not writable!");
+		}
+
+		foreach (@{$active_pane->get_selected_items}) {
+			my $r = rename($_, "$ENV{HOME}/.local/share/Trash/files/" . basename($_));
+
+			if ($r == Filer::DirWalk::FAILED) {
+				Filer::Dialog->msgbox_info("Moving of $_ to Trash failed!");
+				last;
+			} elsif ($r == Filer::DirWalk::ABORTED) {
+				Filer::Dialog->msgbox_info("Moving of $_ to Trash aborted!");
+				last;
+			}
+
+			open(TRASHINFO, ">$ENV{HOME}/.local/share/Trash/info/" . basename($_) . ".trashinfo");
+			print TRASHINFO "[Trash Info]\nPath=$_\nDeletionDate=" . `date +%Y-%m-%d-T%H:%M:%S`;
+			close(TRASHINFO);			
+		}
+	} else {
+		my $delete = Filer::Delete->new;
+		$delete->set_total(&files_count);
+		$delete->show;
+
+		foreach (@{$active_pane->get_selected_items}) {
+			my $r = $delete->delete($_);
+
+			if ($r == Filer::DirWalk::FAILED) {
+				Filer::Dialog->msgbox_info("Deleting of $_ failed!");
+				last;
+			} elsif ($r == Filer::DirWalk::ABORTED) {
+				Filer::Dialog->msgbox_info("Deleting of $_ aborted!");
+				last;
+			}
+		}
+
+		$delete->destroy;
 	}
 
-	$delete->destroy;
 	$active_pane->remove_selected;
 }
 

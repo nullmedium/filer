@@ -43,26 +43,26 @@ sub new {
 
 	$self->{dirwalk}->onBeginWalk(sub {
 		if ($self->{progress} == 0) {
-			return -1;
+			return Filer::DirWalk::ABORTED;
 		}
 
-		return 1;
+		return Filer::DirWalk::SUCCESS;
 	});
 
 	$self->{dirwalk}->onLink(sub {
 		my ($source) = @_;
 
-		unlink($source) || return 0;
+		unlink($source) || return Filer::DirWalk::FAILED;
 
-		return 1;
+		return Filer::DirWalk::SUCCESS;
 	});
 
 	$self->{dirwalk}->onDirLeave(sub {
 		my ($source) = @_;
 
-		rmdir($source) || return 0;
+		rmdir($source) || return Filer::DirWalk::FAILED;
 
-		return 1;
+		return Filer::DirWalk::SUCCESS;
 	});
 
 	$self->{dirwalk}->onFile(sub {
@@ -72,9 +72,9 @@ sub new {
 		$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
 		while (Gtk2->events_pending) { Gtk2->main_iteration; }
 
-		unlink($source) || return 0;
+		unlink($source) || return Filer::DirWalk::FAILED;
 
-		return 1;
+		return Filer::DirWalk::SUCCESS;
 	});
 
 	return $self;

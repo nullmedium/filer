@@ -36,6 +36,7 @@ sub new {
 			ConfirmCopy		=> 1,
 			ConfirmMove		=> 1,
 			ConfirmDelete		=> 1,
+			MoveToTrash		=> 1,
 		};
 
 		$self->store($cfg);

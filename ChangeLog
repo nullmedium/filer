@@ -1,3 +1,93 @@
+2005-03-23 16:19:38  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/Filer/FilePane.pm
+	   A /trunk/README
+
+	* add README file
+
+2005-03-23 15:16:37  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/Filer/Config.pm
+	   M /trunk/Filer/DND.pm
+	   M /trunk/Filer/FilePane.pm
+	   M /trunk/Filer/Move.pm
+	   M /trunk/lib.pl
+
+	* lib.pl, Filer/Config.pm, Filer/DND.pm: add options to turn off confirmation dialogs
+	* Filer/Move.pm: small fix.
+	* Filer/FilePane.pm: copy selected files to clipboard
+
+2005-03-22 18:17:45  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/lib.pl
+
+	* lib.pl: make right pane focused on startup
+
+2005-03-22 14:22:13  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/Makefile
+
+	* Makefile: add PREFIX (suggested by Christian V. J. Bruessow)
+
+2005-03-21 20:17:20  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/Filer/Move.pm
+	   M /trunk/lib.pl
+
+	* lib.pl: inline function for moving files
+	* Filer/Move.pm: fix
+
+2005-03-20 17:26:26  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/Filer/Bookmarks.pm
+	   M /trunk/Filer/Copy.pm
+	   M /trunk/Filer/Dialog.pm
+	   M /trunk/Filer/FilePane.pm
+	   M /trunk/Filer/Move.pm
+	   M /trunk/Filer/ProgressDialog.pm
+	   M /trunk/lib.pl
+
+	* lib.pl: cleanup move_cb()
+
+2005-03-16 16:03:16  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/Filer/ProgressDialog.pm
+
+	* forgot to save file...
+
+2005-03-16 16:02:37  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/Filer/Copy.pm
+	   M /trunk/Filer/FileCopy.pm
+	   M /trunk/Filer/FilePane.pm
+	   M /trunk/Filer/Move.pm
+	   M /trunk/Filer/ProgressDialog.pm
+	   M /trunk/lib.pl
+
+	* several changes to progress dialogs / progress indication.
+	* display amount of files copied inside progressbar
+	* display written bytes/second in file copy progressbar
+	  use timeout to calculate written bytes
+	* use pango ellipsize to display filenames within the progressdialog
+	* cleanups
+
+2005-03-15 22:12:12  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/ChangeLog
+	   A /trunk/update-changelog.sh
+
+	* ChangeLog: update ChangeLog
+	* update-changelog.sh: helper script
+
 2005-03-15 22:06:44  Jens Luedicke <jens.luedicke@gmail.com>
 
 	* Changed paths:

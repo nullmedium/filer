@@ -31,11 +31,9 @@ use constant TREESELECTION	=> 5;
 use constant PATH_ENTRY		=> 6;
 use constant SELECTED_ITEM	=> 7;
 use constant SELECTED_ITER	=> 8;
-use constant ARCHIVES		=> 10;
+use constant OVERRIDES		=> 10;
 use constant MIMEICONS		=> 11;
 use constant FOLDER_STATUS	=> 12;
-
-use constant FILEPATH_OLD	=> 16;
 
 Memoize::memoize("calculate_size");
 Memoize::memoize("Stat::lsMode::format_mode");
@@ -49,7 +47,7 @@ sub new {
 	my ($hbox,$button,$scrolled_window,$col,$cell,$i);
 
 	$self->[SIDE] = $side;
-	$self->[ARCHIVES] = {};
+	$self->[OVERRIDES] = {};
 
 	$self->[VBOX] = new Gtk2::VBox(0,0);
 
@@ -365,8 +363,8 @@ sub open_file {
 	return 0 if ((not defined $filepath) or (not -R $filepath));
 
 	if (-d $filepath) {
-		if (defined $self->[ARCHIVES]->{$filepath}) {
-			$self->open_path($self->[ARCHIVES]->{$filepath});
+		if (defined $self->[OVERRIDES]->{$filepath}) {
+			$self->open_path($self->[OVERRIDES]->{$filepath});
 		} else {
 			$self->open_path($filepath);
 		}
@@ -520,8 +518,6 @@ sub open_terminal {
 sub open_path {
 	my ($self,$filepath) = @_;
 
-	print "open path: $filepath\n";
-
 	if (! -e $filepath) {
 		$filepath = $ENV{HOME};
 	}
@@ -575,6 +571,13 @@ sub open_path {
 
 		my $abspath = Cwd::abs_path("$filepath/$file");
 		my $target = readlink("$filepath/$file");
+
+		if (-l "$filepath/$file") {
+# 			my $dir_up = Cwd::abs_path("$abspath/..");
+# 			$self->[OVERRIDES]->{$dir_up} = $filepath;
+
+			$type = "inode/symlink";
+		}
 
 		if (defined $self->[MIMEICONS]->{$type}) {
 			$mypixbuf = $self->[MIMEICONS]->{$type};
@@ -632,7 +635,7 @@ sub get_temp_archive_dir {
 	my $dir_up = Cwd::abs_path("$dir/..");
 
 	# this overrides the path if the user clicks on the .. inside the temp archive directory
-	$self->[ARCHIVES]->{$dir_up} = $self->[FILEPATH];
+	$self->[OVERRIDES]->{$dir_up} = $self->[FILEPATH];
 
 	return $dir;
 }
