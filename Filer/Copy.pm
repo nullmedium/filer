@@ -62,8 +62,18 @@ sub destroy {
 
 sub copy {
 	my ($self,$source,$dest) = @_;
+	my $copy_inside_same_directory = 0;
 
 	my $dirwalk = new Filer::DirWalk;
+
+	if (dirname($dest) eq ".") {
+		$dest = dirname($source) . "/" . $dest;
+		$copy_inside_same_directory = 1;
+		
+		if (-d $source) {
+			mkdir($dest);
+		}
+	}
 
 	$dirwalk->onBeginWalk(sub {
 		if ($self->{progress} == 0) {
@@ -75,8 +85,8 @@ sub copy {
 
 	$dirwalk->onLink(sub {
 		my ($source) = @_;
-
 		my $target = readlink($source);
+
 		symlink($target, Cwd::abs_path("$dest/" . basename($source))) || return Filer::DirWalk::FAILED;
 
 		return Filer::DirWalk::SUCCESS;
@@ -84,8 +94,12 @@ sub copy {
 
 	$dirwalk->onDirEnter(sub {
 		my ($dir) = @_;
-
-		$dest = Cwd::abs_path("$dest/" . basename($dir));
+			
+		if ($copy_inside_same_directory == 1) {
+			$copy_inside_same_directory = 0;
+		} else {
+			$dest = Cwd::abs_path("$dest/" . basename($dir));
+		}
 
 		if (! -e $dest) {
 			mkdir($dest) || return Filer::DirWalk::FAILED;
@@ -104,15 +118,21 @@ sub copy {
 
 	$dirwalk->onFile(sub {
 		my ($file) = @_;
-		my $dest = Cwd::abs_path("$dest/" . basename($file));
+		my $my_dest = $dest;
+		
+		if ($copy_inside_same_directory == 1) {
+			$copy_inside_same_directory = 0;
+		} else {
+			$my_dest = Cwd::abs_path("$dest/" . basename($file));
+		}
 
- 		$self->{progress_label}->set_text("$file\n$dest");
+ 		$self->{progress_label}->set_text("$file\n$my_dest");
 		$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
 		while (Gtk2->events_pending) { Gtk2->main_iteration; }
 
 		if ($file ne $dest) {
 			my $filecopy = new Filer::FileCopy($self->{progressbar_part}, \$self->{progress});
-			return $filecopy->filecopy($file,$dest);
+			return $filecopy->filecopy($file,$my_dest);
 		} else {
 			Filer::Dialog->msgbox_error("Destination and target are the same! Aborting!");
 			return Filer::DirWalk::ABORTED;

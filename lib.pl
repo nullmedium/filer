@@ -475,7 +475,7 @@ sub copy_cb {
 			my $copy = Filer::Copy->new;
 			$copy->set_total(&files_count);
 			$copy->show;
-
+			
 			my $r = $copy->copy($source, $dest);
 
 			if ($r == Filer::DirWalk::FAILED) {
