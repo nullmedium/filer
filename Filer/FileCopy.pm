@@ -34,21 +34,19 @@ sub new {
 sub filecopy {
 	my ($self,$source,$dest) = @_;
 
-	my $mode = (stat $source)[2] || return 0;
+	my $mode = (stat $source)[2] || return Filer::DirWalk::FAILED;
 	my $size = -s $source;
 	my $buf;
-	my $buf_size = (stat $source)[11] || return 0; # use filesystem blocksize
+	my $buf_size = (stat $source)[11] || return Filer::DirWalk::FAILED; # use filesystem blocksize
 	my $written = 0;
 
-	sysopen(SOURCE, $source, O_RDONLY) || return 0;
-	sysopen(DEST, $dest, O_CREAT|O_WRONLY) || return 0;
+	sysopen(SOURCE, $source, O_RDONLY) || return Filer::DirWalk::FAILED;
+	sysopen(DEST, $dest, O_CREAT|O_WRONLY) || return Filer::DirWalk::FAILED;
 
 	while (sysread(SOURCE, $buf, $buf_size)) {
 		syswrite DEST, $buf, $buf_size;
 
-		if (!${$self->{stopped}}) {
-			return Filer::DirWalk::ABORTED;
-		}
+		return Filer::DirWalk::ABORTED  if (!${$self->{stopped}});
 
 		my $c = $written + $buf_size;
 

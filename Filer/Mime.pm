@@ -155,9 +155,8 @@ sub set_default_command {
 
 sub get_default_command {
 	my ($self,$type,$command) = @_;
-	my $mime = $self->get;
 
-	return $mime->{$type}->[COMMANDS]->[0];
+	return $self->get()->{$type}->[COMMANDS]->[0];
 }
 
 sub set_icon_dialog {
