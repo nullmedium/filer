@@ -39,7 +39,6 @@ sub new {
 	$hbox->pack_start($self->{label1},0,0,0);
 
 	$self->{label2} = Gtk2::Label->new();
-#	$self->{label2}->set_justify('GTK_JUSTIFY_FILL');
 	$self->{label2}->set_alignment(0.0,0.0);
 	$self->{label2}->set_ellipsize('PANGO_ELLIPSIZE_MIDDLE');
 	$hbox->pack_start($self->{label2},1,1,0);
