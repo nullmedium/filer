@@ -16,8 +16,6 @@
 
 our ($VERSION,$libpath,$widgets,$pane,$active_pane,$inactive_pane,$config,$stat_cache);
 
-# use utf8;
-
 use strict;
 use warnings;
 
@@ -342,21 +340,23 @@ sub explorer_cb {
 sub switch_mode {
 	my $opt = $config->get_option('Mode');
 
-	$widgets->{sync_button}->set("visible", ($opt == NORTON_COMMANDER_MODE) ? 1 : 0);
-	$widgets->{tree}->get_vbox->set("visible", ($opt == EXPLORER_MODE) ? 1 : 0);
-	$widgets->{list1}->get_vbox->set("visible", ($opt == NORTON_COMMANDER_MODE) ? 1 : 0);
-
-	$pane->[LEFT] = ($opt == NORTON_COMMANDER_MODE) ? $widgets->{list1} : $widgets->{tree};
-
 	if ($opt == EXPLORER_MODE) {
+		$widgets->{list2}->get_location_bar->reparent($widgets->{location_bar});	
 
-		my $widget = $widgets->{list2}->get_location_bar;
-		$widget->reparent($widgets->{location_bar});	
+		$widgets->{sync_button}->set("visible", 0);
+		$widgets->{tree}->get_vbox->set("visible", 1);
+		$widgets->{list1}->get_vbox->set("visible", 0);
+
+		$pane->[LEFT] = $widgets->{tree};
 
 	} elsif ($opt == NORTON_COMMANDER_MODE) {
+		$widgets->{list2}->get_location_bar->reparent($widgets->{list2}->get_location_bar_parent);	
 
-		my $widget = $widgets->{list2}->get_location_bar;
-		$widget->reparent($widgets->{list2}->get_location_bar_parent);	
+		$widgets->{sync_button}->set("visible", 1);
+		$widgets->{tree}->get_vbox->set("visible", 0);
+		$widgets->{list1}->get_vbox->set("visible", 1);
+
+		$pane->[LEFT] = $widgets->{list1};
 	}
 }
 
@@ -395,7 +395,13 @@ sub refresh_cb {
 }
 
 sub go_home_cb {
-	$active_pane->open_path($ENV{HOME});
+	my $opt = $config->get_option('Mode');
+
+	if ($opt == NORTON_COMMANDER_MODE) {
+		$active_pane->open_path($ENV{HOME});
+	} elsif ($opt == EXPLORER_MODE) {
+		$pane->[RIGHT]->open_path($ENV{HOME});
+	}
 }
 
 sub synchronize_cb {
