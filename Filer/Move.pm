@@ -117,26 +117,23 @@ sub move {
 			my ($file) = @_;
 			my $dest = Cwd::abs_path("$dest/" . basename($file));
 
+	 		$self->{progress_label}->set_text("$file\n$dest");
+			$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
+			while (Gtk2->events_pending) { Gtk2->main_iteration; }
+
 			if ($file ne $dest) {
-		 		$self->{progress_label}->set_text("$file\n$dest");
-				while (Gtk2->events_pending) { Gtk2->main_iteration; }
-
 				my $filecopy = new Filer::FileCopy($self->{progressbar_part}, \$self->{progress});
-				my $r = $filecopy->filecopy($file,$dest);
 
-				if ($r != Filer::DirWalk::SUCCESS) {
+				if ((my $r = $filecopy->filecopy($file,$dest)) != Filer::DirWalk::SUCCESS) {
 					return $r;
 				}
-
-				$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
-				while (Gtk2->events_pending) { Gtk2->main_iteration; }
 
 				unlink($file) || return Filer::DirWalk::FAILED;
 
 				return Filer::DirWalk::SUCCESS;
 			} else {
 				Filer::Dialog->msgbox_error("Destination and target are the same! Aborting!");
-				return Filer::DirWalk::FAILED;
+				return Filer::DirWalk::ABORTED;
 			}
 		});
 

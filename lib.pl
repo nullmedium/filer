@@ -25,6 +25,7 @@ use Gtk2::Gdk::Keysyms;
 
 use Cwd;
 use Fcntl;
+use Memoize;
 use File::Basename;
 use File::MimeInfo::Magic;
 use File::Temp;

@@ -40,6 +40,11 @@ use constant PATH_BUTTONS	=> 14;
 
 use constant FILEPATH_OLD	=> 16;
 
+Memoize::memoize("calculate_size");
+Memoize::memoize("Stat::lsMode::format_mode");
+Memoize::memoize("File::MimeInfo::mimetype");
+Memoize::memoize("File::MimeInfo::describe");
+
 sub new {
 	my ($class,$side) = @_;
 	my $self = bless [], $class;
@@ -574,9 +579,9 @@ sub open_path {
 		$files_count = $files_count_total - scalar(grep { $_ =~ /^\.+\w+/ } @files);
 	}
 
-# 	use Time::HiRes qw( gettimeofday tv_interval );
-#
-# 	my $t0 = [gettimeofday];
+	use Time::HiRes qw( gettimeofday tv_interval );
+
+	my $t0 = [gettimeofday];
 
 	foreach my $file (@dirs,@files) {
 		if ($file =~ /^\.+\w+/ and $show_hidden == 0) {
@@ -613,9 +618,9 @@ sub open_path {
 		$self->[TREEMODEL]->set($self->[TREEMODEL]->append, 0, $mypixbuf, 1, $file, 2, $type, 3, $size, 4, $ctime, 5, $uid, 6, $gid, 7, $mode, 8, $target, 9, $abspath);
 	}
 
-# 	my $t1 = [gettimeofday];
-# 	my $elapsed = tv_interval ( $t0, $t1 );
-# 	print "time to load: $elapsed\n";
+	my $t1 = [gettimeofday];
+	my $elapsed = tv_interval ( $t0, $t1 );
+	print "time to load: $elapsed\n";
 
 	$total_size = &calculate_size($total_size);
 
