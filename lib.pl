@@ -39,6 +39,7 @@ use Filer::Dialog;
 use Filer::ProgressDialog;
 use Filer::DirWalk;
 
+use Filer::DND;
 use Filer::FilePane;
 use Filer::FileTreePane;
 
@@ -230,7 +231,7 @@ sub about_cb {
 
 	my $label = new Gtk2::Label;
 	$label->set_use_markup(1);
-	$label->set_markup("<b>Filer $VERSION</b>\n\nCopyright (c) 2004\nby Jens Luedicke &lt;jens.luedicke\@gmail.com&gt;\n");
+	$label->set_markup("<b>Filer $VERSION</b>\n\nCopyright (c) 2004,2005\nby Jens Luedicke &lt;jens.luedicke\@gmail.com&gt;\n");
 	$label->set_alignment(0.0,0.0);
 	$dialog->vbox->pack_start($label, 1,1,5);
 
@@ -353,7 +354,6 @@ sub bookmarks_cb {
 	foreach ($bookmarks->get_bookmarks) {
 		$menuitem = new Gtk2::MenuItem($_);
 		$menuitem->signal_connect("activate", sub {
-
 			my $p = ($config->get_option("Mode") == NORTON_COMMANDER_MODE) ? $active_pane : $pane->[RIGHT]; 
 			$p->open_path($_[1]);
 		},$_);
@@ -409,13 +409,13 @@ sub select_dialog {
 	if ($dialog->run eq 'ok') {
 		my $mypane = ($config->get_option("Mode") == NORTON_COMMANDER_MODE) ? $active_pane : $pane->[RIGHT];
 		my $selection = $mypane->get_treeview->get_selection;
-		my $x = $entry->get_text;
-		my $bx = (split //, $x)[0];
+		my $str = $entry->get_text;
+#		my $bx = (split //, $str)[0];
 		
-		$x =~ s/\//\\\//g;
-		$x =~ s/\./\\./g;
-		$x =~ s/\*/\.*/g;
-		$x =~ s/\?/\./g;
+		$str =~ s/\//\\\//g;
+		$str =~ s/\./\\./g;
+		$str =~ s/\*/\.*/g;
+		$str =~ s/\?/\./g;
 
 		$mypane->get_treeview->get_model->foreach(sub {
 			my $model = $_[0];
@@ -424,15 +424,15 @@ sub select_dialog {
 
 			return 0 if ($item eq ".."); 
 
-			if (-d $mypane->get_path($item)) {
-				if ($bx eq '/') {
-					$item = "/$item";
-				} else {
-					return 0;
-				}
-			}
+# 			if (-d $mypane->get_path($item)) {
+# 				if ($bx eq '/') {
+# 					$item = "/$item";
+# 				} else {
+# 					return 0;
+# 				}
+# 			}
 
-			if ($item =~ /\A$x\Z/)  {
+			if ($item =~ /\A$str\Z/)  {
 				if ($type == SELECT) {
 					$selection->select_iter($iter);
 				}
@@ -470,63 +470,43 @@ sub copy_cb {
 			my $dest = $dest_entry->get_text;
 			$dialog->destroy;
 
-			if ($source eq $dest) {
-				return;
+			return if ($source eq $dest);
+
+			my $copy = Filer::Copy->new;
+			$copy->set_total(&files_count);
+			$copy->show;
+
+			my $r = $copy->copy($source, $dest);
+
+			if ($r == Filer::DirWalk::FAILED) {
+				Filer::Dialog->msgbox_error("Copying of $source to $dest failed!");
+			} elsif ($r == Filer::DirWalk::ABORTED) {
+				Filer::Dialog->msgbox_info("Copying of $source to $dest aborted!");
 			}
 
-# 			if (dirname($dest) eq ".") {
-# 
-# 				system("cp -a $source " . dirname($source) . "/" . $dest);
-# 
-# 			} else {
-				my $copy = Filer::Copy->new;
-				$copy->set_total(&files_count);
-				$copy->show;
-
-				my $r = $copy->copy($source, $dest);
-
-	# 			if ($r == 0) {
-	# 				Filer::Dialog->msgbox_error("Copying of $source to $dest failed!");
-	# 			} elsif ($r == -1) {
-	# 				Filer::Dialog->msgbox_info("Copying of $source to $dest aborted!");
-	# 			}
-
-				if ($r == 0 || $r == -1) {
-					Filer::Dialog->msgbox_info("Copying of $source to $dest " . (($r == 0) ? "failed!" : "aborted!"));
-				}
-
-				$copy->destroy;
-#			}
+			$copy->destroy;
 
 			&refresh_cb;
 		}
 
 		$dialog->destroy;
 	} else {
-		my $r = Filer::Dialog->yesno_dialog("Copy selected files to " . $inactive_pane->get_pwd . "?");
-		return if ($r eq 'no');
+		return if (Filer::Dialog->yesno_dialog("Copy selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
 		
 		my $copy = Filer::Copy->new;
 		$copy->set_total(&files_count);
 		$copy->show;
 
 		foreach (@{$active_pane->get_selected_items}) {
-			if ($_ eq $inactive_pane->get_pwd) {
-				last;
-			}
+			last if ($_ eq $inactive_pane->get_pwd);
 
 			my $r = $copy->copy($_, $inactive_pane->get_pwd);
 
-# 			if ($r == 0) {
-# 				Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed!");
-# 				last;
-# 			} elsif ($r == -1) {
-# 				Filer::Dialog->msgbox_info("Copying of $_ to " . $inactive_pane->get_pwd . " aborted!");
-# 				last;
-# 			}
-
-			if ($r == 0 || $r == -1) {
-				Filer::Dialog->msgbox_info("Copying of $_ to " . $inactive_pane->get_pwd . (($r == 0) ? "failed!" : "aborted!"));
+			if ($r == Filer::DirWalk::FAILED) {
+				Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed!");
+				last;
+			} elsif ($r == Filer::DirWalk::ABORTED) {
+				Filer::Dialog->msgbox_info("Copying of $_ to " . $inactive_pane->get_pwd . " aborted!");
 				last;
 			}
 		}
@@ -555,9 +535,7 @@ sub move_cb {
 			my $dest = $dest_entry->get_text;
 			$dialog->destroy;
 
-			if ($source eq $dest) {
-				return;
-			}
+			return if ($source eq $dest);
 
 			my $move = Filer::Move->new;
 			$move->set_total(&files_count);
@@ -565,14 +543,10 @@ sub move_cb {
 
 			my $r = $move->move($source, $dest);
 
-# 			if ($r == 0) {
-# 				Filer::Dialog->msgbox_error("Moving of $source to $dest failed!");
-# 			} elsif ($r == -1) {
-# 				Filer::Dialog->msgbox_info("Moving of $source to $dest aborted!");
-# 			}
-
-			if ($r == 0 || $r == -1) {
-				Filer::Dialog->msgbox_info("Moving of $source to $dest " . (($r == 0) ? "failed!" : "aborted!"));
+			if ($r == Filer::DirWalk::FAILED) {
+				Filer::Dialog->msgbox_error("Moving of $source to $dest failed!");
+			} elsif ($r == Filer::DirWalk::ABORTED) {
+				Filer::Dialog->msgbox_info("Moving of $source to $dest aborted!");
 			}
 
 			$move->destroy;
@@ -583,30 +557,22 @@ sub move_cb {
 
 		$dialog->destroy;
 	} else {
-		my $r = Filer::Dialog->yesno_dialog("Move selected files to " . $inactive_pane->get_pwd . "?");
-		return if ($r eq 'no');
+		return if (Filer::Dialog->yesno_dialog("Move selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
 
 		my $move = Filer::Move->new;
 		$move->set_total(&files_count);
 		$move->show;
 
 		foreach (@{$active_pane->get_selected_items}) {
-			if ($_ eq $inactive_pane->get_pwd) {
-				last;
-			}
+			last if ($_ eq $inactive_pane->get_pwd);
 
 			my $r = $move->move($_, $inactive_pane->get_pwd);
 
-# 			if ($r == 0) {
-# 				Filer::Dialog->msgbox_error("Moving of $_ to " . $inactive_pane->get_pwd . " failed!");
-# 				last;
-# 			} elsif ($r == -1) {
-# 				Filer::Dialog->msgbox_info("Moving of $_ to " . $inactive_pane->get_pwd . " aborted!");
-# 				last;
-# 			}
-
-			if ($r == 0 || $r == -1) {
-				Filer::Dialog->msgbox_info("Moving of $_ to " . $inactive_pane->get_pwd . (($r == 0) ? "failed!" : "aborted!"));
+			if ($r == Filer::DirWalk::FAILED) {
+				Filer::Dialog->msgbox_error("Moving of $_ to " . $inactive_pane->get_pwd . " failed!");
+				last;
+			} elsif ($r == Filer::DirWalk::ABORTED) {
+				Filer::Dialog->msgbox_info("Moving of $_ to " . $inactive_pane->get_pwd . " aborted!");
 				last;
 			}
 		}
@@ -640,27 +606,17 @@ sub rename_cb {
 
 	if ($dialog->run eq 'ok') {
 		my $old_name = $active_pane->get_selected_item;
-		my $new_name;
-		
-		if ($active_pane->get_type eq "LIST") {
-			$new_name = $active_pane->get_pwd;
+		my $new_name = File::Basename::dirname($old_name) . "/" . $entry->get_text;
 
-		} elsif ($active_pane->get_type eq "TREE") {
-
-			$new_name = Cwd::abs_path($active_pane->get_pwd . "/..");
-		}
-
-		$new_name .= "/" . $entry->get_text;
-
-		if (!rename($old_name, $new_name)) {
-			Filer::Dialog->msgbox_error("Rename failed: $!");
-		} else {
+		if (rename($old_name, $new_name)) {
 			my $model = $active_pane->get_treeview->get_model;
 			my $iter = $active_pane->get_selected_iter;
 
 			$model->set($iter, 1, $entry->get_text);
 			$model->set($iter, ($active_pane->get_type eq "TREE") ? 2 : 9, $new_name);
 			$active_pane->set_selected_item($new_name);				
+		} else {
+			Filer::Dialog->msgbox_error("Rename failed: $!");
 		}
 	}
 
@@ -668,10 +624,8 @@ sub rename_cb {
 }
 
 sub delete_cb {
-	return if ($active_pane->count_selected_items == 0);
-
-	my $r = Filer::Dialog->yesno_dialog("Delete selected files?");
-	return if ($r eq 'no');
+	return if (($active_pane->count_selected_items == 0)
+		 or (Filer::Dialog->yesno_dialog("Delete selected files?") eq 'no'));
 
 	my $delete = Filer::Delete->new;
 	$delete->set_total(&files_count);
@@ -680,8 +634,11 @@ sub delete_cb {
 	foreach (@{$active_pane->get_selected_items}) {
 		my $r = $delete->delete($_);
 
-		if ($r == 0 || $r == -1) {
-			Filer::Dialog->msgbox_info("Deleting of $_ " . (($r == 0) ? "failed!" : "aborted!"));
+		if ($r == Filer::DirWalk::FAILED) {
+			Filer::Dialog->msgbox_info("Deleting of $_ failed!");
+			last;
+		} elsif ($r == Filer::DirWalk::ABORTED) {
+			Filer::Dialog->msgbox_info("Deleting of $_ aborted!");
 			last;
 		}
 	}
@@ -712,12 +669,11 @@ sub mkdir_cb {
 
 	if ($dialog->run eq 'ok') {
 		my $dir = $label->get_text . $entry->get_text;
-		my $r = mkdir($dir);
 		
-		if (!$r) {
-			Filer::Dialog->msgbox_error("Make directory $dir failed: $!");
-		} else {
+		if (mkdir($dir)) {
 			$active_pane->refresh;
+		} else {
+			Filer::Dialog->msgbox_error("Make directory $dir failed: $!");
 		}
 	}
 
@@ -743,12 +699,10 @@ sub link_cb {
 			$link = $active_pane->get_pwd . "/$link";
 		}
 
-		my $r = link($target, $link);
-		
-		if (!$r) {
-			Filer::Dialog->msgbox_error("Couldn't create link! $!");
-		} else {
+		if (link($target, $link)) {
 			$inactive_pane->refresh;
+		} else {
+			Filer::Dialog->msgbox_error("Couldn't create link! $!");
 		}
 	}
 
@@ -774,89 +728,14 @@ sub symlink_cb {
 			$symlink = $active_pane->get_pwd . "/$symlink";
 		}
 
-		my $r = symlink($target, $symlink);
-		
-		if (!$r) {
-			Filer::Dialog->msgbox_error("Couldn't create symlink! $!");
-		} else {
+		if (symlink($target, $symlink)) {
 			$inactive_pane->refresh;
+		} else {
+			Filer::Dialog->msgbox_error("Couldn't create symlink! $!");
 		}
 	}
 
 	$dialog->destroy;
-}
-
-sub drag_data_get_cb {
-	my ($widget,$context,$data,$info,$time,$self) = @_;
-
-	if ($info == $self->TARGET_URI_LIST) {
-		if ($self->count_selected_items > 0) {
-			my $d = join "\r\n", @{$self->get_selected_items};
-			$data->set($data->target, 8, $d);
-		}
-	}
-}
-
-sub drag_data_received_cb {
-	my ($widget,$context,$x,$y,$data,$info,$time,$self) = @_;
-
-	if (($data->length >= 0) && ($data->format == 8)) {
-		my ($p,$d) = $widget->get_dest_row_at_pos($x,$y);
-		my $action = $context->action;
-		my $path;
-		my $do;
-
-		if (defined $p) {
-			$path = $self->get_path_by_treepath($p);
-	
-			if (! -d $path) {
-				return;
-			}
-		} else {
-			$path = $self->get_pwd;
-		}
-
-		if ($action eq "copy") {
-			my $r = Filer::Dialog->yesno_dialog("Copy selected files to $path?");
-			return if ($r eq 'no');
-
-			$do = Filer::Copy->new;
-		} elsif ($action eq "move") {
-			my $r = Filer::Dialog->yesno_dialog("Move selected files to $path?");
-			return if ($r eq 'no');
-
-			$do = Filer::Move->new;
-		}
-
-		$do->set_total(&main::files_count);
-		$do->show;
-
-		for (split /\r\n/, $data->data) {
-			if ($_ eq $path) {
-				last;
-			}
-
-			my $r = $do->action($_, $path);
-
-			if ($r == 0 || $r == -1) {
-				Filer::Dialog->msgbox_info((($action eq "copy") ? "Copying" : "Moving") . " of $_ to $path " . (($r == 0) ? "failed!" : "aborted!"));
-				last;
-			}
-		}
-
-		$do->destroy;
-
-		if ($action eq "move") {
-			$main::active_pane->remove_selected;
-		}
-
-		$main::inactive_pane->refresh;
-
-		$context->finish (1, 0, $time);
-		return;
-	}
-
- 	$context->finish (0, 0, $time);
 }
 
 sub files_count {
@@ -865,7 +744,7 @@ sub files_count {
 	$dirwalk->onFile(sub {
 		++$c;
 		while (Gtk2->events_pending) { Gtk2->main_iteration }
-		return 1;
+		return Filer::DirWalk::SUCCESS;
 	});
 
 	foreach (@{$active_pane->get_selected_items}) {

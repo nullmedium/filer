@@ -21,12 +21,16 @@ use warnings;
 
 use File::Basename;
 
+use constant FAILED => 0;
+use constant SUCCESS => 1;
+use constant ABORTED => -1;
+
 sub new {
 	my ($class) = @_;
 	my $self = bless {}, $class;
 
 	foreach (qw(onBeginWalk onLink onFile onDirEnter onDirLeave onForEach)) {
-		$self->{$_} = sub { 1; };
+		$self->{$_} = sub { SUCCESS; };
 	}
 	
 	return $self;
@@ -65,34 +69,48 @@ sub onForEach {
 sub walk {
 	my ($self,$path) = @_;
 
-	return -1 if (&{$self->{onBeginWalk}}($path) != 1);
-
+	if ((my $r = &{$self->{onBeginWalk}}($path)) != SUCCESS) {
+		return $r;
+	}
+	
 	if (-l $path) {
 
-		return -1 if (&{$self->{onLink}}($path) != 1);
+		if ((my $r = &{$self->{onLink}}($path)) != SUCCESS) {
+			return $r;
+		}
 
 	} elsif (-d $path) {
 
-		return -1 if (&{$self->{onDirEnter}}($path) != 1);
+		if ((my $r = &{$self->{onDirEnter}}($path)) != SUCCESS) {
+			return $r;
+		}
 
-		opendir(DIR, $path) || return 0;
+		opendir(DIR, $path) || return FAILED;
 
 		foreach my $f (readdir(DIR)) {
 			next if ($f eq "." or $f eq "..");
 
-			return -1 if (&{$self->{onForEach}}("$path/$f") == 0);
+			if ((my $r = &{$self->{onForEach}}("$path/$f")) != SUCCESS) {
+				return $r;
+			}
 
-			return -1 if ($self->walk("$path/$f") != 1);
+			if ((my $r = $self->walk("$path/$f")) != SUCCESS) {
+				return $r;
+			}
 		}
 
 		closedir(DIR);
 
-		return -1 if (&{$self->{onDirLeave}}($path) != 1);
+		if ((my $r = &{$self->{onDirLeave}}($path)) != SUCCESS) {
+			return $r;
+		}
 	} else {
-		return -1 if (&{$self->{onFile}}($path) != 1);
+		if ((my $r = &{$self->{onFile}}($path) != SUCCESS)) {
+			return $r;
+		}
 	}
 
-	return 1;
+	return SUCCESS;
 }
 
 1;

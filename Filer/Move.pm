@@ -68,9 +68,9 @@ sub move {
 	my $r;
 
 	if ($dirname_dest ne '.') {
-		$r = rename($source, Cwd::abs_path("$dest/$basename_source")) && return 1;
+		$r = rename($source, Cwd::abs_path("$dest/$basename_source")) && return Filer::DirWalk::SUCCESS;
 	} else {
-		$r = rename($source, Cwd::abs_path("$dirname_source/$dest")) && return 1;
+		$r = rename($source, Cwd::abs_path("$dirname_source/$dest")) && return Filer::DirWalk::SUCCESS;
 	}
 
 	if (!$r) {
@@ -78,19 +78,19 @@ sub move {
 
 		$dirwalk->onBeginWalk(sub {
 			if ($self->{progress} == 0) {
-				return -1;
+				return Filer::DirWalk::ABORTED;
 			}
 
-			return 1;
+			return Filer::DirWalk::SUCCESS;
 		});
 
 		$dirwalk->onLink(sub {
 			my ($source) = @_;
 
 			my $target = readlink($source);
-			symlink($target, Cwd::abs_path("$dest/" . basename($source))) || return 0;
+			symlink($target, Cwd::abs_path("$dest/" . basename($source))) || return Filer::DirWalk::FAILED;
 
-			return 1;
+			return Filer::DirWalk::SUCCESS;
 		});
 
 		$dirwalk->onDirEnter(sub {
@@ -99,10 +99,10 @@ sub move {
 			$dest = Cwd::abs_path("$dest/" . basename($dir));
 
 			if (! -e  $dest) {
-				mkdir($dest) || return 0;
+				mkdir($dest) || return Filer::DirWalk::FAILED;
 			}
 
-			return 1;
+			return Filer::DirWalk::SUCCESS;
 		});
 
 		$dirwalk->onDirLeave(sub {
@@ -110,7 +110,7 @@ sub move {
 
 			$dest = Cwd::abs_path("$dest/..");
 
-			return 1;
+			return Filer::DirWalk::SUCCESS;
 		});
 
 		$dirwalk->onFile(sub {
@@ -124,19 +124,19 @@ sub move {
 				my $filecopy = new Filer::FileCopy($self->{progressbar_part}, \$self->{progress});
 				my $r = $filecopy->filecopy($file,$dest);
 
-				$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
-				while (Gtk2->events_pending) { Gtk2->main_iteration; }
-
-				if ($r != 1) {
+				if ($r != Filer::DirWalk::SUCCESS) {
 					return $r;
 				}
 
-				unlink($file) || return 0;
+				$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
+				while (Gtk2->events_pending) { Gtk2->main_iteration; }
 
-				return 1;
+				unlink($file) || return Filer::DirWalk::FAILED;
+
+				return Filer::DirWalk::SUCCESS;
 			} else {
 				Filer::Dialog->msgbox_error("Destination and target are the same! Aborting!");
-				return 0;
+				return Filer::DirWalk::FAILED;
 			}
 		});
 

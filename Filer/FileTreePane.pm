@@ -31,17 +31,11 @@ use constant FILEPATH		=> 5;
 use constant FILEPATH_ITER	=> 6;
 use constant MIMEICONS		=> 7;
 
-use constant TARGET_URI_LIST	=> 0;
-
 sub new {
 	my ($class,$side) = @_;
 	my $self = bless [], $class;
 	my ($hbox,$button,$scrolled_window,$cell_pixbuf,$cell_text,$i);
 	my ($col, $cell);
-
-	my @target_table = (
-		{'target' => "text/uri-list", 'flags' => [], 'info' => TARGET_URI_LIST},
-	);
 
 	$self->[SIDE] = $side;
 
@@ -69,10 +63,10 @@ sub new {
 	$self->[TREEVIEW]->set_model($self->[TREEMODEL]);
 
 	# Drag and Drop
-	$self->[TREEVIEW]->drag_source_set(['button1_mask', 'button3_mask'], ['copy', 'move'], @target_table);
-	$self->[TREEVIEW]->drag_dest_set('all', ['copy', 'move'], @target_table);
-	$self->[TREEVIEW]->signal_connect("drag_data_get", \&main::drag_data_get_cb, $self);
-	$self->[TREEVIEW]->signal_connect("drag_data_received", \&main::drag_data_received_cb, $self);
+	$self->[TREEVIEW]->drag_source_set(['button1_mask', 'button3_mask'], ['copy', 'move'], &Filer::DND::target_table);
+	$self->[TREEVIEW]->drag_dest_set('all', ['copy', 'move'], &Filer::DND::target_table);
+	$self->[TREEVIEW]->signal_connect("drag_data_get", \&Filer::DND::drag_data_get_cb, $self);
+	$self->[TREEVIEW]->signal_connect("drag_data_received", \&Filer::DND::drag_data_received_cb, $self);
 
 	$scrolled_window->add($self->[TREEVIEW]);
 

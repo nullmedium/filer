@@ -40,16 +40,10 @@ use constant PATH_BUTTONS	=> 14;
 
 use constant FILEPATH_OLD	=> 16;
 
-use constant TARGET_URI_LIST	=> 0;
-
 sub new {
 	my ($class,$side) = @_;
 	my $self = bless [], $class;
 	my ($hbox,$button,$scrolled_window,$col,$cell,$i);
-
-	my @target_table = (
-		{'target' => "text/uri-list", 'flags' => [], 'info' => TARGET_URI_LIST},
-	);
 
 	$self->[SIDE] = $side;
 	$self->[ARCHIVES] = {};
@@ -95,10 +89,10 @@ sub new {
 	$self->[TREEVIEW]->set_model($self->[TREEMODEL]);
 
 	# Drag and Drop
-	$self->[TREEVIEW]->drag_source_set(['button1_mask', 'button3_mask'], ['copy', 'move'], @target_table);
-	$self->[TREEVIEW]->drag_dest_set('all', ['copy', 'move'], @target_table);
-	$self->[TREEVIEW]->signal_connect("drag_data_get", \&main::drag_data_get_cb, $self);
-	$self->[TREEVIEW]->signal_connect("drag_data_received", \&main::drag_data_received_cb, $self);
+	$self->[TREEVIEW]->drag_source_set(['button1_mask', 'button3_mask'], ['copy', 'move'], &Filer::DND::target_table);
+	$self->[TREEVIEW]->drag_dest_set('all', ['copy', 'move'], &Filer::DND::target_table);
+	$self->[TREEVIEW]->signal_connect("drag_data_get", \&Filer::DND::drag_data_get_cb, $self);
+	$self->[TREEVIEW]->signal_connect("drag_data_received", \&Filer::DND::drag_data_received_cb, $self);
 
 	$self->[TREESELECTION] = $self->[TREEVIEW]->get_selection;
 	$self->[TREESELECTION]->set_mode("multiple");
@@ -295,7 +289,16 @@ sub treeview_event_cb {
 
 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Return'})
 	 or ($e->type eq "2button-press" and $e->button == 1)) {
-		$self->open_file($self->[SELECTED_ITEM]);
+		my $b = File::Basename::basename($self->[SELECTED_ITEM]);
+		
+		print "$b\n";
+
+		if (defined $self->[ARCHIVES]->{"$b/.."}) {
+			$self->open_file($self->[ARCHIVES]->{"$b/.."});
+		} else {
+			$self->open_file($self->[SELECTED_ITEM]);
+		}
+		
 		return 1;
 	}
 
@@ -625,9 +628,7 @@ sub open_path {
 	my @dir_contents = sort readdir(DIR);
 	closedir(DIR);
 
-	@dir_contents = ($filepath eq "/") 
-		? @dir_contents[2 .. $#dir_contents]
-		: @dir_contents[1 .. $#dir_contents];
+	@dir_contents = @dir_contents[(($filepath eq "/") ? 2 : 1) .. $#dir_contents];
 
 	delete $self->[SELECTED_ITEM];
 	delete $self->[SELECTED_ITER];

@@ -67,19 +67,19 @@ sub copy {
 
 	$dirwalk->onBeginWalk(sub {
 		if ($self->{progress} == 0) {
-			return -1;
+			return Filer::DirWalk::ABORTED;
 		}
 		
-		return 1;
+		return Filer::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onLink(sub {
 		my ($source) = @_;
 
 		my $target = readlink($source);
-		symlink($target, Cwd::abs_path("$dest/" . basename($source))) || return 0;
+		symlink($target, Cwd::abs_path("$dest/" . basename($source))) || return Filer::DirWalk::FAILED;
 		
-		return 1;
+		return Filer::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onDirEnter(sub {
@@ -88,10 +88,10 @@ sub copy {
 		$dest = Cwd::abs_path("$dest/" . basename($dir));
 
 		if (! -e $dest) {
-			mkdir($dest) || return 0;
+			mkdir($dest) || return Filer::DirWalk::FAILED;
 		}
 
-		return 1;
+		return Filer::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onDirLeave(sub {
@@ -99,7 +99,7 @@ sub copy {
 
 		$dest = Cwd::abs_path("$dest/..");
 	
-		return 1;
+		return Filer::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onFile(sub {
@@ -117,7 +117,7 @@ sub copy {
 			return $filecopy->filecopy($file,$my_dest);
 		} else {
 			Filer::Dialog->msgbox_error("Destination and target are the same! Aborting!");
-			return 0;
+			return Filer::DirWalk::ABORTED;
 		}
 	});
 

@@ -47,7 +47,7 @@ sub filecopy {
 		syswrite DEST, $buf, $buf_size;
 
 		if (!${$self->{stopped}}) {
-			return -1;
+			return Filer::DirWalk::ABORTED;
 		}
 
 		my $c = $written + $buf_size;
