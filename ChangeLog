@@ -1,3 +1,28 @@
+2005-03-15 22:06:44  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   A /trunk/ChangeLog
+	   M /trunk/Filer/FilePane.pm
+	   M /trunk/filer.pl
+	   M /trunk/lib.pl
+	   A /trunk/svn2cl.pl
+
+	* filer.pl: new version: 0.0.9-svn
+	* lib.pl, Filer/FilePane.pm: bookmark menu changes
+
+	* svn2cl.pl: ChangeLog generation script
+	* ChangeLog: new ChangeLog
+
+2005-03-15 20:31:44  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/Filer/FilePane.pm
+	   M /trunk/Filer/Move.pm
+	   M /trunk/lib.pl
+
+	* lib.pl, Filer/FilePane.pm: use Memoize to speed up directory loading
+	* Filer/Move.pm: change behaviour of progressbar
+
 2005-03-15 09:52:55  Jens Luedicke <jens.luedicke@gmail.com>
 
 	* Changed paths:
