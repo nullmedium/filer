@@ -21,7 +21,6 @@ use warnings;
 
 use constant ICON => 0;
 use constant COMMANDS => 1;
-
 use constant MIME => 2;
 
 sub new {
@@ -116,14 +115,7 @@ sub get_icons {
 
 	foreach my $type (@mimetypes) {
 		my $file = $self->get_icon($type);
-		my $pixbuf;
-
-		if (-e $file) {
-			$pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($file);
-		} else {
-			$pixbuf = Gtk2::Gdk::Pixbuf->new_from_file("$main::libpath/icons/default.png");
-		}
-
+		my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file((-e $file) ? $file : "$main::libpath/icons/default.png");
 		$icons->{$type} = &main::intelligent_scale($pixbuf,100);
 	}
 
