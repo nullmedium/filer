@@ -104,9 +104,7 @@ sub copy {
 
 	$dirwalk->onFile(sub {
 		my ($file) = @_;
-		my $my_dest = $dest;
-
-		$my_dest = Cwd::abs_path("$dest/" . basename($file));
+		my $dest = Cwd::abs_path("$dest/" . basename($file));
 
  		$self->{progress_label}->set_text("$file\n$dest");
 		$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
@@ -114,7 +112,7 @@ sub copy {
 
 		if ($file ne $dest) {
 			my $filecopy = new Filer::FileCopy($self->{progressbar_part}, \$self->{progress});
-			return $filecopy->filecopy($file,$my_dest);
+			return $filecopy->filecopy($file,$dest);
 		} else {
 			Filer::Dialog->msgbox_error("Destination and target are the same! Aborting!");
 			return Filer::DirWalk::ABORTED;
