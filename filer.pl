@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-#     Copyright (C) 2004 Jens Luedicke <jens@irs-net.com>
+#     Copyright (C) 2004-2005 Jens Luedicke <jens.luedicke@gmail.com>
 #
 #     This program is free software; you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by

@@ -1,4 +1,4 @@
-#     Copyright (C) 2004 Jens Luedicke <jens@irs-net.com>
+#     Copyright (C) 2004-2005 Jens Luedicke <jens.luedicke@gmail.com>
 #
 #     This program is free software; you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -162,16 +162,12 @@ sub main_window {
 	$widgets->{statusbar} = new Gtk2::Statusbar;
 	$widgets->{vbox}->pack_start($widgets->{statusbar}, 0, 0, 0);
 
-	my $path;
-
 	my $i1 = $item_factory->get_item("/Options/Mode/Norton Commander Style");
 	my $i2 = $item_factory->get_item("/Options/Mode/MS Explorer Style");
 
 	$i2->set_group($i1->get_group);
 
 	if ($config->get_option('Mode') == NORTON_COMMANDER_MODE) {
-		$widgets->{list1}->open_path($config->get_option('PathLeft'));
-
 		$i1->set_active(1);
 		$i2->set_active(0);
 	} elsif ($config->get_option('Mode') == EXPLORER_MODE) {
@@ -179,11 +175,8 @@ sub main_window {
 		$i2->set_active(1);
 	}
 
-	if (defined $ARGV[0] and -d $ARGV[0]) {
-		$widgets->{list2}->open_path($ARGV[0]);
-	} else {
-		$widgets->{list2}->open_path($config->get_option('PathRight'));
-	}
+	$widgets->{list1}->open_path($config->get_option('PathLeft'));
+	$widgets->{list2}->open_path((defined $ARGV[0] and -d $ARGV[0]) ? $ARGV[0] : $config->get_option('PathRight'));
 
 	$window->show_all;
 
@@ -191,6 +184,8 @@ sub main_window {
 	$widgets->{tree}->get_vbox->hide;
 	$widgets->{list1}->get_vbox->hide;
 	$widgets->{list2}->get_vbox->show;
+
+	$pane->[LEFT] = undef;
 	$pane->[RIGHT] = $widgets->{list2};
 
 	&switch_mode;
@@ -231,7 +226,7 @@ sub about_cb {
 
 	my $label = new Gtk2::Label;
 	$label->set_use_markup(1);
-	$label->set_markup("<b>Filer $VERSION</b>\n\nCopyright (c) 2004,2005\nby Jens Luedicke &lt;jens.luedicke\@gmail.com&gt;\n");
+	$label->set_markup("<b>Filer $VERSION</b>\n\nCopyright (C) 2004-2005\nby Jens Luedicke &lt;jens.luedicke\@gmail.com&gt;\n");
 	$label->set_alignment(0.0,0.0);
 	$dialog->vbox->pack_start($label, 1,1,5);
 
