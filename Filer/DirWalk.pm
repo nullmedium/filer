@@ -105,7 +105,7 @@ sub walk {
 			return $r;
 		}
 	} else {
-		if ((my $r = &{$self->{onFile}}($path) != SUCCESS)) {
+		if ((my $r = &{$self->{onFile}}($path)) ne SUCCESS) {
 			return $r;
 		}
 	}

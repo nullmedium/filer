@@ -484,7 +484,7 @@ sub copy_cb {
 			my $r = $copy->copy($_, $target);
 
 			if ($r == Filer::DirWalk::FAILED) {
-				Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed!");
+				Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed: $!");
 				last;
 			} elsif ($r == Filer::DirWalk::ABORTED) {
 				Filer::Dialog->msgbox_info("Copying of $_ to " . $inactive_pane->get_pwd . " aborted!");
@@ -539,7 +539,7 @@ sub move_cb {
 			my $r = $move->move($_, $target);
 
 			if ($r == Filer::DirWalk::FAILED) {
-				Filer::Dialog->msgbox_error("Moving of $_ to " . $inactive_pane->get_pwd . " failed!");
+				Filer::Dialog->msgbox_error("Moving of $_ to " . $inactive_pane->get_pwd . " failed: $!");
 				last;
 			} elsif ($r == Filer::DirWalk::ABORTED) {
 				Filer::Dialog->msgbox_info("Moving of $_ to " . $inactive_pane->get_pwd . " aborted!");
@@ -646,7 +646,7 @@ sub delete_cb {
 			my $r = rename($_, "$ENV{HOME}/.local/share/Trash/files/" . basename($_));
 
 			if ($r == Filer::DirWalk::FAILED) {
-				Filer::Dialog->msgbox_info("Moving of $_ to Trash failed!");
+				Filer::Dialog->msgbox_info("Moving of $_ to Trash failed: $!");
 				last;
 			} elsif ($r == Filer::DirWalk::ABORTED) {
 				Filer::Dialog->msgbox_info("Moving of $_ to Trash aborted!");
@@ -666,7 +666,7 @@ sub delete_cb {
 			my $r = $delete->delete($_);
 
 			if ($r == Filer::DirWalk::FAILED) {
-				Filer::Dialog->msgbox_info("Deleting of $_ failed!");
+				Filer::Dialog->msgbox_info("Deleting of $_ failed: $!");
 				last;
 			} elsif ($r == Filer::DirWalk::ABORTED) {
 				Filer::Dialog->msgbox_info("Deleting of $_ aborted!");
