@@ -118,9 +118,10 @@ sub main_window {
 	$widgets->{vbox}->pack_start($widgets->{item_factory}->get_widget('<main>'), 0, 0, 0);
 
 	$toolbar = new Gtk2::Toolbar;
-	$toolbar->set_style('text');
+	$toolbar->set_style('GTK_TOOLBAR_BOTH_HORIZ');
 	$toolbar->append_item('Open Terminal', 'Open Terminal', undef, undef, \&open_terminal_cb);
-	$toolbar->append_item('Home', 'Home', undef, undef, \&go_home_cb);
+
+	$widgets->{home_button} = $toolbar->append_item('Home', 'Home', undef, undef, \&go_home_cb);
 	$widgets->{sync_button} = $toolbar->append_item('Synchronize', 'Synchronize', undef, undef, \&synchronize_cb);
 
 	$widgets->{vbox}->pack_start($toolbar, 0, 0, 0);
@@ -493,6 +494,7 @@ sub search_cb {
 
 sub copy_cb {
 	return if ($active_pane->count_selected_items == 0);
+	return if (not defined $active_pane->get_selected_item);
 
 	my $f = sub {
 		my ($files,$target) = @_;
@@ -548,6 +550,7 @@ sub copy_cb {
 
 sub move_cb {
 	return if ($active_pane->count_selected_items == 0);
+	return if (not defined $active_pane->get_selected_item);
 
 	my $f = sub {
 		my ($files,$target) = @_;
@@ -605,6 +608,9 @@ sub move_cb {
 sub rename_cb {
 	my ($dialog,$hbox,$label,$entry);
 
+	return if ($active_pane->count_selected_items == 0);
+	return if (not defined $active_pane->get_selected_item);
+
 	$dialog = new Gtk2::Dialog("Rename", undef, 'modal', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
 	$dialog->set_size_request(450,150);
 	$dialog->set_position('center');
@@ -644,6 +650,7 @@ sub rename_cb {
 
 sub delete_cb {
 	return if ($active_pane->count_selected_items == 0);
+	return if (not defined $active_pane->get_selected_item);
 	
 	if ($config->get_option("ConfirmDelete") == 1) {
 		return if (Filer::Dialog->yesno_dialog("Delete selected files?") eq 'no');
@@ -652,15 +659,15 @@ sub delete_cb {
 	if ($config->get_option("MoveToTrash") == 1) {
 
 		if (! -e "$ENV{HOME}/.local/share/Trash") {
-			return Filer::Dialog->msgbox_info("$ENV{HOME}/.local/share/Trash doesn't exist!");
+			return Filer::Dialog->msgbox_info("$ENV{HOME}/.local/share/Trash doesn't exist: $!");
 		}
 
 		if (! -W "$ENV{HOME}/.local/share/Trash/files") {
-			return Filer::Dialog->msgbox_info("$ENV{HOME}/.local/share/Trash/files not writable!");
+			return Filer::Dialog->msgbox_info("$ENV{HOME}/.local/share/Trash/files not writable: $!");
 		}
 
 		if (! -W "$ENV{HOME}/.local/share/Trash/info") {
-			return Filer::Dialog->msgbox_info("$ENV{HOME}/.local/share/Trash/info not writable!");
+			return Filer::Dialog->msgbox_info("$ENV{HOME}/.local/share/Trash/info not writable:  $!");
 		}
 
 		foreach (@{$active_pane->get_selected_items}) {

@@ -60,11 +60,11 @@ sub new {
 	$self->[HBOX] = new Gtk2::HBox(0,0);
 	$self->[LOCATION_BAR]->pack_start($self->[HBOX], 1, 1, 0);
 
-# 	$button = new Gtk2::Button("Up");
-# 	$button->signal_connect("clicked", sub {
-# 		$self->open_path(Cwd::abs_path($self->[FILEPATH] . "/.."));
-# 	});
-# 	$self->[HBOX]->pack_start($button, 0, 1, 0);
+	$button = new Gtk2::Button("Up");
+	$button->signal_connect("clicked", sub {
+		$self->open_path(Cwd::abs_path($self->[FILEPATH] . "/.."));
+	});
+	$self->[HBOX]->pack_start($button, 0, 1, 0);
 
 	$self->[PATH_ENTRY] = new Gtk2::Entry;
 	$self->[PATH_ENTRY]->signal_connect('key-press-event', sub {
@@ -548,7 +548,6 @@ sub open_path {
 	my @dir_contents = sort readdir(DIR);
 	closedir(DIR);
 
-#	@dir_contents = @dir_contents[2 .. $#dir_contents];
 	@dir_contents = @dir_contents[(($filepath eq "/") ? 2 : 1) .. $#dir_contents];
 
 	delete $self->[SELECTED_ITEM];
@@ -624,10 +623,6 @@ sub open_path {
 
 	$self->[PATH_ENTRY]->set_text($self->[FILEPATH]);
 	$self->[FOLDER_STATUS] = "$dirs_count ($dirs_count_total) directories and $files_count ($files_count_total) files: $total_size";
-
-#	if ($main::config->get_option('Mode') == main->NORTON_COMMANDER_MODE) {
-#		$self->set_focus;
-#	}
 }
 
 sub set_mime_icon {
@@ -681,9 +676,6 @@ sub extract_archive {
 	my $archive = Filer::Archive->new($self->[SELECTED_ITEM]);
 	$archive->extract_archive;
 	$self->refresh;
-}
-
-sub open_archive {
 }
 
 sub calculate_size {

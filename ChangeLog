@@ -1,3 +1,30 @@
+2005-03-31 12:16:05  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/Filer/Bookmarks.pm
+	   M /trunk/Filer/Config.pm
+	   M /trunk/Filer/Mime.pm
+	   M /trunk/lib.pl
+
+	* use File::BaseDir and ${XDG_CONFIG_HOME}/filer to store configuration files.
+	* existing config files will be moved to the new location
+
+2005-03-31 11:54:32  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/lib.pl
+
+	* improve switch_mode()
+	* fix go_home_cb()
+
+2005-03-31 11:41:02  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/ChangeLog
+	   M /trunk/update-changelog.sh
+
+	* update changelog
+
 2005-03-31 11:21:52  Jens Luedicke <jens.luedicke@gmail.com>
 
 	* Changed paths:

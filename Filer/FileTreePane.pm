@@ -349,10 +349,12 @@ sub DirRead {
 
 	my @dirs = grep { -d "$dir/$_" and (($show_hidden == 0 and $_ !~ /^\.+\w+/) or ($show_hidden == 1)) } @dir_contents;
 
-	splice @dirs, 0, 1; # no .
+#	splice @dirs, 0, 1; # no .
+	@dirs = @dirs[1 .. $#dirs];
 
 	if ($dir ne "/") {
-		splice @dirs, 0, 1; # no ..
+#		splice @dirs, 0, 1; # no ..
+		@dirs = @dirs[1 .. $#dirs];
 	}
 
 	foreach my $file (@dirs) {
