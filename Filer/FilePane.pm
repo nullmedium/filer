@@ -57,8 +57,8 @@ sub new {
 	$self->[VBOX]->pack_start($hbox, 0, 1, 0);
 
 # 	$button = new Gtk2::Button("Up");
-# 	$button->signal_connect("clicked", sub { 
-# 		$self->open_path(Cwd::abs_path($self->[FILEPATH] . "/..")); 
+# 	$button->signal_connect("clicked", sub {
+# 		$self->open_path(Cwd::abs_path($self->[FILEPATH] . "/.."));
 # 	});
 # 	$hbox->pack_start($button, 0, 1, 0);
 
@@ -71,8 +71,8 @@ sub new {
 	$hbox->pack_start($self->[PATH_ENTRY], 1, 1, 0);
 
 	$button = new Gtk2::Button("Go");
-	$button->signal_connect("clicked", sub { 
-		$self->open_file($self->[PATH_ENTRY]->get_text) 
+	$button->signal_connect("clicked", sub {
+		$self->open_file($self->[PATH_ENTRY]->get_text)
 	});
 	$hbox->pack_start($button, 0, 1, 0);
 
@@ -219,11 +219,11 @@ sub show_popup_menu {
 
 sub selection_changed_cb {
 	my ($selection,$self) = @_;
-	my $c = $selection->count_selected_rows; 
+	my $c = $selection->count_selected_rows;
 
 	$self->[SELECTED_ITER] = $self->get_selected_iters->[0];
 	$self->[SELECTED_ITEM] = $self->get_selected_items->[0];
-	
+
 	if ($c > 1) {
 		$main::widgets->{statusbar}->push(1, "$c files selected");
 	}
@@ -374,25 +374,25 @@ sub open_file {
 		} else {
 			if ($type eq 'application/x-compressed-tar') {
 
-				my $dir = $self->get_temp_archive_dir(); 
+				my $dir = $self->get_temp_archive_dir();
 				system("cd $dir && tar -xzf '$filepath'");
 				$self->open_path($dir);
 
 			} elsif ($type eq 'application/x-bzip-compressed-tar') {
 
-				my $dir = $self->get_temp_archive_dir(); 
+				my $dir = $self->get_temp_archive_dir();
 				system("cd $dir && tar -xjf '$filepath'");
 				$self->open_path($dir);
 
 			} elsif ($type eq 'application/x-tar') {
 
-				my $dir = $self->get_temp_archive_dir(); 
+				my $dir = $self->get_temp_archive_dir();
 				system("cd $dir && tar -xf '$filepath'");
 				$self->open_path($dir);
 
 			} elsif ($type eq 'application/zip') {
 
-				my $dir = $self->get_temp_archive_dir(); 
+				my $dir = $self->get_temp_archive_dir();
 				system("cd $dir && unzip '$filepath'");
 				$self->open_path($dir);
 
@@ -540,7 +540,7 @@ sub open_path {
 	}
 
 # 	use Time::HiRes qw( gettimeofday tv_interval );
-# 
+#
 # 	my $t0 = [gettimeofday];
 
 	foreach my $file (@dirs,@files) {
@@ -617,7 +617,7 @@ sub get_temp_archive_dir {
 	my ($self) = @_;
 	my $dir = File::Temp::tempdir(CLEANUP => 1);
 	my $dir_up = Cwd::abs_path("$dir/..");
-	
+
 	# this overrides the path if the user clicks on the .. inside the temp archive directory
 	$self->[ARCHIVES]->{$dir_up} = $self->[FILEPATH];
 

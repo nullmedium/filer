@@ -50,7 +50,7 @@ sub set_bookmark {
 	my @bookmarks = $self->get_bookmarks;
 
 	push @bookmarks, $path;
-	
+
 	$self->store(\@bookmarks);
 }
 
@@ -64,7 +64,7 @@ sub remove_bookmark {
 			push @b, $_;
 		}
 	}
-	
+
 	$self->store(\@b);
 }
 

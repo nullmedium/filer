@@ -69,7 +69,7 @@ sub copy {
 	if (dirname($dest) eq ".") {
 		$dest = dirname($source) . "/" . $dest;
 		$copy_inside_same_directory = 1;
-		
+
 		if (-d $source) {
 			mkdir($dest);
 		}
@@ -94,7 +94,7 @@ sub copy {
 
 	$dirwalk->onDirEnter(sub {
 		my ($dir) = @_;
-			
+
 		if ($copy_inside_same_directory == 1) {
 			$copy_inside_same_directory = 0;
 		} else {
@@ -109,17 +109,14 @@ sub copy {
 	});
 
 	$dirwalk->onDirLeave(sub {
-		my ($dir) = @_;
-
 		$dest = Cwd::abs_path("$dest/..");
-
 		return Filer::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onFile(sub {
 		my ($file) = @_;
 		my $my_dest = $dest;
-		
+
 		if ($copy_inside_same_directory == 1) {
 			$copy_inside_same_directory = 0;
 		} else {

@@ -94,7 +94,7 @@ sub main_window {
 	{ path => '/_Help',												item_type => '<LastBranch>'},
 	{ path => '/_Help/About',							callback => \&about_cb,		item_type => '<Item>'},
 	);
-	
+
 	$window = new Gtk2::Window('toplevel');
 	$window->set_title("Filer $VERSION");
 	$window->resize(800,600);
@@ -144,7 +144,7 @@ sub main_window {
 	$button->signal_connect("clicked", \&copy_cb);
 	$hbox->pack_start($button, 1, 1, 0);
 
-	$button = new Gtk2::Button("Move");
+	$button = new Gtk2::Button("Move/Rename");
 	$button->signal_connect("clicked", \&move_cb);
 	$hbox->pack_start($button, 1, 1, 0);
 
@@ -460,7 +460,7 @@ sub copy_cb {
 			my $copy = Filer::Copy->new;
 			$copy->set_total(&files_count);
 			$copy->show;
-			
+
 			my $r = $copy->copy($source,$dest);
 
 			if ($r == Filer::DirWalk::FAILED) {
@@ -504,6 +504,10 @@ sub copy_cb {
 sub move_cb {
 	return if ($active_pane->count_selected_items == 0);
 
+	my $move = new Filer::Move;
+	my @files = ();
+	my $target;
+
 	if ($active_pane->count_selected_items == 1) {
 		my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
 
@@ -516,57 +520,36 @@ sub move_cb {
 		$dialog->show_all;
 
 		if ($dialog->run eq 'ok') {
-			my $source = $source_entry->get_text;
-			my $dest = $dest_entry->get_text;
-			$dialog->destroy;
-
-			return if ($source eq $dest);
-
-			my $move = Filer::Move->new;
-			$move->set_total(&files_count);
-			$move->show;
-
-			my $r = $move->move($source, $dest);
-
-			if ($r == Filer::DirWalk::FAILED) {
-				Filer::Dialog->msgbox_error("Moving of $source to $dest failed!");
-			} elsif ($r == Filer::DirWalk::ABORTED) {
-				Filer::Dialog->msgbox_info("Moving of $source to $dest aborted!");
-			}
-
-			$move->destroy;
-
-			$active_pane->remove_selected;
-			$inactive_pane->refresh;
+			@files = ($source_entry->get_text);
+			$target = $dest_entry->get_text;
+		} else {
+			return;
 		}
-
-		$dialog->destroy;
 	} else {
 		return if (Filer::Dialog->yesno_dialog("Move selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
 
-		my $move = Filer::Move->new;
-		$move->set_total(&files_count);
-		$move->show;
-
-		foreach (@{$active_pane->get_selected_items}) {
-			last if ($_ eq $inactive_pane->get_pwd);
-
-			my $r = $move->move($_, $inactive_pane->get_pwd);
-
-			if ($r == Filer::DirWalk::FAILED) {
-				Filer::Dialog->msgbox_error("Moving of $_ to " . $inactive_pane->get_pwd . " failed!");
-				last;
-			} elsif ($r == Filer::DirWalk::ABORTED) {
-				Filer::Dialog->msgbox_info("Moving of $_ to " . $inactive_pane->get_pwd . " aborted!");
-				last;
-			}
-		}
-
-		$move->destroy;
-
-		$active_pane->remove_selected;
-		$inactive_pane->refresh;
+		@files = @{$active_pane->get_selected_items};
+		$target = $inactive_pane->get_pwd;
 	}
+	
+	$move->set_total(&files_count);
+	$move->show;
+
+	foreach (@files) {
+		my $r = $move->move($_, $target);
+
+		if ($r == Filer::DirWalk::FAILED) {
+			Filer::Dialog->msgbox_error("Moving of $_ to " . $inactive_pane->get_pwd . " failed!");
+			last;
+		} elsif ($r == Filer::DirWalk::ABORTED) {
+			Filer::Dialog->msgbox_info("Moving of $_ to " . $inactive_pane->get_pwd . " aborted!");
+			last;
+		}
+	}
+
+	$move->destroy;
+	$active_pane->refresh;
+	$inactive_pane->refresh;
 }
 
 sub rename_cb {

@@ -73,10 +73,8 @@ sub label2 {
 
 sub add_progressbar {
 	my ($self) = @_;
-
-	my $progressbar = Gtk2::ProgressBar->new();
+	my $progressbar = new Gtk2::ProgressBar;
 	$self->{dialog}->vbox->pack_start($progressbar,0,1,0);
-
 	return $progressbar;
 }
 

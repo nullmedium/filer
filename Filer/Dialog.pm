@@ -136,7 +136,7 @@ sub preview_file_selection {
 
 	$dialog->signal_connect("update-preview", sub {
 		my ($w,$preview) = @_;
-		my $filename = $w->get_preview_filename;		
+		my $filename = $w->get_preview_filename;
 
 		return if ((not defined $filename) or (-d $filename));
 

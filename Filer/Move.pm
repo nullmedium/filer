@@ -65,15 +65,16 @@ sub move {
 	my $dirname_source = dirname($source);
 	my $dirname_dest = dirname($dest);
 	my $basename_source = basename($source);
-	my $r;
+
+	return Filer::DirWalk::FAILED if ($source eq $dest);
 
 	if ($dirname_dest ne '.') {
-		$r = rename($source, Cwd::abs_path("$dest/$basename_source")) && return Filer::DirWalk::SUCCESS;
+		$dest = Cwd::abs_path("$dest/$basename_source");
 	} else {
-		$r = rename($source, Cwd::abs_path("$dirname_source/$dest")) && return Filer::DirWalk::SUCCESS;
+		$dest = Cwd::abs_path("$dirname_source/$dest");
 	}
 
-	if (!$r) {
+	if (!rename($source,$dest)) {
 		my $dirwalk = new Filer::DirWalk;
 
 		$dirwalk->onBeginWalk(sub {
@@ -87,8 +88,7 @@ sub move {
 		$dirwalk->onLink(sub {
 			my ($source) = @_;
 
-			my $target = readlink($source);
-			symlink($target, Cwd::abs_path("$dest/" . basename($source))) || return Filer::DirWalk::FAILED;
+			symlink(readlink($source), Cwd::abs_path("$dest/" . basename($source))) || return Filer::DirWalk::FAILED;
 
 			return Filer::DirWalk::SUCCESS;
 		});
@@ -98,7 +98,7 @@ sub move {
 
 			$dest = Cwd::abs_path("$dest/" . basename($dir));
 
-			if (! -e  $dest) {
+			if (! -e $dest) {
 				mkdir($dest) || return Filer::DirWalk::FAILED;
 			}
 
@@ -106,10 +106,7 @@ sub move {
 		});
 
 		$dirwalk->onDirLeave(sub {
-			my ($dir) = @_;
-
 			$dest = Cwd::abs_path("$dest/..");
-
 			return Filer::DirWalk::SUCCESS;
 		});
 
@@ -140,6 +137,8 @@ sub move {
 
 		return $dirwalk->walk($source);
 	}
+	
+	return Filer::DirWalk::SUCCESS;
 }
 
 *action = \&move;
