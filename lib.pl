@@ -465,95 +465,6 @@ sub search_cb {
 	new Filer::Search;
 }
 
-# sub copy_cb {
-# 	return if ($active_pane->count_selected_items == 0);
-# 
-# 	if ($active_pane->count_selected_items == 1) {
-# 		if ($config->get_option("ConfirmCopy") == 1) {
-# 			my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
-# 
-# 			$dialog->set_title("Copy");
-# 			$source_label->set_markup("<b>Copy: </b>");
-# 			$source_entry->set_text($active_pane->get_selected_item);
-# 			$dest_label->set_markup("<b>to: </b>");
-# 			$dest_entry->set_text($inactive_pane->get_pwd);
-# 
-# 			$dialog->show_all;
-# 
-# 			if ($dialog->run eq 'ok') {
-# 				my $source = $source_entry->get_text;
-# 				my $dest = $dest_entry->get_text;
-# 				$dialog->destroy;
-# 
-# 				return if ($source eq $dest);
-# 
-# 				my $copy = Filer::Copy->new;
-# 				$copy->set_total(&files_count);
-# 				$copy->show;
-# 
-# 				my $r = $copy->copy($source,$dest);
-# 
-# 				if ($r == Filer::DirWalk::FAILED) {
-# 					Filer::Dialog->msgbox_error("Copying of $source to $dest failed!");
-# 				} elsif ($r == Filer::DirWalk::ABORTED) {
-# 					Filer::Dialog->msgbox_info("Copying of $source to $dest aborted!");
-# 				}
-# 
-# 				$copy->destroy;
-# 
-# 				&refresh_cb;
-# 			}
-# 
-# 			$dialog->destroy;
-# 		} else {
-# 			my $source = $active_pane->get_selected_item;
-# 			my $dest = $inactive_pane->get_pwd;
-# 
-# 			return if ($source eq $dest);
-# 
-# 			my $copy = Filer::Copy->new;
-# 			$copy->set_total(&files_count);
-# 			$copy->show;
-# 
-# 			my $r = $copy->copy($source,$dest);
-# 
-# 			if ($r == Filer::DirWalk::FAILED) {
-# 				Filer::Dialog->msgbox_error("Copying of $source to $dest failed!");
-# 			} elsif ($r == Filer::DirWalk::ABORTED) {
-# 				Filer::Dialog->msgbox_info("Copying of $source to $dest aborted!");
-# 			}
-# 
-# 			$copy->destroy;
-# 		}
-# 	} else {
-# 		if ($config->get_option("ConfirmCopy") == 1) {
-# 			return if (Filer::Dialog->yesno_dialog("Copy selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
-# 		}
-# 
-# 		my $copy = Filer::Copy->new;
-# 		$copy->set_total(&files_count);
-# 		$copy->show;
-# 
-# 		foreach (@{$active_pane->get_selected_items}) {
-# 			last if ($_ eq $inactive_pane->get_pwd);
-# 
-# 			my $r = $copy->copy($_, $inactive_pane->get_pwd);
-# 
-# 			if ($r == Filer::DirWalk::FAILED) {
-# 				Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed!");
-# 				last;
-# 			} elsif ($r == Filer::DirWalk::ABORTED) {
-# 				Filer::Dialog->msgbox_info("Copying of $_ to " . $inactive_pane->get_pwd . " aborted!");
-# 				last;
-# 			}
-# 		}
-# 
-# 		$copy->destroy;
-# 	}
-# 
-# 	$inactive_pane->refresh;
-# }
-
 sub copy_cb {
 	return if ($active_pane->count_selected_items == 0);
 
@@ -581,9 +492,8 @@ sub copy_cb {
 	};
 
 	if ($active_pane->count_selected_items == 1) {
-		my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
-
 		if ($config->get_option("ConfirmCopy") == 1) {
+			my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
 
 			$dialog->set_title("Copy");
 			$source_label->set_markup("<b>Copy: </b>");
@@ -638,9 +548,8 @@ sub move_cb {
 	};
 
 	if ($active_pane->count_selected_items == 1) {
-		my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
-
 		if ($config->get_option("ConfirmMove") == 1) {
+			my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
 
 			$dialog->set_title("Move");
 			$source_label->set_markup("<b>Move: </b>");
