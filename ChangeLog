@@ -1,3 +1,17 @@
+2005-04-02 10:53:40  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/ChangeLog
+	   M /trunk/Filer/FilePane.pm
+	   M /trunk/Filer/FileTreePane.pm
+	   M /trunk/filer.pl
+	   M /trunk/lib.pl
+
+	* update version 0.0.10
+	* update changelog
+	* more checking of pre-conds in copy_cb, move_cb, rename_cb, delete_cb
+	* misc stuff
+
 2005-03-31 12:16:05  Jens Luedicke <jens.luedicke@gmail.com>
 
 	* Changed paths:
