@@ -156,15 +156,9 @@ sub set_commands {
 sub set_default_command {
 	my ($self,$type,$command) = @_;
 	my @commands = $self->get_commands($type);
-	my @new = ();
+	$commands[0] = $command;
 
-	for (0 .. $#commands) {
-		if ($commands[$_] ne $command) {
-			push @new, $commands[$_];
-		}
-	}
-
-	$self->set_commands($type, [ $command, @new ]);
+	$self->set_commands($type, [ @commands ]);
 }
 
 sub get_default_command {
