@@ -195,6 +195,8 @@ sub main_window {
 	&switch_mode;
 
 	$widgets->{item_factory}->get_item("/Options/Show Hidden Files")->set_active($config->get_option('ShowHiddenFiles'));
+
+	$pane->[RIGHT]->set_focus;
 }
 
 sub get_bookmarks_menu {
