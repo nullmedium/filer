@@ -65,46 +65,31 @@ sub onForEach {
 sub walk {
 	my ($self,$path) = @_;
 
-	if (&{$self->{onBeginWalk}}($path) != 1) {
-		return -1;
-	}
+	return -1 if (&{$self->{onBeginWalk}}($path) != 1);
 
 	if (-l $path) {
-		if (&{$self->{onLink}}($path) != 1) {
-			return -1;
-		}
+
+		return -1 if (&{$self->{onLink}}($path) != 1);
+
 	} elsif (-d $path) {
 
-		if (&{$self->{onDirEnter}}($path) != 1) {
-			return -1;
-		}
+		return -1 if (&{$self->{onDirEnter}}($path) != 1);
 
 		opendir(DIR, $path) || return 0;
 
 		foreach my $f (readdir(DIR)) {
-	
-			if ($f eq "." or $f eq "..") {
-				next;
-			}
+			next if ($f eq "." or $f eq "..");
 
-			if (&{$self->{onForEach}}("$path/$f") == 0) {
-				next;
-			}
+			return -1 if (&{$self->{onForEach}}("$path/$f") == 0);
 
-			if ($self->walk("$path/$f") != 1) {
-				return -1;
-			}
+			return -1 if ($self->walk("$path/$f") != 1);
 		}
 
 		closedir(DIR);
 
-		if (&{$self->{onDirLeave}}($path) != 1) {
-			return -1;
-		}
+		return -1 if (&{$self->{onDirLeave}}($path) != 1);
 	} else {
-		if (&{$self->{onFile}}($path) != 1) {
-			return -1;
-		}
+		return -1 if (&{$self->{onFile}}($path) != 1);
 	}
 
 	return 1;

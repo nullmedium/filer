@@ -641,34 +641,26 @@ sub rename_cb {
 	if ($dialog->run eq 'ok') {
 		my $old_name = $active_pane->get_selected_item;
 		my $new_name;
-
+		
 		if ($active_pane->get_type eq "LIST") {
-			$new_name = $active_pane->get_pwd . "/" . $entry->get_text;
-		} else {
-			$new_name = $old_name;
-			my $base_old = File::Basename::basename($old_name);
-			my $base_new = $entry->get_text;
+			$new_name = $active_pane->get_pwd;
 
-			$new_name =~ s/$base_old/$base_new/g;
+		} elsif ($active_pane->get_type eq "TREE") {
+
+			$new_name = Cwd::abs_path($active_pane->get_pwd . "/..");
 		}
 
-		my $r = rename($old_name, $new_name);
-		
-		if (!$r) {
+		$new_name .= "/" . $entry->get_text;
+
+		if (!rename($old_name, $new_name)) {
 			Filer::Dialog->msgbox_error("Rename failed: $!");
 		} else {
 			my $model = $active_pane->get_treeview->get_model;
 			my $iter = $active_pane->get_selected_iter;
 
 			$model->set($iter, 1, $entry->get_text);
-
-			if ($active_pane->get_type eq "TREE") {
-				$model->set($iter, 2, $new_name);
-				$active_pane->set_selected_item($new_name);				
-			} elsif ($active_pane->get_type eq "LIST") {
-				$model->set($iter, 9, $new_name);
-				$active_pane->set_selected_item($new_name);				
-			}
+			$model->set($iter, ($active_pane->get_type eq "TREE") ? 2 : 9, $new_name);
+			$active_pane->set_selected_item($new_name);				
 		}
 	}
 
