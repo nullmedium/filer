@@ -22,8 +22,9 @@ use warnings;
 sub new {
 	my ($class,$side) = @_;
 	my $self = bless {}, $class;
+	$self->{cfg_home} = File::BaseDir::xdg_config_home . "/filer";
 
-	if (! -e "$ENV{HOME}/.filer/bookmarks") {
+	if (! -e "$self->{cfg_home}/bookmarks") {
 		$self->store([]);
 	}
 
@@ -32,12 +33,12 @@ sub new {
 
 sub store {
 	my ($self,$bookmarks) = @_;
-	Storable::store($bookmarks, "$ENV{HOME}/.filer/bookmarks");
+	Storable::store($bookmarks, "$self->{cfg_home}/bookmarks");
 }
 
 sub get {
 	my ($self) = @_;
-	return Storable::retrieve("$ENV{HOME}/.filer/bookmarks");
+	return Storable::retrieve("$self->{cfg_home}/bookmarks");
 }
 
 sub get_bookmarks {

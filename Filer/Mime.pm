@@ -26,8 +26,9 @@ use constant MIME => 2;
 sub new {
 	my ($class,$side) = @_;
 	my $self = bless {}, $class;
+	$self->{cfg_home} = File::BaseDir::xdg_config_home . "/filer";
 
-	if (! -e "$ENV{HOME}/.filer/mime") {
+	if (! -e "$self->{cfg_home}/mime") {
 		my $mime = {
 			'default'				=> [ "$main::libpath/icons/default.png",			[] ],
 			'application/ogg'			=> [ "$main::libpath/icons/mimetypes/audio.png",		[] ],
@@ -65,12 +66,12 @@ sub new {
 
 sub store {
 	my ($self,$mime) = @_;
-	Storable::store($mime,"$ENV{HOME}/.filer/mime");
+	Storable::store($mime,"$self->{cfg_home}/mime");
 }
 
 sub get {
 	my ($self) = @_;
-	return Storable::retrieve("$ENV{HOME}/.filer/mime");
+	return Storable::retrieve("$self->{cfg_home}/mime");
 }
 
 sub get_mimetypes {

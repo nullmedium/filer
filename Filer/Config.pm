@@ -22,12 +22,19 @@ use warnings;
 sub new {
 	my ($class,$side) = @_;
 	my $self = bless {}, $class;
+	$self->{cfg_home} = File::BaseDir::xdg_config_home . "/filer";
 
-	if (! -e "$ENV{HOME}/.filer/") {
-		mkdir("$ENV{HOME}/.filer/");
+	# move old config directory if it exists:
+	if (-e "$ENV{HOME}/.filer/") {
+		print "moving old config directory to new location ...\n";
+		rename("$ENV{HOME}/.filer", $self->{cfg_home});
 	}
 
-	if (! -e "$ENV{HOME}/.filer/config") {
+	if (! -e $self->{cfg_home}) {
+		mkdir($self->{cfg_home});
+	}
+
+	if (! -e "$self->{cfg_home}/config") {
 		my $cfg = {
 			PathLeft		=> $ENV{HOME},
 			PathRight		=> $ENV{HOME},
@@ -47,12 +54,12 @@ sub new {
 
 sub store {
 	my ($self,$config) = @_;
-	Storable::store($config, "$ENV{HOME}/.filer/config");
+	Storable::store($config, "$self->{cfg_home}/config");
 }
 
 sub get {
 	my ($self) = @_;
-	return Storable::retrieve("$ENV{HOME}/.filer/config");
+	return Storable::retrieve("$self->{cfg_home}/config");
 }
 
 sub set_option {
