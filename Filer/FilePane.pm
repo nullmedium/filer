@@ -228,6 +228,9 @@ sub selection_changed_cb {
 		$main::widgets->{statusbar}->push(1, "$c files selected");
 	}
 
+# 	my $clipboard = Gtk2::Clipboard->get_for_display(Gtk2::Gdk::Display->get_default, undef);
+# 	$clipboard->set_text(join("", map { "file://$_\n" } @{$self->get_selected_items}) . pack("x", 1));
+
 	return 1;
 }
 
@@ -371,6 +374,7 @@ sub open_file {
 		if (defined $mime->get_default_command($type)) {
 			my $command = $mime->get_default_command($type);
 			system("$command '$filepath' & exit ");
+
 		} else {
 			if ($type eq 'application/x-compressed-tar') {
 
@@ -407,7 +411,7 @@ sub open_file_with {
 	my ($self) = @_;
 	my ($dialog,$table,$label,$button,$type_label,$cmd_browse_button,$remember_checkbutton,$run_terminal_checkbutton,$command_combo);
 
-	return 0 if ((not defined $self->[SELECTED_ITEM]) or (not -R $self->[SELECTED_ITEM]) or (-l $self->[SELECTED_ITEM]) or (-d $self->[SELECTED_ITEM]));
+	return 0 if ((not defined $self->[SELECTED_ITEM]) or (not -R $self->[SELECTED_ITEM]) or (-l $self->[SELECTED_ITEM]));
 
 	my $mime = new Filer::Mime;
 	my $type = File::MimeInfo::Magic::mimetype($self->[SELECTED_ITEM]);
@@ -508,6 +512,8 @@ sub open_terminal {
 
 sub open_path {
 	my ($self,$filepath) = @_;
+
+	print "open path: $filepath\n";
 
 	if (! -e $filepath) {
 		$filepath = $ENV{HOME};

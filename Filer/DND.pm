@@ -56,10 +56,16 @@ sub drag_data_received_cb {
 		}
 
 		if ($action eq "copy") {
-			return if (Filer::Dialog->yesno_dialog("Copy selected files to $path?") eq 'no');
+			if ($main::config->get_option("ConfirmCopy") == 1) {
+				return if (Filer::Dialog->yesno_dialog("Copy selected files to $path?") eq 'no');
+			}
+
 			$do = Filer::Copy->new;
 		} elsif ($action eq "move") {
-			return if (Filer::Dialog->yesno_dialog("Move selected files to $path?") eq 'no');
+			if ($main::config->get_option("ConfirmMove") == 1) {
+				return if (Filer::Dialog->yesno_dialog("Move selected files to $path?") eq 'no');
+			}
+
 			$do = Filer::Move->new;
 		}
 

@@ -32,7 +32,10 @@ sub new {
 			PathLeft		=> $ENV{HOME},
 			PathRight		=> $ENV{HOME},
 			ShowHiddenFiles 	=> 1,
-			Mode			=> 0
+			Mode			=> 0,
+			ConfirmCopy		=> 1,
+			ConfirmMove		=> 1,
+			ConfirmDelete		=> 1,
 		};
 
 		$self->store($cfg);

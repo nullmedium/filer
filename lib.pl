@@ -89,6 +89,9 @@ sub main_window {
 	{ path => '/_Options/Mode/MS Explorer Style',					callback => \&explorer_cb,	item_type => '<RadioItem>'},
 	{ path => '/_Options/sep',											item_type => '<Separator>'},
 	{ path => '/_Options/Show Hidden Files',	accelerator => '<control>H',	callback => \&hidden_cb,	item_type => '<CheckItem>'},
+	{ path => '/_Options/Ask confirmation for/Copying',				callback => \&ask_copy_cb,	item_type => '<CheckItem>'},
+	{ path => '/_Options/Ask confirmation for/Moving',				callback => \&ask_move_cb,	item_type => '<CheckItem>'},
+	{ path => '/_Options/Ask confirmation for/Deleting',				callback => \&ask_delete_cb,	item_type => '<CheckItem>'},
 	{ path => '/_Options/sep',											item_type => '<Separator>'},
 	{ path => '/_Options/File Associations',					callback => \&file_ass_cb,	item_type => '<Item>'},
 	{ path => '/_Help',												item_type => '<LastBranch>'},
@@ -195,6 +198,9 @@ sub main_window {
 	&switch_mode;
 
 	$widgets->{item_factory}->get_item("/Options/Show Hidden Files")->set_active($config->get_option('ShowHiddenFiles'));
+	$widgets->{item_factory}->get_item("/Options/Ask confirmation for/Copying")->set_active($config->get_option('ConfirmCopy'));
+	$widgets->{item_factory}->get_item("/Options/Ask confirmation for/Moving")->set_active($config->get_option('ConfirmMove'));
+	$widgets->{item_factory}->get_item("/Options/Ask confirmation for/Deleting")->set_active($config->get_option('ConfirmDelete'));
 
 	$pane->[RIGHT]->set_focus;
 }
@@ -342,6 +348,18 @@ sub hidden_cb {
 	return 1;
 }
 
+sub ask_copy_cb {
+	$config->set_option('ConfirmCopy', ($_[2]->get_active) ? 1 : 0);
+}
+
+sub ask_move_cb {
+	$config->set_option('ConfirmMove', ($_[2]->get_active) ? 1 : 0);
+}
+
+sub ask_delete_cb {
+	$config->set_option('ConfirmDelete', ($_[2]->get_active) ? 1 : 0);
+}
+
 sub file_ass_cb {
 	Filer::Mime->file_association_dialog;
 }
@@ -478,7 +496,9 @@ sub copy_cb {
 
 		$dialog->destroy;
 	} else {
-		return if (Filer::Dialog->yesno_dialog("Copy selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
+		if ($config->get_option("ConfirmCopy") == 1) {
+			return if (Filer::Dialog->yesno_dialog("Copy selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
+		}
 
 		my $copy = Filer::Copy->new;
 		$copy->set_total(&files_count);
@@ -547,7 +567,9 @@ sub move_cb {
 
 		$dialog->destroy;
 	} else {
-		return if (Filer::Dialog->yesno_dialog("Move selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
+		if ($config->get_option("ConfirmMove") == 1) {
+			return if (Filer::Dialog->yesno_dialog("Move selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
+		}
 
 		&{$f}($active_pane->get_selected_items, $inactive_pane->get_pwd);
 	}
@@ -594,8 +616,11 @@ sub rename_cb {
 }
 
 sub delete_cb {
-	return if (($active_pane->count_selected_items == 0)
-		 or (Filer::Dialog->yesno_dialog("Delete selected files?") eq 'no'));
+	return if ($active_pane->count_selected_items == 0);
+	
+	if ($config->get_option("ConfirmDelete") == 1) {
+		return if (Filer::Dialog->yesno_dialog("Delete selected files?") eq 'no');
+	}
 
 	my $delete = Filer::Delete->new;
 	$delete->set_total(&files_count);

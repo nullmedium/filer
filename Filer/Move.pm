@@ -104,7 +104,13 @@ sub move {
 		});
 
 		$dirwalk->onDirLeave(sub {
+			my ($dir) = @_;
 			$dest = Cwd::abs_path("$dest/..");
+
+			if (!rmdir($dir)) {
+				return Filer::DirWalk::FAILED;
+			}
+
 			return Filer::DirWalk::SUCCESS;
 		});
 
