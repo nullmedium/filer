@@ -1,10 +1,65 @@
+2005-03-29 21:20:41  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/Filer/FilePane.pm
+	   M /trunk/lib.pl
+
+	* display the location bar below the toolbar in explorer mode.
+	* requires some reparenting and two additional parent widgets
+	* to hold the location bar widgets.
+
+2005-03-25 20:42:39  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/Filer/DirWalk.pm
+
+	* argh!!
+
+2005-03-25 20:36:17  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/Filer/DirWalk.pm
+	   M /trunk/lib.pl
+
+	* be more verbose about errors
+	* fix a misplaced parentheses. caused some big confusion.
+
+2005-03-25 18:47:42  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/Filer/Delete.pm
+	   M /trunk/lib.pl
+
+	* add a Home button the the toolbar
+
+2005-03-24 20:58:25  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/lib.pl
+
+	* small tweak
+	* remove old copy_cb() function
+
+2005-03-24 20:54:13  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/ChangeLog
+	   M /trunk/Filer/Config.pm
+	   M /trunk/Filer/Delete.pm
+	   M /trunk/Filer/FilePane.pm
+	   M /trunk/Filer/Move.pm
+	   M /trunk/README
+	   M /trunk/lib.pl
+
+	* larger update
+
 2005-03-23 16:19:38  Jens Luedicke <jens.luedicke@gmail.com>
 
 	* Changed paths:
 	   M /trunk/Filer/FilePane.pm
 	   A /trunk/README
 
-	* add README file
+	* * add README file
 
 2005-03-23 15:16:37  Jens Luedicke <jens.luedicke@gmail.com>
 
@@ -15,9 +70,9 @@
 	   M /trunk/Filer/Move.pm
 	   M /trunk/lib.pl
 
-	* lib.pl, Filer/Config.pm, Filer/DND.pm: add options to turn off confirmation dialogs
-	* Filer/Move.pm: small fix.
-	* Filer/FilePane.pm: copy selected files to clipboard
+	* * lib.pl, Filer/Config.pm, Filer/DND.pm: add options to turn off confirmation dialogs
+	* * Filer/Move.pm: small fix.
+	* * Filer/FilePane.pm: copy selected files to clipboard
 
 2005-03-22 18:17:45  Jens Luedicke <jens.luedicke@gmail.com>
 
@@ -39,8 +94,8 @@
 	   M /trunk/Filer/Move.pm
 	   M /trunk/lib.pl
 
-	* lib.pl: inline function for moving files
-	* Filer/Move.pm: fix
+	* * lib.pl: inline function for moving files
+	* * Filer/Move.pm: fix
 
 2005-03-20 17:26:26  Jens Luedicke <jens.luedicke@gmail.com>
 
@@ -72,12 +127,12 @@
 	   M /trunk/Filer/ProgressDialog.pm
 	   M /trunk/lib.pl
 
-	* several changes to progress dialogs / progress indication.
-	* display amount of files copied inside progressbar
-	* display written bytes/second in file copy progressbar
+	* * several changes to progress dialogs / progress indication.
+	* * display amount of files copied inside progressbar
+	* * display written bytes/second in file copy progressbar
 	  use timeout to calculate written bytes
-	* use pango ellipsize to display filenames within the progressdialog
-	* cleanups
+	* * use pango ellipsize to display filenames within the progressdialog
+	* * cleanups
 
 2005-03-15 22:12:12  Jens Luedicke <jens.luedicke@gmail.com>
 

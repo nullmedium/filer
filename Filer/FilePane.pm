@@ -72,6 +72,12 @@ sub new {
 			$self->open_file($self->[PATH_ENTRY]->get_text);
 		}
 	});
+
+	$self->[PATH_ENTRY]->drag_source_set(['button1_mask', 'button3_mask'], ['copy', 'move'], &Filer::DND::target_table);
+	$self->[PATH_ENTRY]->drag_dest_set('all', ['copy', 'move'], &Filer::DND::target_table);
+	$self->[PATH_ENTRY]->signal_connect("drag_data_get", \&Filer::DND::filepane_path_entry_drag_data_get_cb, $self);
+	$self->[PATH_ENTRY]->signal_connect("drag_data_received", \&Filer::DND::filepane_path_entry_drag_data_received_cb, $self);
+
 	$self->[HBOX]->pack_start($self->[PATH_ENTRY], 1, 1, 0);
 
 	$button = new Gtk2::Button("Go");
@@ -97,8 +103,8 @@ sub new {
 	# Drag and Drop
 	$self->[TREEVIEW]->drag_source_set(['button1_mask', 'button3_mask'], ['copy', 'move'], &Filer::DND::target_table);
 	$self->[TREEVIEW]->drag_dest_set('all', ['copy', 'move'], &Filer::DND::target_table);
-	$self->[TREEVIEW]->signal_connect("drag_data_get", \&Filer::DND::drag_data_get_cb, $self);
-	$self->[TREEVIEW]->signal_connect("drag_data_received", \&Filer::DND::drag_data_received_cb, $self);
+	$self->[TREEVIEW]->signal_connect("drag_data_get", \&Filer::DND::filepane_treeview_drag_data_get_cb, $self);
+	$self->[TREEVIEW]->signal_connect("drag_data_received", \&Filer::DND::filepane_treeview_drag_data_received_cb, $self);
 
 	$self->[TREESELECTION] = $self->[TREEVIEW]->get_selection;
 	$self->[TREESELECTION]->set_mode("multiple");

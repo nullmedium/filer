@@ -25,7 +25,33 @@ sub target_table {
 	return ({'target' => "text/uri-list", 'flags' => [], 'info' => TARGET_URI_LIST});
 }
 
-sub drag_data_get_cb {
+sub filepane_path_entry_drag_data_get_cb {
+	my ($widget,$context,$data,$info,$time,$self) = @_;
+
+	if ($info == TARGET_URI_LIST) {
+		my $d = $widget->get_text . "\r\n";
+		$data->set($data->target, 8, $d);
+	}
+}
+
+sub filepane_path_entry_drag_data_received_cb {
+	my ($widget,$context,$x,$y,$data,$info,$time,$self) = @_;
+
+	if (($data->length >= 0) && ($data->format == 8)) {
+		# get first item from uri-list and remove file:// prefix
+
+		my @d = split /\r\n/, $data->data;
+		$d[0] =~ s/file:\/\///g;
+
+		$self->open_file($d[0]);
+		$context->finish (1, 0, $time);
+		return;
+	}
+
+ 	$context->finish (0, 0, $time);
+}
+
+sub filepane_treeview_drag_data_get_cb {
 	my ($widget,$context,$data,$info,$time,$self) = @_;
 
 	if ($info == TARGET_URI_LIST) {
@@ -36,7 +62,7 @@ sub drag_data_get_cb {
 	}
 }
 
-sub drag_data_received_cb {
+sub filepane_treeview_drag_data_received_cb {
 	my ($widget,$context,$x,$y,$data,$info,$time,$self) = @_;
 
 	if (($data->length >= 0) && ($data->format == 8)) {
@@ -73,6 +99,8 @@ sub drag_data_received_cb {
 		$do->show;
 
 		for (split /\r\n/, $data->data) {
+			$_ =~ s/file:\/\///g;
+
 			last if ($_ eq $path);
 
 			my $r = $do->action($_, $path);
