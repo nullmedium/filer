@@ -35,9 +35,6 @@ use constant ARCHIVES		=> 10;
 use constant MIMEICONS		=> 11;
 use constant FOLDER_STATUS	=> 12;
 
-use constant PATH_BUTTONBOX	=> 13;
-use constant PATH_BUTTONS	=> 14;
-
 use constant FILEPATH_OLD	=> 16;
 
 Memoize::memoize("calculate_size");
@@ -59,25 +56,24 @@ sub new {
 	$hbox = new Gtk2::HBox(0,0);
 	$self->[VBOX]->pack_start($hbox, 0, 1, 0);
 
-	$self->[PATH_BUTTONBOX] = new Gtk2::HButtonBox;
-	$self->[PATH_BUTTONBOX]->set_layout_default('GTK_BUTTONBOX_START');
-	$self->[PATH_BUTTONBOX]->set_homogeneous(0);
-	$self->[VBOX]->pack_start($self->[PATH_BUTTONBOX], 0, 0, 0);
-	$self->[PATH_BUTTONBOX]->show;
-
-	$self->[PATH_BUTTONS] = [];
+# 	$button = new Gtk2::Button("Up");
+# 	$button->signal_connect("clicked", sub { 
+# 		$self->open_path(Cwd::abs_path($self->[FILEPATH] . "/..")); 
+# 	});
+# 	$hbox->pack_start($button, 0, 1, 0);
 
 	$self->[PATH_ENTRY] = new Gtk2::Entry;
 	$self->[PATH_ENTRY]->signal_connect('key-press-event', sub {
-		my ($w,$e) = @_;
-		if ($e->keyval == $Gtk2::Gdk::Keysyms{'Return'}) {
+		if ($_[1]->keyval == $Gtk2::Gdk::Keysyms{'Return'}) {
 			$self->open_file($self->[PATH_ENTRY]->get_text);
 		}
 	});
 	$hbox->pack_start($self->[PATH_ENTRY], 1, 1, 0);
 
 	$button = new Gtk2::Button("Go");
-	$button->signal_connect("clicked", sub { $self->open_file($self->[PATH_ENTRY]->get_text) });
+	$button->signal_connect("clicked", sub { 
+		$self->open_file($self->[PATH_ENTRY]->get_text) 
+	});
 	$hbox->pack_start($button, 0, 1, 0);
 
 	$scrolled_window = new Gtk2::ScrolledWindow;
@@ -124,12 +120,9 @@ sub new {
 	$i = 2;
 	foreach (qw(Type Size Date Owner Group Mode Link)) {
 		$cell = new Gtk2::CellRendererText;
-		$col = Gtk2::TreeViewColumn->new_with_attributes($_, $cell, text => $i);
+		$col = Gtk2::TreeViewColumn->new_with_attributes($_, $cell, text => $i++);
 		$col->set_resizable(1);
-#		$col->set_sort_column_id($i);
-
 		$self->[TREEVIEW]->append_column($col);
-		++$i;
 	}
 
 	$self->init_icons;
@@ -352,16 +345,14 @@ sub remove_selected {
 	my ($self) = @_;
 
 	foreach (@{$self->get_selected_iters}) {
-		if (! -e $self->[TREEMODEL]->get($_, 9)) {
-			$self->[TREEMODEL]->remove($_);
-		}
+		$self->[TREEMODEL]->remove($_) if (! -e $self->[TREEMODEL]->get($_, 9));
 	}
 }
 
 sub open_file {
 	my ($self,$filepath) = @_;
 
-	return 0 if ((not defined $filepath) || (not -R $filepath));
+	return 0 if ((not defined $filepath) or (not -R $filepath));
 
 	if (-d $filepath) {
 		if (defined $self->[ARCHIVES]->{$filepath}) {
@@ -416,7 +407,7 @@ sub open_file_with {
 	my ($self) = @_;
 	my ($dialog,$table,$label,$button,$type_label,$cmd_browse_button,$remember_checkbutton,$run_terminal_checkbutton,$command_combo);
 
-	return 0 if ((not defined $self->[SELECTED_ITEM]) || (not -R $self->[SELECTED_ITEM]) || (-l $self->[SELECTED_ITEM]) || (-d $self->[SELECTED_ITEM]));
+	return 0 if ((not defined $self->[SELECTED_ITEM]) or (not -R $self->[SELECTED_ITEM]) or (-l $self->[SELECTED_ITEM]) or (-d $self->[SELECTED_ITEM]));
 
 	my $mime = new Filer::Mime;
 	my $type = File::MimeInfo::Magic::mimetype($self->[SELECTED_ITEM]);
@@ -461,8 +452,7 @@ sub open_file_with {
 		$fs->set_filename($command_combo->entry->get_text);
 
 		if ($fs->run eq 'ok') {
-			my $file = $fs->get_filename;
-			$command_combo->entry->set_text($file);
+			$command_combo->entry->set_text($fs->get_filename);
 		}
 
 		$fs->destroy;
@@ -523,10 +513,11 @@ sub open_path {
 		$filepath = $ENV{HOME};
 	}
 
-	opendir (DIR, $filepath) || return Filer::Dialog->msgbox_error("$filepath: $!");
+	opendir (DIR, $filepath) or return Filer::Dialog->msgbox_error("$filepath: $!");
 	my @dir_contents = sort readdir(DIR);
 	closedir(DIR);
 
+#	@dir_contents = @dir_contents[2 .. $#dir_contents];
 	@dir_contents = @dir_contents[(($filepath eq "/") ? 2 : 1) .. $#dir_contents];
 
 	delete $self->[SELECTED_ITEM];
@@ -618,9 +609,7 @@ sub set_mime_icon {
 
 sub set_properties {
 	my ($self) = @_;
-
 	Filer::Properties->set_properties_dialog($self->[SELECTED_ITEM]);
-
 	$self->refresh;
 }
 
@@ -637,28 +626,22 @@ sub get_temp_archive_dir {
 
 sub create_tar_gz_archive {
 	my ($self) = @_;
-
 	my $archive = Filer::Archive->new($self->[SELECTED_ITEM]);
 	$archive->create_tar_gz_archive;
-
 	$self->refresh;
 }
 
 sub create_tar_bz2_archive {
 	my ($self) = @_;
-
 	my $archive = Filer::Archive->new($self->[SELECTED_ITEM]);
 	$archive->create_tar_bz2_archive;
-
 	$self->refresh;
 }
 
 sub extract_archive {
 	my ($self) = @_;
-
 	my $archive = Filer::Archive->new($self->[SELECTED_ITEM]);
 	$archive->extract_archive;
-
 	$self->refresh;
 }
 

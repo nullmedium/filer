@@ -21,12 +21,19 @@ use warnings;
 
 use Fcntl;
 
+use constant PROGRESSBAR => 0;
+use constant STOPPED => 1;
+
+use constant STOP => 0;
+
 sub new {
 	my ($class,$progressbar,$stop_ref) = @_;
-	my $self = bless {}, $class;
+	my $self = bless [], $class;
 
-	$self->{progressbar} = $progressbar;
-	$self->{stopped} = $stop_ref;
+	$self->[PROGRESSBAR] = $progressbar;
+	$self->[STOPPED] = $stop_ref;
+
+	$self->[PROGRESSBAR]->set_text(" ");
 
 	return $self;
 }
@@ -39,6 +46,16 @@ sub filecopy {
 	my $buf;
 	my $buf_size = (stat $source)[11] || return Filer::DirWalk::FAILED; # use filesystem blocksize
 	my $written = 0;
+	my $written_avg = 0;
+
+	my $id = Glib::Timeout->add(1000, sub {
+		return 0 if ($written_avg == 0);
+
+		$self->[PROGRESSBAR]->set_text(&Filer::FilePane::calculate_size($written_avg) . "/s");
+		$written_avg = 0;
+
+		return 1;
+	});
 
 	sysopen(SOURCE, $source, O_RDONLY) || return Filer::DirWalk::FAILED;
 	sysopen(DEST, $dest, O_CREAT|O_WRONLY) || return Filer::DirWalk::FAILED;
@@ -46,22 +63,17 @@ sub filecopy {
 	while (sysread(SOURCE, $buf, $buf_size)) {
 		syswrite DEST, $buf, $buf_size;
 
-		return Filer::DirWalk::ABORTED  if (!${$self->{stopped}});
+		return Filer::DirWalk::ABORTED if (${$self->[STOPPED]} == STOP);
 
-		my $c = $written + $buf_size;
+		my $l = length($buf);
+		$written += $l;
+		$written_avg += $l;
 
-		if ($c < $size) {
-
-			$written = $c;
-
-		} elsif ($c > $size) {
-
-			$written += ($size % $buf_size);
-		}
-
-		$self->{progressbar}->set_fraction($written/$size);
+		$self->[PROGRESSBAR]->set_fraction($written/$size);
 		while (Gtk2->events_pending) { Gtk2->main_iteration; }
 	}
+
+	Glib::Source->remove($id);
 
 	close(SOURCE);
 	close(DEST);

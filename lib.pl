@@ -94,7 +94,7 @@ sub main_window {
 	{ path => '/_Help',												item_type => '<LastBranch>'},
 	{ path => '/_Help/About',							callback => \&about_cb,		item_type => '<Item>'},
 	);
-
+	
 	$window = new Gtk2::Window('toplevel');
 	$window->set_title("Filer $VERSION");
 	$window->resize(800,600);
@@ -461,7 +461,7 @@ sub copy_cb {
 			$copy->set_total(&files_count);
 			$copy->show;
 			
-			my $r = $copy->copy($source, $dest);
+			my $r = $copy->copy($source,$dest);
 
 			if ($r == Filer::DirWalk::FAILED) {
 				Filer::Dialog->msgbox_error("Copying of $source to $dest failed!");
@@ -730,6 +730,21 @@ sub symlink_cb {
 sub files_count {
 	my $c = 0;
 	my $dirwalk = new Filer::DirWalk;
+
+	my $dialog = new Filer::ProgressDialog;
+	$dialog->dialog->set_title("Please wait ...");
+	$dialog->label1->set_markup("<b>Please wait ...</b>");
+
+	my $progressbar = $dialog->add_progressbar;
+
+	$dialog->show;
+
+	my $id = Glib::Timeout->add(50, sub {
+		$progressbar->pulse;
+		while (Gtk2->events_pending) { Gtk2->main_iteration }
+		return 1;
+	});
+
 	$dirwalk->onFile(sub {
 		++$c;
 		while (Gtk2->events_pending) { Gtk2->main_iteration }
@@ -739,6 +754,10 @@ sub files_count {
 	foreach (@{$active_pane->get_selected_items}) {
 		$dirwalk->walk($_);
 	}
+
+	Glib::Source->remove($id);
+
+	$dialog->destroy;
 
 	return $c;
 }
