@@ -68,7 +68,7 @@ sub new {
 	$self->{dirwalk}->onFile(sub {
 		my ($source) = @_;
 
-		$self->{progress_label}->set_text("$source");
+		$self->{progress_label}->set_text($source);
 		$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
 		while (Gtk2->events_pending) { Gtk2->main_iteration; }
 

@@ -121,6 +121,7 @@ sub main_window {
 	$toolbar = new Gtk2::Toolbar;
 	$toolbar->set_style('text');
 	$toolbar->append_item('Open Terminal', 'Open Terminal', undef, undef, \&open_terminal_cb);
+	$toolbar->append_item('Home', 'Home', undef, undef, \&go_home_cb);
 	$widgets->{sync_button} = $toolbar->append_item('Synchronize', 'Synchronize', undef, undef, \&synchronize_cb);
 
 	$widgets->{vbox}->pack_start($toolbar, 0, 0, 0);
@@ -377,6 +378,10 @@ sub refresh_cb {
 	$pane->[LEFT]->refresh;
 	$pane->[RIGHT]->refresh;
 	return 1;
+}
+
+sub go_home_cb {
+	$active_pane->open_path($ENV{HOME});
 }
 
 sub synchronize_cb {
