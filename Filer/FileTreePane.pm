@@ -342,7 +342,6 @@ sub open_path {
 sub DirRead {
 	my ($self,$dir,$parent_iter) = @_;
 	my $show_hidden = $main::config->get_option('ShowHiddenFiles');
-	my $mypixbuf;
 
 	opendir (DIR, $dir) || return Filer::Dialog->msgbox_error("$dir: $!");
 	my @dir_contents = sort readdir(DIR);
@@ -357,7 +356,6 @@ sub DirRead {
 	}
 
 	foreach my $file (@dirs) {
-
 		my $iter = $self->[TREEMODEL]->append($parent_iter);
 
 		$self->[TREEMODEL]->set(

@@ -363,12 +363,11 @@ sub file_association_dialog {
 
 	$button = Gtk2::Button->new("Edit");
 	$button->signal_connect("clicked", sub {
-		my $fs = new Gtk2::FileSelection("Select Command");
+		my $fs = new Gtk2::FileChooserDialog("Select Command", undef, 'GTK_FILE_CHOOSER_ACTION_OPEN', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
 		$fs->set_filename($command);
 
 		if ($fs->run eq 'ok') {
 			my $command = $fs->get_filename;
-
 			$commands_model->set($command_iter, 0, $command);
 		}
 
@@ -380,11 +379,10 @@ sub file_association_dialog {
 
 	$button = Gtk2::Button->new_from_stock('gtk-add');
 	$button->signal_connect("clicked", sub {
-		my $fs = new Gtk2::FileSelection("Select Command");
+		my $fs = new Gtk2::FileChooserDialog("Select Command", undef, 'GTK_FILE_CHOOSER_ACTION_OPEN', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
 
 		if ($fs->run eq 'ok') {
 			my $command = $fs->get_filename;
-
 			my $iter = $commands_model->append;
 			$commands_model->set($iter, 0, $command);
 		}

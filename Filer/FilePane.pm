@@ -252,14 +252,13 @@ sub show_popup_menu {
 
 sub selection_changed_cb {
 	my ($selection,$self) = @_;
+	my $c = $selection->count_selected_rows; 
 
-	if ($selection->count_selected_rows > 0) {
- 		$self->[SELECTED_ITER] = $self->get_selected_iters->[0];
- 		$self->[SELECTED_ITEM] = $self->get_selected_items->[0];
-	}
-
-	if ($selection->count_selected_rows > 1) {
-		$main::widgets->{statusbar}->push(1, $selection->count_selected_rows . " files selected");
+	$self->[SELECTED_ITER] = $self->get_selected_iters->[0];
+	$self->[SELECTED_ITEM] = $self->get_selected_items->[0];
+	
+	if ($c > 1) {
+		$main::widgets->{statusbar}->push(1, "$c files selected");
 	}
 
 	return 1;
@@ -289,16 +288,7 @@ sub treeview_event_cb {
 
 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Return'})
 	 or ($e->type eq "2button-press" and $e->button == 1)) {
-		my $b = File::Basename::basename($self->[SELECTED_ITEM]);
-
-		print "$b\n";
-
-		if (defined $self->[ARCHIVES]->{"$b/.."}) {
-			$self->open_file($self->[ARCHIVES]->{"$b/.."});
-		} else {
-			$self->open_file($self->[SELECTED_ITEM]);
-		}
-
+		$self->open_file($self->[SELECTED_ITEM]);
 		return 1;
 	}
 
@@ -315,7 +305,6 @@ sub treeview_event_cb {
 sub init_icons {
 	my ($self) = @_;
 	my $mime = new Filer::Mime;
-
 	$self->[MIMEICONS] = $mime->get_icons;
 }
 
@@ -341,15 +330,7 @@ sub get_pwd {
 
 sub get_path {
 	my ($self,$file) = @_;
-	my $path = $self->[FILEPATH] . "/$file";
-
-	if (-l $path) {
-		return $path;
-	} elsif (defined $self->[ARCHIVES]->{$path}) {
-		return $self->[ARCHIVES]->{$path};
-	} else {
-		return Cwd::abs_path($path);
-	}
+	return Cwd::abs_path($self->[FILEPATH] . "/$file");
 }
 
 sub get_selected_item {
@@ -384,7 +365,7 @@ sub get_path_by_treepath {
 
 sub count_selected_items {
 	my ($self) = @_;
-	return $self->[TREEVIEW]->get_selection->count_selected_rows;
+	return $self->[TREESELECTION]->count_selected_rows;
 }
 
 sub refresh {
@@ -397,51 +378,11 @@ sub remove_selected {
 	my ($self) = @_;
 
 	foreach (@{$self->get_selected_iters}) {
-		my $file = $self->[TREEMODEL]->get($_, 9);
-
-		if (! -e $file) {
+		if (! -e $self->[TREEMODEL]->get($_, 9)) {
 			$self->[TREEMODEL]->remove($_);
 		}
 	}
 }
-
-# sub update_history {
-# 	my ($self) = @_;
-# 	my @items = split /\//, $self->[FILEPATH];
-# 	my $path = "";
-# 	my $c = 0;
-#
-# 	$items[0] = "/";
-#
-# 	if (length($self->[FILEPATH]) != length($self->[FILEPATH_OLD])) {
-# 		foreach my $b (@{$self->[PATH_BUTTONS]}) {
-# 			$b->destroy;
-# 		}
-# 	}
-#
-# 	foreach my $p (@items) {
-# 		$path = Cwd::abs_path("$path/$p");
-#
-# 		if ($path eq $self->[FILEPATH]) {
-# 			$self->[PATH_BUTTONS]->[$c] = new Gtk2::ToggleButton("$p");
-# 			$self->[PATH_BUTTONS]->[$c]->set_active(1);
-# 		} else {
-# 			$self->[PATH_BUTTONS]->[$c] = new Gtk2::Button("$p");
-# 		}
-#
-# 		$self->[PATH_BUTTONS]->[$c]->signal_connect("clicked", sub {
-# 			my ($w,$p) = @_;
-#
-# 			$self->[FILEPATH_OLD] = $self->[FILEPATH];
-#
-# 			$self->open_path($p);
-# 		}, $path);
-#
-# 		$self->[PATH_BUTTONBOX]->pack_start($self->[PATH_BUTTONS]->[$c], 0, 1, 0);
-# 		$self->[PATH_BUTTONS]->[$c]->show;
-# 		$c++;
-# 	}
-# }
 
 sub open_file {
 	my ($self,$filepath) = @_;
@@ -449,15 +390,11 @@ sub open_file {
 	return 0 if ((not defined $filepath) || (not -R $filepath));
 
 	if (-d $filepath) {
-
-#		$self->open_path($filepath);
-
-		if (defined $self->[ARCHIVES]->{"$filepath/.."}) {
-			$self->open_path($self->[ARCHIVES]->{"$filepath/.."});
+		if (defined $self->[ARCHIVES]->{$filepath}) {
+			$self->open_path($self->[ARCHIVES]->{$filepath});
 		} else {
 			$self->open_path($filepath);
 		}
-
 	} elsif (-x $filepath) {
 
 		system("$filepath & exit");
@@ -468,42 +405,30 @@ sub open_file {
 
 		if (defined $mime->get_default_command($type)) {
 			my $command = $mime->get_default_command($type);
-			system("$command '$filepath' & exit");
+			system("$command '$filepath' & exit ");
 		} else {
 			if ($type eq 'application/x-compressed-tar') {
 
-				my $dir = File::Temp::tempdir(CLEANUP => 1);
-				$self->[ARCHIVES]->{"$dir/.."} = $self->[FILEPATH];
-
+				my $dir = $self->get_temp_archive_dir(); 
 				system("cd $dir && tar -xzf '$filepath'");
-
 				$self->open_path($dir);
 
 			} elsif ($type eq 'application/x-bzip-compressed-tar') {
 
-				my $dir = File::Temp::tempdir(CLEANUP => 1);
-				$self->[ARCHIVES]->{"$dir/.."} = $self->[FILEPATH];
-
+				my $dir = $self->get_temp_archive_dir(); 
 				system("cd $dir && tar -xjf '$filepath'");
-
 				$self->open_path($dir);
 
 			} elsif ($type eq 'application/x-tar') {
 
-				my $dir = File::Temp::tempdir(CLEANUP => 1);
-				$self->[ARCHIVES]->{"$dir/.."} = $self->[FILEPATH];
-
+				my $dir = $self->get_temp_archive_dir(); 
 				system("cd $dir && tar -xf '$filepath'");
-
 				$self->open_path($dir);
 
 			} elsif ($type eq 'application/zip') {
 
-				my $dir = File::Temp::tempdir(CLEANUP => 1);
-				$self->[ARCHIVES]->{"$dir/.."} = $self->[FILEPATH];
-
+				my $dir = $self->get_temp_archive_dir(); 
 				system("cd $dir && unzip '$filepath'");
-
 				$self->open_path($dir);
 
 			} else {
@@ -558,7 +483,7 @@ sub open_file_with {
 	$cmd_browse_button = new Gtk2::Button;
 	$cmd_browse_button->add(Gtk2::Image->new_from_stock('gtk-open', 'button'));
 	$cmd_browse_button->signal_connect("clicked", sub {
-		my $fs = new Gtk2::FileSelection("Select Command");
+		my $fs = new Gtk2::FileChooserDialog("Select Command", undef, 'GTK_FILE_CHOOSER_ACTION_OPEN', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
 		$fs->set_filename($command_combo->entry->get_text);
 
 		if ($fs->run eq 'ok') {
@@ -681,9 +606,9 @@ sub open_path {
 			$self->init_icons();
 		}
 
-# 		if (defined $type) {
-# 			$type = File::MimeInfo::describe($type, "");
-# 		}
+		if (defined $type) {
+			$type = File::MimeInfo::describe($type, "");
+		}
 
 		$self->[TREEMODEL]->set($self->[TREEMODEL]->append, 0, $mypixbuf, 1, $file, 2, $type, 3, $size, 4, $ctime, 5, $uid, 6, $gid, 7, $mode, 8, $target, 9, $abspath);
 	}
@@ -699,11 +624,9 @@ sub open_path {
 	$self->[PATH_ENTRY]->set_text($self->[FILEPATH]);
 	$self->[FOLDER_STATUS] = "$dirs_count ($dirs_count_total) directories and $files_count ($files_count_total) files: $total_size";
 
-	if ($main::config->get_option('Mode') == main->NORTON_COMMANDER_MODE) {
-		$self->set_focus;
-	}
-
-#	$self->update_history();
+#	if ($main::config->get_option('Mode') == main->NORTON_COMMANDER_MODE) {
+#		$self->set_focus;
+#	}
 }
 
 sub set_mime_icon {
@@ -727,6 +650,17 @@ sub set_properties {
 	Filer::Properties->set_properties_dialog($self->[SELECTED_ITEM]);
 
 	$self->refresh;
+}
+
+sub get_temp_archive_dir {
+	my ($self) = @_;
+	my $dir = File::Temp::tempdir(CLEANUP => 1);
+	my $dir_up = Cwd::abs_path("$dir/..");
+	
+	# this overrides the path if the user clicks on the .. inside the temp archive directory
+	$self->[ARCHIVES]->{$dir_up} = $self->[FILEPATH];
+
+	return $dir;
 }
 
 sub create_tar_gz_archive {

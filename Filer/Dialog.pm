@@ -120,31 +120,31 @@ sub source_target_dialog {
 }
 
 sub preview_file_selection {
-	my ($fs,$hbox,$frame,$preview,$selection);
-	$fs = new Gtk2::FileSelection("Select Icon");
-
-	$hbox = $fs->file_list->parent;
-
-	do {
-		$hbox = $hbox->parent;
-	} while (ref($hbox) ne 'Gtk2::HBox');
-
-	$frame = new Gtk2::Frame("Preview");
-	$hbox->pack_start($frame,1,1,0);
-
-	$preview = new Gtk2::Image;
+	my $frame = new Gtk2::Frame("Preview");
+	my $preview = new Gtk2::Image;
 	$frame->add($preview);
 	$frame->show_all;
 
-	$selection = $fs->file_list->get_selection;
-	$selection->signal_connect("changed", sub {
-		my $mimeicon = $fs->get_filename;
-		my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($mimeicon) || return;
+	my $dialog = new Gtk2::FileChooserDialog("Select Icon", undef, 'GTK_FILE_CHOOSER_ACTION_OPEN', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
+	$dialog->set_use_preview_label(0);
+	$dialog->set_preview_widget($frame);
+	$dialog->set_preview_widget_active(1);
 
+	my $filter = new Gtk2::FileFilter;
+	$filter->add_pixbuf_formats;
+	$dialog->set_filter($filter);
+
+	$dialog->signal_connect("update-preview", sub {
+		my ($w,$preview) = @_;
+		my $filename = $w->get_preview_filename;		
+
+		return if ((not defined $filename) or (-d $filename));
+
+		my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($filename);
 		$preview->set_from_pixbuf(&main::intelligent_scale($pixbuf,100));
-	});
+	}, $preview);
 
-	return $fs;
+	return $dialog;
 }
 
 sub mixed_button_new {

@@ -21,8 +21,8 @@ use warnings;
 
 use constant S_IFMT  => 00170000;
 use constant S_IFSOCK => 0140000;
-use constant S_IFLNK =>  0120000;
-use constant S_IFREG =>  0100000;
+use constant S_IFLNK => 0120000;
+use constant S_IFREG => 0100000;
 use constant S_IFBLK => 0060000;
 use constant S_IFDIR => 0040000;
 use constant S_IFCHR => 0020000;

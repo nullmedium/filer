@@ -583,15 +583,16 @@ sub rename_cb {
 	my ($dialog,$hbox,$label,$entry);
 
 	$dialog = new Gtk2::Dialog("Rename", undef, 'modal', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
+	$dialog->set_size_request(450,150);
 	$dialog->set_position('center');
 	$dialog->set_modal(1);
 
 	$hbox = new Gtk2::HBox(0,0);
-	$dialog->vbox->pack_start($hbox, 1,1,5);
+	$dialog->vbox->pack_start($hbox,0,0,5);
 
 	$label = new Gtk2::Label;
 	$label->set_text("Rename: ");
-	$hbox->pack_start($label, 1,1,2);
+	$hbox->pack_start($label, 0,0,2);
 
 	$entry = new Gtk2::Entry;
 	$entry->set_text(File::Basename::basename($active_pane->get_selected_item));
@@ -646,15 +647,16 @@ sub mkdir_cb {
 	my ($dialog,$hbox,$label,$entry);
 
 	$dialog = new Gtk2::Dialog("Make directory", undef, 'modal', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
+	$dialog->set_size_request(450,150);
 	$dialog->set_position('center');
 	$dialog->set_modal(1);
 
 	$hbox = new Gtk2::HBox(0,0);
-	$dialog->vbox->pack_start($hbox, 1,1,5);
+	$dialog->vbox->pack_start($hbox, 0,0,5);
 
 	$label = new Gtk2::Label;
 	$label->set_text($active_pane->get_pwd . "/");
-	$hbox->pack_start($label, 1,1,2);
+	$hbox->pack_start($label, 0,0,2);
 
 	$entry = new Gtk2::Entry;
 	$entry->set_text("New Folder");
@@ -679,6 +681,7 @@ sub link_cb {
 	my ($dialog,$link_label,$target_label,$link_entry,$target_entry) = Filer::Dialog->source_target_dialog;
 
 	$dialog->set_title("Link");
+	$dialog->set_size_request(450,150);
 	$link_label->set_markup("<b>Link: </b>");
 	$link_entry->set_text($inactive_pane->get_pwd . "/" . basename($active_pane->get_selected_item));
 	$target_label->set_markup("<b>to: </b>");
@@ -708,6 +711,7 @@ sub symlink_cb {
 	my ($dialog,$symlink_label,$target_label,$symlink_entry,$target_entry) = Filer::Dialog->source_target_dialog;
 
 	$dialog->set_title("Symlink");
+	$dialog->set_size_request(450,150);
 	$symlink_label->set_markup("<b>Symlink: </b>");
 	$symlink_entry->set_text($inactive_pane->get_pwd . "/" . basename($active_pane->get_selected_item));
 	$target_label->set_markup("<b>to: </b>");

@@ -211,7 +211,7 @@ sub init_dirwalk {
 sub select_path {
 	my ($self) = @_;
 
-	my $fs = new Gtk2::FileSelection("Select Path");
+	my $fs = new Gtk2::FileChooserDialog("Select Path", undef, 'GTK_FILE_CHOOSER_ACTION_OPEN', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
 	$fs->set_filename($self->{path_combo}->entry->get_text);
 
 	if ($fs->run eq 'ok') {
