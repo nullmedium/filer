@@ -23,7 +23,7 @@ sub new {
 	my ($class,$side) = @_;
 	my $self = bless {}, $class;
 
-	if (! -e "$ENV{HOME}/.filer/") { 
+	if (! -e "$ENV{HOME}/.filer/") {
 		mkdir("$ENV{HOME}/.filer/");
 	}
 

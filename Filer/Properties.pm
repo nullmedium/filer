@@ -55,7 +55,7 @@ sub set_properties_dialog {
 	my $mode = 0;
 	my $properties_mode = 0;
 	my $owner_mode = 0;
-	my $group_mode = 0; 
+	my $group_mode = 0;
 	my $other_mode = 0;
 
 	my @stat;
@@ -87,31 +87,31 @@ sub set_properties_dialog {
 	$dialog->set_has_separator(1);
 	$dialog->set_position('center');
 	$dialog->set_modal(1);
-	
+
 	$table = new Gtk2::Table(4,4);
 	$table->set_homogeneous(0);
 	$table->set_col_spacings(5);
 	$table->set_row_spacings(1);
 	$dialog->vbox->pack_start($table,0,0,5);
 
-	$label = new Gtk2::Label("<b>Owner</b>");	
+	$label = new Gtk2::Label("<b>Owner</b>");
 	$label->set_use_markup(1);
 	$label->set_alignment(0.0,0.0);
-	$table->attach($label, 1, 2, 0, 1, [ "fill" ], [], 0, 0);	
+	$table->attach($label, 1, 2, 0, 1, [ "fill" ], [], 0, 0);
 
-	$label = new Gtk2::Label("<b>Group</b>");	
+	$label = new Gtk2::Label("<b>Group</b>");
 	$label->set_use_markup(1);
 	$label->set_alignment(0.0,0.0);
-	$table->attach($label, 2, 3, 0, 1, [ "fill" ], [], 0, 0);	
+	$table->attach($label, 2, 3, 0, 1, [ "fill" ], [], 0, 0);
 
-	$label = new Gtk2::Label("<b>Other</b>");	
+	$label = new Gtk2::Label("<b>Other</b>");
 	$label->set_use_markup(1);
 	$label->set_alignment(0.0,0.0);
 	$table->attach($label, 3, 4, 0, 1, [ "fill" ], [], 0, 0);
 
 	# Properties
 
-	$checkbutton = new Gtk2::CheckButton("Set UID");	
+	$checkbutton = new Gtk2::CheckButton("Set UID");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$properties_mode,4);
@@ -119,7 +119,7 @@ sub set_properties_dialog {
 	$checkbutton->set_active(S_ISUID & $stat[2]) if ($multiple == 0);
 	$table->attach($checkbutton, 0, 1, 1, 2, [ "fill" ], [], 0, 0);
 
-	$checkbutton = new Gtk2::CheckButton("Set GID");	
+	$checkbutton = new Gtk2::CheckButton("Set GID");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$properties_mode,2);
@@ -127,17 +127,17 @@ sub set_properties_dialog {
 	$checkbutton->set_active(S_ISGID & $stat[2]) if ($multiple == 0);
 	$table->attach($checkbutton, 0, 1, 2, 3, [ "fill" ], [], 0, 0);
 
-	$checkbutton = new Gtk2::CheckButton("Sticky Bit");	
+	$checkbutton = new Gtk2::CheckButton("Sticky Bit");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$properties_mode,1);
 	});
 	$checkbutton->set_active(S_ISVTX & $stat[2]) if ($multiple == 0);
 	$table->attach($checkbutton, 0, 1, 3, 4, [ "fill" ], [], 0, 0);
-	
+
 	# Owner
 
-	$checkbutton = new Gtk2::CheckButton("Read");	
+	$checkbutton = new Gtk2::CheckButton("Read");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$owner_mode,4);
@@ -145,7 +145,7 @@ sub set_properties_dialog {
 	$checkbutton->set_active(S_IRUSR & $stat[2]) if ($multiple == 0);
 	$table->attach($checkbutton, 1, 2, 1, 2, [ "fill" ], [], 0, 0);
 
-	$checkbutton = new Gtk2::CheckButton("Write");	
+	$checkbutton = new Gtk2::CheckButton("Write");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$owner_mode,2);
@@ -153,7 +153,7 @@ sub set_properties_dialog {
 	$checkbutton->set_active(S_IWUSR & $stat[2]) if ($multiple == 0);
 	$table->attach($checkbutton, 1, 2, 2, 3, [ "fill" ], [], 0, 0);
 
-	$checkbutton = new Gtk2::CheckButton("Execute");	
+	$checkbutton = new Gtk2::CheckButton("Execute");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$owner_mode,1);
@@ -163,7 +163,7 @@ sub set_properties_dialog {
 
 	# Group
 
-	$checkbutton = new Gtk2::CheckButton("Read");	
+	$checkbutton = new Gtk2::CheckButton("Read");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$group_mode,4);
@@ -171,7 +171,7 @@ sub set_properties_dialog {
 	$checkbutton->set_active(S_IRGRP & $stat[2]) if ($multiple == 0);
 	$table->attach($checkbutton, 2, 3, 1, 2, [ "fill" ], [], 0, 0);
 
-	$checkbutton = new Gtk2::CheckButton("Write");	
+	$checkbutton = new Gtk2::CheckButton("Write");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$group_mode,2);
@@ -179,7 +179,7 @@ sub set_properties_dialog {
 	$checkbutton->set_active(S_IWGRP & $stat[2]) if ($multiple == 0);
 	$table->attach($checkbutton, 2, 3, 2, 3, [ "fill" ], [], 0, 0);
 
-	$checkbutton = new Gtk2::CheckButton("Execute");	
+	$checkbutton = new Gtk2::CheckButton("Execute");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$group_mode,1);
@@ -189,7 +189,7 @@ sub set_properties_dialog {
 
 	# Other
 
-	$checkbutton = new Gtk2::CheckButton("Read");	
+	$checkbutton = new Gtk2::CheckButton("Read");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$other_mode,4);
@@ -197,7 +197,7 @@ sub set_properties_dialog {
 	$checkbutton->set_active(S_IROTH & $stat[2]) if ($multiple == 0);
 	$table->attach($checkbutton, 3, 4, 1, 2, [ "fill" ], [], 0, 0);
 
-	$checkbutton = new Gtk2::CheckButton("Write");	
+	$checkbutton = new Gtk2::CheckButton("Write");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$other_mode,2);
@@ -205,7 +205,7 @@ sub set_properties_dialog {
 	$checkbutton->set_active(S_IWOTH & $stat[2]) if ($multiple == 0);
 	$table->attach($checkbutton, 3, 4, 2, 3, [ "fill" ], [], 0, 0);
 
-	$checkbutton = new Gtk2::CheckButton("Execute");	
+	$checkbutton = new Gtk2::CheckButton("Execute");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$other_mode,1);
@@ -230,24 +230,24 @@ sub set_properties_dialog {
 	$table->attach($label, 0, 1, 1, 2, [ "fill" ], [], 0, 0);
 
 	$owner_combo = new Gtk2::Combo;
-	$owner_combo->set_popdown_strings(@users);	
+	$owner_combo->set_popdown_strings(@users);
 	$owner_combo->entry->set_text($owner);
 	$owner_combo->set_sensitive(0) if ($ENV{USER} ne 'root');
 	$table->attach($owner_combo, 1, 2, 0, 1, [ "fill" ], [], 0, 0);
 
 	$group_combo = new Gtk2::Combo;
-	$group_combo->set_popdown_strings(@groups);	
+	$group_combo->set_popdown_strings(@groups);
 	$group_combo->entry->set_text($group);
 	$table->attach($group_combo, 1, 2, 1, 2, [ "fill" ], [], 0, 0);
 
 	$dialog->show_all;
 
 	my $r = $dialog->run;
-	
+
 	if ($r eq 'ok') {
 		foreach (@{$main::active_pane->get_selected_items}) {
 			my @stat = stat($_);
-			
+
 			if ($ENV{USER} eq getpwuid($stat[4])) {
 				my $mode = ($properties_mode * 1000) + ($owner_mode * 100) +  ($group_mode * 10) + ($other_mode * 1);
 				my $owner = $owner_combo->entry->get_text;

@@ -55,14 +55,14 @@ sub new {
 
 	$self->[PATH_BUTTONBOX] = new Gtk2::HButtonBox;
 	$self->[PATH_BUTTONBOX]->set_layout_default('GTK_BUTTONBOX_START');
-	$self->[PATH_BUTTONBOX]->set_homogeneous(0); 
+	$self->[PATH_BUTTONBOX]->set_homogeneous(0);
 	$self->[VBOX]->pack_start($self->[PATH_BUTTONBOX], 0, 0, 0);
 	$self->[PATH_BUTTONBOX]->show;
 
 	$self->[PATH_BUTTONS] = [];
 
 	$self->[PATH_ENTRY] = new Gtk2::Entry;
-	$self->[PATH_ENTRY]->signal_connect('key-press-event', sub { 
+	$self->[PATH_ENTRY]->signal_connect('key-press-event', sub {
 		my ($w,$e) = @_;
 		if ($e->keyval == $Gtk2::Gdk::Keysyms{'Return'}) {
 			$self->open_file($self->[PATH_ENTRY]->get_text);
@@ -102,7 +102,7 @@ sub new {
 
 	# a column with a pixbuf renderer and a text renderer
 	$col = Gtk2::TreeViewColumn->new;
-	$col->set_resizable(1);	
+	$col->set_resizable(1);
 	$col->set_title("Name");
 
 	$cell = Gtk2::CellRendererPixbuf->new;
@@ -119,7 +119,7 @@ sub new {
 	foreach (qw(Type Size Date Owner Group Mode Link)) {
 		$cell = new Gtk2::CellRendererText;
 		$col = Gtk2::TreeViewColumn->new_with_attributes($_, $cell, text => $i);
-		$col->set_resizable(1);	
+		$col->set_resizable(1);
 #		$col->set_sort_column_id($i);
 
 		$self->[TREEVIEW]->append_column($col);
@@ -222,7 +222,7 @@ sub show_popup_menu {
 
 		$item = $item_factory->get_item('/Open');
 		$item->set_submenu($commands_menu);
-	
+
 		if (-e $self->[SELECTED_ITEM]) {
 			# Open Menu
 			my $mime = new Filer::Mime;
@@ -230,7 +230,7 @@ sub show_popup_menu {
 
 			foreach ($mime->get_commands($type)) {
 				$item = new Gtk2::MenuItem(File::Basename::basename($_));
-				$item->signal_connect("activate", sub {	
+				$item->signal_connect("activate", sub {
 					my $command = $_[1];
 					system("$command '$self->[SELECTED_ITEM]' & exit");
 				}, $_);
@@ -256,12 +256,12 @@ sub selection_changed_cb {
 	if ($selection->count_selected_rows > 0) {
  		$self->[SELECTED_ITER] = $self->get_selected_iters->[0];
  		$self->[SELECTED_ITEM] = $self->get_selected_items->[0];
-	} 
-	
+	}
+
 	if ($selection->count_selected_rows > 1) {
 		$main::widgets->{statusbar}->push(1, $selection->count_selected_rows . " files selected");
 	}
-	
+
 	return 1;
 }
 
@@ -290,7 +290,7 @@ sub treeview_event_cb {
 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Return'})
 	 or ($e->type eq "2button-press" and $e->button == 1)) {
 		my $b = File::Basename::basename($self->[SELECTED_ITEM]);
-		
+
 		print "$b\n";
 
 		if (defined $self->[ARCHIVES]->{"$b/.."}) {
@@ -298,7 +298,7 @@ sub treeview_event_cb {
 		} else {
 			$self->open_file($self->[SELECTED_ITEM]);
 		}
-		
+
 		return 1;
 	}
 
@@ -306,11 +306,11 @@ sub treeview_event_cb {
 		$self->show_popup_menu($e);
 		return 1;
 	}
-	
+
 	return 0;
 }
 
-# internal and external functions and methods. 
+# internal and external functions and methods.
 
 sub init_icons {
 	my ($self) = @_;
@@ -328,7 +328,7 @@ sub get_treeview {
 	my ($self) = @_;
 	return $self->[TREEVIEW];
 }
- 
+
 sub set_focus {
 	my ($self) = @_;
 	$self->[TREEVIEW]->grab_focus;
@@ -410,34 +410,34 @@ sub remove_selected {
 # 	my @items = split /\//, $self->[FILEPATH];
 # 	my $path = "";
 # 	my $c = 0;
-# 
+#
 # 	$items[0] = "/";
-# 
+#
 # 	if (length($self->[FILEPATH]) != length($self->[FILEPATH_OLD])) {
 # 		foreach my $b (@{$self->[PATH_BUTTONS]}) {
 # 			$b->destroy;
 # 		}
 # 	}
-# 
+#
 # 	foreach my $p (@items) {
 # 		$path = Cwd::abs_path("$path/$p");
-# 
+#
 # 		if ($path eq $self->[FILEPATH]) {
-# 			$self->[PATH_BUTTONS]->[$c] = new Gtk2::ToggleButton("$p");		
-# 			$self->[PATH_BUTTONS]->[$c]->set_active(1);		
+# 			$self->[PATH_BUTTONS]->[$c] = new Gtk2::ToggleButton("$p");
+# 			$self->[PATH_BUTTONS]->[$c]->set_active(1);
 # 		} else {
-# 			$self->[PATH_BUTTONS]->[$c] = new Gtk2::Button("$p");		
+# 			$self->[PATH_BUTTONS]->[$c] = new Gtk2::Button("$p");
 # 		}
-# 
-# 		$self->[PATH_BUTTONS]->[$c]->signal_connect("clicked", sub { 
+#
+# 		$self->[PATH_BUTTONS]->[$c]->signal_connect("clicked", sub {
 # 			my ($w,$p) = @_;
-# 
+#
 # 			$self->[FILEPATH_OLD] = $self->[FILEPATH];
-# 
+#
 # 			$self->open_path($p);
 # 		}, $path);
-# 
-# 		$self->[PATH_BUTTONBOX]->pack_start($self->[PATH_BUTTONS]->[$c], 0, 1, 0);		
+#
+# 		$self->[PATH_BUTTONBOX]->pack_start($self->[PATH_BUTTONS]->[$c], 0, 1, 0);
 # 		$self->[PATH_BUTTONS]->[$c]->show;
 # 		$c++;
 # 	}
@@ -457,7 +457,7 @@ sub open_file {
 		} else {
 			$self->open_path($filepath);
 		}
-		
+
 	} elsif (-x $filepath) {
 
 		system("$filepath & exit");
@@ -578,7 +578,7 @@ sub open_file_with {
 
 	$button = Filer::Dialog::mixed_button_new('gtk-ok',"_Run");
 	$dialog->add_action_widget($button, 'ok');
-	
+
 	$dialog->show_all;
 
 	if ($dialog->run eq 'ok') {
@@ -593,7 +593,7 @@ sub open_file_with {
 				$command = "$ENV{TERMCMD} -e $command";
 			} else {
 				Filer::Dialog->msgbox_info("TERMCMD not defined!");
-				
+
 				$dialog->destroy;
 				return;
 			}
@@ -650,7 +650,7 @@ sub open_path {
 	}
 
 # 	use Time::HiRes qw( gettimeofday tv_interval );
-# 
+#
 # 	my $t0 = [gettimeofday];
 
 	foreach my $file (@dirs,@files) {
@@ -710,7 +710,7 @@ sub set_mime_icon {
 	my ($self) = @_;
 	my $mime = Filer::Mime->new;
 	my $type = File::MimeInfo::Magic::mimetype($self->[SELECTED_ITEM]);
-	
+
 	if (-l $self->[SELECTED_ITEM]) {
 		$type = "inode/symlink";
 	}

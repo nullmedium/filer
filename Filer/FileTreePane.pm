@@ -87,9 +87,9 @@ sub new {
 	$col->add_attribute ($cell, text => 1);
 
 	$self->[TREEVIEW]->append_column($col);
-	
+
 	$self->init_icons;
-	
+
 	$self->open_path("/");
 
 	return $self;
@@ -178,7 +178,7 @@ sub selection_changed_cb {
 		$self->[FILEPATH] = $self->get_selected_items->[0];
  		$self->[FILEPATH_ITER] = $self->get_selected_iters->[0];
 	}
-	
+
 	return 1;
 }
 
@@ -211,7 +211,7 @@ sub treeview_event_cb {
 		} else {
 			$self->[TREEVIEW]->expand_row($path,0);
 		}
- 
+
 		return 1;
 	}
 
@@ -228,7 +228,7 @@ sub treeview_row_expanded_cb {
 	my $dir = $self->[TREEMODEL]->get($iter, 2);
 
 	$self->DirRead($dir,$iter);
-	
+
 	return 1;
 }
 
@@ -238,7 +238,7 @@ sub treeview_row_collapsed_cb {
 	while (my $i = $self->[TREEMODEL]->iter_children($iter)) {
 		$self->[TREEMODEL]->remove($i);
 	}
-	
+
 	$self->[TREEMODEL]->append($iter);
 
 	return 1;
@@ -307,7 +307,7 @@ sub count_selected_items {
 
 sub refresh {
 	my ($self) = @_;
-	
+
 	if (defined $self->[FILEPATH_ITER]) {
 		my $path = $self->[TREEMODEL]->get_path($self->[FILEPATH_ITER]);
 
@@ -363,7 +363,7 @@ sub DirRead {
 		$self->[TREEMODEL]->set(
 			$iter,
 			0, (-l "$dir/$file") ? $self->[MIMEICONS]->{'inode/symlink'} : $self->[MIMEICONS]->{'inode/directory'},
-			1, $file, 
+			1, $file,
 			2, Cwd::abs_path("$dir/$file")
 		);
 
@@ -371,7 +371,7 @@ sub DirRead {
 			$self->[TREEMODEL]->append($iter);
 		}
 	}
-	
+
 	my $iter = $self->[TREEMODEL]->iter_nth_child($parent_iter, 0); # dummy iter
 	$self->[TREEMODEL]->remove($iter);
 }
@@ -388,7 +388,7 @@ sub create_tar_gz_archive {
 	my $archive = Filer::Archive->new($self->[FILEPATH]);
 	$archive->create_tar_gz_archive;
 
-	$main::inactive_pane->open_path($self->[FILEPATH]. "/..");	
+	$main::inactive_pane->open_path($self->[FILEPATH]. "/..");
 }
 
 sub create_tar_bz2_archive {
@@ -397,7 +397,7 @@ sub create_tar_bz2_archive {
 	my $archive = Filer::Archive->new($self->[FILEPATH]);
 	$archive->create_tar_bz2_archive;
 
-	$main::inactive_pane->open_path($self->[FILEPATH]. "/..");	
+	$main::inactive_pane->open_path($self->[FILEPATH]. "/..");
 }
 
 1;

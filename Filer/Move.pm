@@ -24,7 +24,7 @@ use File::Basename;
 
 sub new {
 	my ($class) = @_;
-	my $self = bless {}, $class;	
+	my $self = bless {}, $class;
 
 	$self->{progress} = 1;
 	$self->{progress_dialog} = new Filer::ProgressDialog;

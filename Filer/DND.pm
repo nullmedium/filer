@@ -31,7 +31,7 @@ sub drag_data_received_cb {
 
 		if (defined $p) {
 			$path = $self->get_path_by_treepath($p);
-	
+
 			if (! -d $path) {
 				return;
 			}

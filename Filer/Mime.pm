@@ -117,16 +117,16 @@ sub get_icons {
 	foreach my $type (@mimetypes) {
 		my $file = $self->get_icon($type);
 		my $pixbuf;
-		
+
 		if (-e $file) {
 			$pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($file);
 		} else {
 			$pixbuf = Gtk2::Gdk::Pixbuf->new_from_file("$main::libpath/icons/default.png");
 		}
-		
+
 		$icons->{$type} = &main::intelligent_scale($pixbuf,100);
 	}
-	
+
 	return $icons;
 }
 
@@ -266,7 +266,7 @@ sub file_association_dialog {
 		$types_model->clear;
 
 		foreach (sort $mime->get_mimetypes) {
-			if ($_ ne 'default') { 
+			if ($_ ne 'default') {
 				my $iter = $types_model->append;
 				$types_model->set($iter, 0, Gtk2::Gdk::Pixbuf->new_from_file($mime->get_icon($_)));
 				$types_model->set($iter, 1, $_);
@@ -287,15 +287,15 @@ sub file_association_dialog {
 
 	my $set_commands = sub {
 		my @commands = ();
-		
+
 		$commands_model->foreach(sub {
 			my $model = $_[0];
 			my $iter = $_[2];
 			my $item = $model->get($iter, 0);
 
 			push @commands, $item;
-			
-			return 0;		
+
+			return 0;
 		});
 
 		$mime->set_commands($type,\@commands);
@@ -335,7 +335,7 @@ sub file_association_dialog {
 	$treeview->append_column($col);
 
 	$selection = $treeview->get_selection;
-	$selection->signal_connect("changed", sub { 
+	$selection->signal_connect("changed", sub {
 		my ($selection) = @_;
 		my (@q) = $selection->get_selected_rows;
 
@@ -350,14 +350,14 @@ sub file_association_dialog {
 	$sw->set_policy('automatic','automatic');
 	$sw->set_shadow_type('etched-in');
 	$hbox->pack_start($sw,1,1,0);
-	
+
 	$commands_model = new Gtk2::ListStore('Glib::String');
 
 	$treeview = Gtk2::TreeView->new_with_model($commands_model);
 	$treeview->insert_column_with_attributes(0, "Application Preference Order", Gtk2::CellRendererText->new, text => 0);
 
 	$selection = $treeview->get_selection;
-	$selection->signal_connect("changed", sub { 
+	$selection->signal_connect("changed", sub {
 		my ($selection) = @_;
 		my (@q) = $selection->get_selected_rows;
 
@@ -432,23 +432,23 @@ sub file_association_dialog {
 		}
 
 		&{$set_commands};
-	});	
+	});
 	$bbox->add($button);
 
 	$button = Gtk2::Button->new_from_stock('gtk-go-down');
 	$button->signal_connect("clicked", sub {
 		my $treepath = $commands_model->get_path($command_iter);
 		my $r = $treepath->next;
-		
+
 		my $a = $command_iter;
 		my $b = $commands_model->get_iter($treepath);
-	
+
 		if ($b) {
 			$commands_model->swap($a,$b);
 		}
 
 		&{$set_commands};
-	});	
+	});
 	$bbox->add($button);
 
 	$bbox = new Gtk2::HButtonBox;
@@ -485,26 +485,26 @@ sub file_association_dialog {
 		$dialog->destroy;
 		&{$refresh_types};
 	});
-	$bbox->add($button);	
-	
+	$bbox->add($button);
+
 	$button = Gtk2::Button->new_from_stock('gtk-remove');
 	$button->signal_connect("clicked", sub {
 		$mime->delete_mimetype($type);
 		&{$refresh_types};
 	});
-	$bbox->add($button);	
+	$bbox->add($button);
 
 	$button = Gtk2::Button->new("Set Icon");
 	$button->signal_connect("clicked", sub {
 		$mime->set_icon_dialog($type);
 		&{$refresh_types};
 	});
-	$bbox->add($button);	
+	$bbox->add($button);
 
 	&{$refresh_types};
 
 	$dialog->show_all;
-	
+
 	$dialog->run;
 	$dialog->destroy;
 }

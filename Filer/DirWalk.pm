@@ -32,7 +32,7 @@ sub new {
 	foreach (qw(onBeginWalk onLink onFile onDirEnter onDirLeave onForEach)) {
 		$self->{$_} = sub { SUCCESS; };
 	}
-	
+
 	return $self;
 }
 
@@ -72,7 +72,7 @@ sub walk {
 	if ((my $r = &{$self->{onBeginWalk}}($path)) != SUCCESS) {
 		return $r;
 	}
-	
+
 	if (-l $path) {
 
 		if ((my $r = &{$self->{onLink}}($path)) != SUCCESS) {

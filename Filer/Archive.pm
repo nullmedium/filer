@@ -22,11 +22,11 @@ use warnings;
 sub new {
 	my ($class,$filepath) = @_;
 	my $self = bless {}, $class;
-	
+
 	$self->{filepath} = $filepath;
 	$self->{path} = File::Basename::dirname($filepath);
 	$self->{file} = File::Basename::basename($filepath);
-	
+
 	return $self;
 }
 

@@ -24,7 +24,7 @@ use File::Basename;
 
 sub new {
 	my ($class) = @_;
-	my $self = bless {}, $class;	
+	my $self = bless {}, $class;
 
 	$self->{progress} = 1;
 	$self->{progress_dialog} = new Filer::ProgressDialog;
@@ -69,7 +69,7 @@ sub copy {
 		if ($self->{progress} == 0) {
 			return Filer::DirWalk::ABORTED;
 		}
-		
+
 		return Filer::DirWalk::SUCCESS;
 	});
 
@@ -78,7 +78,7 @@ sub copy {
 
 		my $target = readlink($source);
 		symlink($target, Cwd::abs_path("$dest/" . basename($source))) || return Filer::DirWalk::FAILED;
-		
+
 		return Filer::DirWalk::SUCCESS;
 	});
 
@@ -98,7 +98,7 @@ sub copy {
 		my ($dir) = @_;
 
 		$dest = Cwd::abs_path("$dest/..");
-	
+
 		return Filer::DirWalk::SUCCESS;
 	});
 

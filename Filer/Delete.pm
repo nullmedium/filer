@@ -23,7 +23,7 @@ use File::Basename;
 
 sub new {
 	my ($class) = @_;
-	my $self = bless {}, $class;	
+	my $self = bless {}, $class;
 
 	$self->{progress} = 1;
 	$self->{progress_dialog} = new Filer::ProgressDialog;
@@ -45,14 +45,14 @@ sub new {
 		if ($self->{progress} == 0) {
 			return -1;
 		}
-		
+
 		return 1;
 	});
 
 	$self->{dirwalk}->onLink(sub {
 		my ($source) = @_;
 
-		unlink($source) || return 0;		
+		unlink($source) || return 0;
 
 		return 1;
 	});
@@ -61,7 +61,7 @@ sub new {
 		my ($source) = @_;
 
 		rmdir($source) || return 0;
-		
+
 		return 1;
 	});
 

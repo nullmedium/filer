@@ -131,7 +131,7 @@ sub main_window {
 	$widgets->{hbox}->pack_start($widgets->{list1}->get_vbox,1,1,0);
 	$widgets->{hbox}->pack_start($widgets->{list2}->get_vbox,1,1,0);
 	$widgets->{vbox}->pack_start($widgets->{hpaned},1,1,0);
-	
+
 	$hbox = new Gtk2::HBox(0,0);
 	$widgets->{vbox}->pack_start($hbox, 0, 0, 0);
 
@@ -161,7 +161,7 @@ sub main_window {
 
 	$widgets->{statusbar} = new Gtk2::Statusbar;
 	$widgets->{vbox}->pack_start($widgets->{statusbar}, 0, 0, 0);
-	
+
 	my $path;
 
 	my $i1 = $item_factory->get_item("/Options/Mode/Norton Commander Style");
@@ -298,7 +298,7 @@ sub switch_mode {
 	$widgets->{sync_button}->set("visible", ($opt == NORTON_COMMANDER_MODE) ? 1 : 0);
 	$widgets->{tree}->get_vbox->set("visible", ($opt == EXPLORER_MODE) ? 1 : 0);
 	$widgets->{list1}->get_vbox->set("visible", ($opt == NORTON_COMMANDER_MODE) ? 1 : 0);
-	
+
 	$pane->[LEFT] = ($opt == NORTON_COMMANDER_MODE) ? $widgets->{list1} : $widgets->{tree};
 }
 
@@ -354,7 +354,7 @@ sub bookmarks_cb {
 	foreach ($bookmarks->get_bookmarks) {
 		$menuitem = new Gtk2::MenuItem($_);
 		$menuitem->signal_connect("activate", sub {
-			my $p = ($config->get_option("Mode") == NORTON_COMMANDER_MODE) ? $active_pane : $pane->[RIGHT]; 
+			my $p = ($config->get_option("Mode") == NORTON_COMMANDER_MODE) ? $active_pane : $pane->[RIGHT];
 			$p->open_path($_[1]);
 		},$_);
 		$menuitem->show;
@@ -411,7 +411,7 @@ sub select_dialog {
 		my $selection = $mypane->get_treeview->get_selection;
 		my $str = $entry->get_text;
 #		my $bx = (split //, $str)[0];
-		
+
 		$str =~ s/\//\\\//g;
 		$str =~ s/\./\\./g;
 		$str =~ s/\*/\.*/g;
@@ -422,7 +422,7 @@ sub select_dialog {
 			my $iter = $_[2];
 			my $item = $model->get($iter, 1);
 
-			return 0 if ($item eq ".."); 
+			return 0 if ($item eq "..");
 
 # 			if (-d $mypane->get_path($item)) {
 # 				if ($bx eq '/') {
@@ -443,7 +443,7 @@ sub select_dialog {
 			}
 		}, undef);
 	}
-	
+
 	$dialog->destroy;
 }
 
@@ -492,7 +492,7 @@ sub copy_cb {
 		$dialog->destroy;
 	} else {
 		return if (Filer::Dialog->yesno_dialog("Copy selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
-		
+
 		my $copy = Filer::Copy->new;
 		$copy->set_total(&files_count);
 		$copy->show;
@@ -614,7 +614,7 @@ sub rename_cb {
 
 			$model->set($iter, 1, $entry->get_text);
 			$model->set($iter, ($active_pane->get_type eq "TREE") ? 2 : 9, $new_name);
-			$active_pane->set_selected_item($new_name);				
+			$active_pane->set_selected_item($new_name);
 		} else {
 			Filer::Dialog->msgbox_error("Rename failed: $!");
 		}
@@ -669,7 +669,7 @@ sub mkdir_cb {
 
 	if ($dialog->run eq 'ok') {
 		my $dir = $label->get_text . $entry->get_text;
-		
+
 		if (mkdir($dir)) {
 			$active_pane->refresh;
 		} else {

@@ -43,7 +43,7 @@ sub new {
 	$label = new Gtk2::Label("Filename: ");
 	$label->set_alignment(0.0,0.0);
 	$table->attach($label, 0, 1, 1, 2, [ "fill" ], [], 0, 0);
-	
+
 	$label = new Gtk2::Label("Content: ");
 	$label->set_alignment(0.0,0.0);
 	$table->attach($label, 0, 1, 2, 3, [ "fill" ], [], 0, 0);
@@ -83,13 +83,13 @@ sub new {
 		$self->init_dirwalk();
 		$self->start_search
 	});
-	$hbox->add($button);	
+	$hbox->add($button);
 
 	$button = Filer::Dialog::mixed_button_new("gtk-stop","Stop");
 	$button->signal_connect("clicked", sub {
 		$self->{search_stop} = 1;
 	});
-	$hbox->add($button);	
+	$hbox->add($button);
 
 	$button = Filer::Dialog::mixed_button_new("gtk-clear","Clear");
 	$button->signal_connect("clicked", sub {
@@ -114,7 +114,7 @@ sub new {
 	$sw->add($self->{treeview});
 
 	$dialog->show_all;
-	
+
 	$dialog->run;
 	$dialog->destroy;
 
@@ -184,7 +184,7 @@ sub init_dirwalk {
 						if ($self->{first_match_checkbutton}->get_active) {
 							last;
 						}
-						
+
 						if ($hits >= 500 or $. >= 10000)  {
 							$self->append_search_result($self->{parent_iter}->{$dirname_file}, "...");
 							last;
@@ -200,7 +200,7 @@ sub init_dirwalk {
 
 		return 1;
 	};
-	
+
 	$self->{dirwalk}->onFile($f);
 
 	if ($self->{follow_symlinks_checkbutton}->get_active) {
@@ -246,7 +246,7 @@ sub start_search {
 	$self->{search_stop} = 0;
 
 	$self->{dirwalk}->walk($path);
-	
+
 	$self->{searching_label}->set_markup("<b>Searching finished</b>");
 	$self->{treeview}->expand_all;
 }

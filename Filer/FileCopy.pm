@@ -23,8 +23,8 @@ use Fcntl;
 
 sub new {
 	my ($class,$progressbar,$stop_ref) = @_;
-	my $self = bless {}, $class;	
-	
+	my $self = bless {}, $class;
+
 	$self->{progressbar} = $progressbar;
 	$self->{stopped} = $stop_ref;
 

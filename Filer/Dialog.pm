@@ -67,18 +67,18 @@ sub yesno_dialog {
 # sub input_dialog {
 # 	my ($str) = pop;
 # 	my ($dialog,$label);
-# 
+#
 # 	$dialog = new Gtk2::Dialog($question, undef, 'modal', 'gtk-no' => 'no', 'gtk-yes' => 'yes');
 # 	$dialog->set_has_separator(1);
 # 	$dialog->set_position('center');
 # 	$dialog->set_modal(1);
-# 
+#
 # 	$label = new Gtk2::Label;
 # 	$label->set_use_markup(1);
 # 	$label->set_markup($question);
 # 	$label->set_alignment(0.0,0.0);
 # 	$dialog->vbox->pack_start($label, 1,1,5);
-# 
+#
 # 	$dialog->show_all;
 # 	my $r = $dialog->run;
 # 	$dialog->destroy;
