@@ -32,7 +32,7 @@ use warnings;
 use lib "$libpath";
 require "lib.pl";
 
-$VERSION = '0.0.7';
+$VERSION = '0.0.8';
 
 use constant LEFT => 0;
 use constant RIGHT => 1;
@@ -46,8 +46,8 @@ Glib->install_exception_handler(sub {
 });
 
 Gtk2->init;
-&init_config;
 
+&init_config;
 &main_window;
 
 Gtk2->main;
