@@ -1,0 +1,52 @@
+================================================================================
+README:
+================================================================================
+
+1. Dependencies
+
+Filer requires a few dependencies (mainly Perl modules):
+
+* shared-mime-info (http://freedesktop.org/)
+
+* Gtk+ 2.6.x (http://gtk.org/)
+
+* Gtk2-Perl 1.080 (http://gtk2-perl.sf.net/)
+
+ - ExtUtils::Depends
+ - ExtUtils::PkgConfig
+ - Glib
+ - Gtk2
+
+* File::MimeInfo
+
+* Stat::lsMode
+
+If possible use the packages provided by your distribution. 
+Filer is available as a in Gentoo and Lunar Linux.
+When installing from source, please read the packages
+installation instructions:
+
+If you need to install a Perl module (as root):
+
+	$ cpan -i <module>
+
+2. Installation
+
+If you want to install Filer, instead of using it out of the box
+in its own directory, you can use the small and straightforward Makefile.
+
+	$ make install
+
+or
+
+	$ make install PREFIX=prefix
+
+depending on your chosen PREFIX, filer will be installed
+as ${PREFIX}/bin/filer
+
+You may want to add ${PREFIX}/bin to your PATH
+
+If you have problems with installing Filer, please refer 
+to the Filer mailing list:
+
+ * http://foo-projects.org/mailman/listinfo/filer

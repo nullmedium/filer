@@ -225,6 +225,13 @@ sub selection_changed_cb {
 	$self->[SELECTED_ITEM] = $self->get_selected_items->[0];
 
 	if ($c > 1) {
+# 		my $size = 0;
+# 		for (@{$self->get_selected_items}) {
+# 			$size += (lstat($_))[7] if (-R $_);
+# 		}
+# 	
+# 		$main::widgets->{statusbar}->push(1, "$c files selected (Size: " . &calculate_size($size) . ")");
+
 		$main::widgets->{statusbar}->push(1, "$c files selected");
 	}
 
