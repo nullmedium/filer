@@ -1,3 +1,43 @@
+2005-04-07 18:01:16  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/Filer/Archive.pm
+	   M /trunk/Filer/FilePane.pm
+	   M /trunk/Filer/FileTreePane.pm
+
+	* rewritten Archive module (contributed by Sjon)
+	* re-designed context-menu (based on contributions by Sjon)
+	* single-click navigation in tree-view
+
+2005-04-06 14:16:46  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/Filer/FilePane.pm
+	   M /trunk/Filer/FileTreePane.pm
+	   M /trunk/Filer/Move.pm
+	   M /trunk/lib.pl
+
+	* remove some cruft
+	* select item below mouse cursour on right-click
+
+2005-04-02 17:21:38  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/Filer/Config.pm
+	   M /trunk/Makefile
+	   M /trunk/filer.pl
+
+	* version 0.0.11-svn
+	* fix: create XDG_CONFIG_HOME in case it doesn't exist
+	* fix: add install -d ${PREFIX}/bin to Makefile
+
+2005-04-02 10:54:22  Jens Luedicke <jens.luedicke@gmail.com>
+
+	* Changed paths:
+	   M /trunk/ChangeLog
+
+	* update changelog
+
 2005-04-02 10:53:40  Jens Luedicke <jens.luedicke@gmail.com>
 
 	* Changed paths:
