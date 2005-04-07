@@ -19,6 +19,15 @@ package Filer::Archive;
 use strict;
 use warnings;
 
+my %supported_archives = (
+	'application/x-gzip' =>			{ extension => 'gz',		create => 'gzip -c',	extract => 'gzip -d'},
+	'application/x-bzip' =>			{ extension => 'bz2',		create => 'bzip2 -c',	extract => 'gzip2 -d'},
+	'application/zip' =>			{ extension => 'zip',		create => 'zip',	extract => 'unzip'},
+	'application/x-tar' =>			{ extension => 'tar',		create => 'tar -cf',	extract => 'tar -xf'},
+	'application/x-compressed-tar' =>	{ extension => 'tar.gz',	create => 'tar -czf',	extract => 'tar -xzf'},
+	'application/x-bzip-compressed-tar' =>	{ extension => 'tar.bz2',	create => 'tar -cjf',	extract => 'tar -xjf'}
+);
+
 sub new {
 	my ($class,$filepath) = @_;
 	my $self = bless {}, $class;
@@ -30,20 +39,34 @@ sub new {
 	return $self;
 }
 
-sub create_tar_gz_archive {
-	my ($self) = @_;
-	my $path = $self->{path};
-	my $file = $self->{file};
-
-	system("cd $path && tar -c './$file' | gzip - > '$file.tar.gz'");
-}
-
 sub create_tar_bz2_archive {
 	my ($self) = @_;
+	$self->{requested_archivetype} = 'application/x-bzip-compressed-tar';
+
+	create_archive($self)
+}
+
+sub create_tar_gz_archive {
+	my ($self) = @_;
+	$self->{requested_archivetype} = 'application/x-compressed-tar';
+
+	create_archive($self)
+}
+
+sub create_archive {
+	my ($self) = @_;
 	my $path = $self->{path};
 	my $file = $self->{file};
+	my $type = $self->{requested_archivetype};
+	my $archive_file = $file.'.'.$supported_archives{$type}{extension};
+	my $archive_command = $supported_archives{$type}{create};
 
-	system("cd $path && tar -c './$file' | bzip2 - > '$file.tar.bz2'");
+#TODO check if binary exists; split by space
+	if (1){
+		system("cd '$path' && $archive_command '$archive_file' '$file'");
+	} else {
+		Filer::Dialog->msgbox_error("This is not an supported Archive!");
+	}
 }
 
 sub extract_archive {
@@ -52,33 +75,21 @@ sub extract_archive {
 	my $file = $self->{file};
 	my $type = File::MimeInfo::Magic::mimetype($self->{filepath});
 
-	if ($type eq 'application/x-gzip') {
-
-		system("cd '$path' && gzip -d '$file'");
-
-	} elsif ($type eq 'application/x-bzip') {
-
-		system("cd '$path' && bzip2 -d '$file'");
-
-	} elsif ($type eq 'application/zip') {
-
-		system("cd '$path' && unzip '$file'");
-
-	} elsif ($type eq 'application/x-tar') {
-
-		system("cd '$path' && tar -xf '$file'");
-
-	} elsif ($type eq 'application/x-compressed-tar') {
-
-		system("cd '$path' && tar -xzf '$file'");
-
-	} elsif ($type eq 'application/x-bzip-compressed-tar') {
-
-		system("cd '$path' && tar -xjf '$file'");
-
+	my $archive_extract_command = $supported_archives{$type}{'extract'};
+	if ($archive_extract_command){
+		system("cd '$path' && $archive_extract_command '$file'");
 	} else {
-
 		Filer::Dialog->msgbox_error("This is not an supported Archive!");
+	}
+}
+
+sub is_supported_archive {
+	my ($type) = @_;
+
+	if (exists($supported_archives{$type})) {
+		return 1;
+	} else {
+		return 0;
 	}
 }
 

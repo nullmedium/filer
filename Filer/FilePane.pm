@@ -155,90 +155,180 @@ sub get_location_bar {
 	return $self->[HBOX];
 }
 
+# sub show_popup_menu {
+# 	my ($self,$e) = @_;
+# 	my ($p,$d) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
+# 
+# 	if (defined $p) {
+# 		$self->[TREESELECTION]->select_iter($self->[TREEMODEL]->get_iter($p));
+# 	}
+# 
+# 	my $item;
+# 	my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
+# 	my $popup_menu = $item_factory->get_widget('<main>');
+# 	my $commands_menu = new Gtk2::Menu;
+# 
+# 	my @menu_items = (
+# 	{ path => '/Copy',					callback => \&main::copy_cb,				item_type => '<Item>'},
+# 	{ path => '/Move',					callback => \&main::move_cb,				item_type => '<Item>'},
+# 	{ path => '/Rename',					callback => \&main::rename_cb,				item_type => '<Item>'},
+# 	{ path => '/MkDir',					callback => \&main::mkdir_cb,				item_type => '<Item>'},
+# 	{ path => '/Delete',					callback => \&main::delete_cb,		        	item_type => '<Item>'},
+# 	{ path => '/sep1',								        			item_type => '<Separator>'},
+# 	{ path => '/Bookmarks',												item_type => '<Item>'},
+# 	{ path => '/sep2',								        			item_type => '<Separator>'},
+# 	{ path => '/Open',												item_type => '<Item>'},
+# 	{ path => '/Open Terminal',				callback => sub { $self->open_terminal },	        item_type => '<Item>'},
+# 	{ path => '/Archive/Create gzipped tar Archive',	callback => sub { $self->create_tar_gz_archive },	item_type => '<Item>'},
+# 	{ path => '/Archive/Create bzipped tar Archive',	callback => sub { $self->create_tar_bz2_archive },	item_type => '<Item>'},
+# 	{ path => '/Archive/Extract',				callback => sub { $self->extract_archive },	        item_type => '<Item>'},
+# 	{ path => '/sep3',								       				item_type => '<Separator>'},
+# 	{ path => '/Refresh',					callback => sub { $self->refresh },		        item_type => '<Item>'},
+# 	{ path => '/sep4',									       			item_type => '<Separator>'},
+# 	{ path => '/Properties',				callback => sub { $self->set_properties },	        item_type => '<Item>'},
+# 	{ path => '/Set Icon',					callback => sub { $self->set_mime_icon },	        item_type => '<Item>'},
+# 	{ path => '/sep5',												item_type => '<Separator>'},
+# 	{ path => '/Quit',					callback => \&main::quit_cb,				item_type => '<Item>'},
+# 	);
+# 
+# 	$item_factory->create_items(undef, @menu_items);
+# 
+# 	if ($self->count_selected_items == 1) {
+# 	
+# 		$item = $item_factory->get_item('/Bookmarks');
+# 		$item->set_submenu(&main::get_bookmarks_menu);
+# 
+# 		$item = new Gtk2::SeparatorMenuItem;
+# 		$commands_menu->add($item);
+# 
+# 		$item = $item_factory->get_item('/Open');
+# 		$item->set_submenu($commands_menu);
+# 
+# 		if (-e $self->[SELECTED_ITEM]) {
+#         		my $mime = new Filer::Mime;
+#         		my $type = File::MimeInfo::Magic::mimetype($self->[SELECTED_ITEM]);
+# 
+#         		foreach ($mime->get_commands($type)) {
+#                 		$item = new Gtk2::MenuItem(File::Basename::basename($_));
+#                 		$item->signal_connect("activate", sub {
+#                         		my $command = $_[1];
+#                         		system("$command '$self->[SELECTED_ITEM]' & exit");
+#                 		}, $_);
+#                 		$commands_menu->add($item);
+#         		}
+# 		}
+# 
+# 		$item = new Gtk2::MenuItem('Other ...');
+# 		$item->signal_connect("activate", sub {	$self->open_file_with });
+# 		$commands_menu->add($item);
+# 	} else {
+# 		$item_factory->delete_item('/Rename');
+# 		$item_factory->delete_item('/MkDir');
+# 		$item_factory->delete_item('/Bookmarks');
+# 		$item_factory->delete_item('/Open');
+# 		$item_factory->delete_item('/Open Terminal');
+# 		$item_factory->delete_item('/Archive');
+# 		$item_factory->delete_item('/Set Icon');
+# 		$item_factory->delete_item('/Refresh');
+# 		$item_factory->delete_item('/Properties');
+# 		$item_factory->delete_item('/sep2');
+# 		$item_factory->delete_item('/sep3');
+# 		$item_factory->delete_item('/sep4');
+# 		$item_factory->delete_item('/sep5');
+# 	}
+# 
+# 	$popup_menu->show_all;
+# 	$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
+# }
+
 sub show_popup_menu {
-	my ($self,$e) = @_;
+       my ($self,$e) = @_;
+
+	return if ($self->count_selected_items == 0);
+
 	my ($p,$d) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
 
 	if (defined $p) {
 		$self->[TREESELECTION]->select_iter($self->[TREEMODEL]->get_iter($p));
 	}
 
-	my $item;
-	my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
-	my $popup_menu = $item_factory->get_widget('<main>');
-	my $commands_menu = new Gtk2::Menu;
+       my $item;
+       my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
+       my $popup_menu = $item_factory->get_widget('<main>');
+       my $commands_menu = new Gtk2::Menu;
+       my $mime = new Filer::Mime;
+       my $type = File::MimeInfo::Magic::mimetype($self->[SELECTED_ITEM]);
 
-	my @menu_items = (
-	{ path => '/Copy',					callback => \&main::copy_cb,				item_type => '<Item>'},
-	{ path => '/Move',					callback => \&main::move_cb,				item_type => '<Item>'},
-	{ path => '/Rename',					callback => \&main::rename_cb,				item_type => '<Item>'},
-	{ path => '/MkDir',					callback => \&main::mkdir_cb,				item_type => '<Item>'},
-	{ path => '/Delete',					callback => \&main::delete_cb,		        	item_type => '<Item>'},
-	{ path => '/sep1',								        			item_type => '<Separator>'},
-	{ path => '/Bookmarks',												item_type => '<Item>'},
-	{ path => '/sep2',								        			item_type => '<Separator>'},
-	{ path => '/Open',												item_type => '<Item>'},
-	{ path => '/Open Terminal',				callback => sub { $self->open_terminal },	        item_type => '<Item>'},
-	{ path => '/Archive/Create gzipped tar Archive',	callback => sub { $self->create_tar_gz_archive },	item_type => '<Item>'},
-	{ path => '/Archive/Create bzipped tar Archive',	callback => sub { $self->create_tar_bz2_archive },	item_type => '<Item>'},
-	{ path => '/Archive/Extract',				callback => sub { $self->extract_archive },	        item_type => '<Item>'},
-	{ path => '/sep3',								       				item_type => '<Separator>'},
-	{ path => '/Refresh',					callback => sub { $self->refresh },		        item_type => '<Item>'},
-	{ path => '/sep4',									       			item_type => '<Separator>'},
-	{ path => '/Properties',				callback => sub { $self->set_properties },	        item_type => '<Item>'},
-	{ path => '/Set Icon',					callback => sub { $self->set_mime_icon },	        item_type => '<Item>'},
-	{ path => '/sep5',												item_type => '<Separator>'},
-	{ path => '/Quit',					callback => \&main::quit_cb,				item_type => '<Item>'},
-	);
+       my @menu_items = (
+       { path => '/Open',										item_type => '<Item>'},
+       { path => '/Copy',			callback => \&main::copy_cb,				item_type => '<Item>'},
+       { path => '/Move',			callback => \&main::move_cb,				item_type => '<Item>'},
+       { path => '/Rename',			callback => \&main::rename_cb,				item_type => '<Item>'},
+       { path => '/MkDir',			callback => \&main::mkdir_cb,				item_type => '<Item>'},
+       { path => '/Delete',			callback => \&main::delete_cb,				item_type => '<Item>'},
+       { path => '/sep1',								      		item_type => '<Separator>'},
+       { path => '/Bookmarks',								 		item_type => '<Item>'},
+       { path => '/sep2',										item_type => '<Separator>'},
+       { path => '/Archive/Create tar.gz',	callback => sub { $self->create_tar_gz_archive },	item_type => '<Item>'},
+       { path => '/Archive/Create tar.bz2',	callback => sub { $self->create_tar_bz2_archive },      item_type => '<Item>'},
+       { path => '/Archive/Extract',		callback => sub { $self->extract_archive },		item_type => '<Item>'},
+       { path => '/sep3',										item_type => '<Separator>'},
+       { path => '/Properties',			callback => sub { $self->set_properties },		item_type => '<Item>'},
+       );
 
-	$item_factory->create_items(undef, @menu_items);
+       $item_factory->create_items(undef, @menu_items);
 
-	if ($self->count_selected_items == 1) {
-	
-		$item = $item_factory->get_item('/Bookmarks');
-		$item->set_submenu(&main::get_bookmarks_menu);
+       # Customize archive submenu
+       if (! Filer::Archive::is_supported_archive($type)) {
+	       $item_factory->delete_item('/Archive/Extract');
+	       $item_factory->delete_item('sep3');
+       } else {
+	       $item_factory->delete_item('/Archive/Create tar.gz');
+	       $item_factory->delete_item('/Archive/Create tar.bz2');
+       }
 
-		$item = new Gtk2::SeparatorMenuItem;
-		$commands_menu->add($item);
+       if ($self->count_selected_items == 1) {
+	       $item = $item_factory->get_item('/Bookmarks');
+	       $item->set_submenu(&main::get_bookmarks_menu);
 
-		$item = $item_factory->get_item('/Open');
-		$item->set_submenu($commands_menu);
+	       $item = new Gtk2::SeparatorMenuItem;
+	       $commands_menu->add($item);
 
-		if (-e $self->[SELECTED_ITEM]) {
-        		my $mime = new Filer::Mime;
-        		my $type = File::MimeInfo::Magic::mimetype($self->[SELECTED_ITEM]);
+	       $item = $item_factory->get_item('/Open');
+	       $item->set_submenu($commands_menu);
 
-        		foreach ($mime->get_commands($type)) {
-                		$item = new Gtk2::MenuItem(File::Basename::basename($_));
-                		$item->signal_connect("activate", sub {
-                        		my $command = $_[1];
-                        		system("$command '$self->[SELECTED_ITEM]' & exit");
-                		}, $_);
-                		$commands_menu->add($item);
-        		}
-		}
+	       if (-e $self->[SELECTED_ITEM]) {
+		       foreach ($mime->get_commands($type)) {
+			       $item = new Gtk2::MenuItem(File::Basename::basename($_));
+			       $item->signal_connect("activate", sub {
+				       my $command = $_[1];
+				       system("$command '$self->[SELECTED_ITEM]' & exit");
+			       }, $_);
+			       $commands_menu->add($item);
+		       }
+	       }
 
-		$item = new Gtk2::MenuItem('Other ...');
-		$item->signal_connect("activate", sub {	$self->open_file_with });
-		$commands_menu->add($item);
-	} else {
-		$item_factory->delete_item('/Rename');
-		$item_factory->delete_item('/MkDir');
-		$item_factory->delete_item('/Bookmarks');
-		$item_factory->delete_item('/Open');
-		$item_factory->delete_item('/Open Terminal');
-		$item_factory->delete_item('/Archive');
-		$item_factory->delete_item('/Set Icon');
-		$item_factory->delete_item('/Refresh');
-		$item_factory->delete_item('/Properties');
-		$item_factory->delete_item('/sep2');
-		$item_factory->delete_item('/sep3');
-		$item_factory->delete_item('/sep4');
-		$item_factory->delete_item('/sep5');
-	}
+	       $item = new Gtk2::MenuItem('Other ...');
+	       $item->signal_connect("activate", sub { $self->open_file_with });
+	       $commands_menu->add($item);
+       } else {
+	       $item_factory->delete_item('/Rename');
+	       $item_factory->delete_item('/MkDir');
+	       $item_factory->delete_item('/Bookmarks');
+	       $item_factory->delete_item('/Open');
+	       $item_factory->delete_item('/Open Terminal');
+	       $item_factory->delete_item('/Archive');
+	       $item_factory->delete_item('/Set Icon');
+	       $item_factory->delete_item('/Refresh');
+	       $item_factory->delete_item('/Properties');
+	       $item_factory->delete_item('/sep2');
+	       $item_factory->delete_item('/sep3');
+	       $item_factory->delete_item('/sep4');
+	       $item_factory->delete_item('/sep5');
+       }
 
-	$popup_menu->show_all;
-	$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
+       $popup_menu->show_all;
+       $popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
 }
 
 sub selection_changed_cb {

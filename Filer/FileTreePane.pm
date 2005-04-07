@@ -124,14 +124,11 @@ sub show_popup_menu {
 	{ path => '/sep1',								        			item_type => '<Separator>'},
 	{ path => '/Bookmarks',												item_type => '<Item>'},
 	{ path => '/sep2',								        			item_type => '<Separator>'},
-	{ path => '/Open',												item_type => '<Item>'},
-	{ path => '/Open Terminal',				callback => sub { $self->open_terminal },	        item_type => '<Item>'},
-	{ path => '/Archive/Create gzipped tar Archive',	callback => sub { $self->create_tar_gz_archive },	item_type => '<Item>'},
-	{ path => '/Archive/Create bzipped tar Archive',	callback => sub { $self->create_tar_bz2_archive },	item_type => '<Item>'},
+#	{ path => '/Open Terminal',				callback => sub { $self->open_terminal },	        item_type => '<Item>'},
+	{ path => '/Archive/Create tar.gz',			callback => sub { $self->create_tar_gz_archive },	item_type => '<Item>'},
+	{ path => '/Archive/Create tar.bz2',			callback => sub { $self->create_tar_bz2_archive },	item_type => '<Item>'},
 	{ path => '/sep3',								       				item_type => '<Separator>'},
 	{ path => '/Properties',				callback => sub { $self->set_properties },	        item_type => '<Item>'},
-	{ path => '/sep4',												item_type => '<Separator>'},
-	{ path => '/Quit',					callback => \&main::quit_cb,				item_type => '<Item>'},
 	);
 
 	$item_factory->create_items(undef, @menu_items);
@@ -183,6 +180,8 @@ sub selection_changed_cb {
 	if ($selection->count_selected_rows > 0) {
 		$self->[FILEPATH] = $self->get_selected_items->[0];
  		$self->[FILEPATH_ITER] = $self->get_selected_iters->[0];
+
+		$main::pane->[!$self->[SIDE]]->open_path($self->[FILEPATH]);
 	}
 
 	return 1;
