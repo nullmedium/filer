@@ -1,3 +1,4 @@
 #!/bin/sh
 
-svn log -v http://svn.foo-projects.org/svn/filer/trunk | perl svn2cl.pl > ChangeLog
+svn log --xml --verbose http://svn.foo-projects.org/svn/filer/trunk/ | xsltproc svn2cl.xsl - > ChangeLog
+

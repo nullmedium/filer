@@ -71,7 +71,7 @@ sub new {
 	$scrolled_window->add($self->[TREEVIEW]);
 
 	$self->[TREESELECTION] = $self->[TREEVIEW]->get_selection;
-	$self->[TREESELECTION]->set_mode("multiple");
+	$self->[TREESELECTION]->set_mode("single");
 	$self->[TREESELECTION]->signal_connect("changed", \&selection_changed_cb, $self);
 
 	# a column with a pixbuf renderer and a text renderer
@@ -177,12 +177,10 @@ sub show_popup_menu {
 sub selection_changed_cb {
 	my ($selection,$self) = @_;
 
-	if ($selection->count_selected_rows > 0) {
-		$self->[FILEPATH] = $self->get_selected_items->[0];
- 		$self->[FILEPATH_ITER] = $self->get_selected_iters->[0];
+	$self->[FILEPATH] = $self->get_selected_items->[0];
+	$self->[FILEPATH_ITER] = $self->get_selected_iters->[0];
 
-		$main::pane->[!$self->[SIDE]]->open_path($self->[FILEPATH]);
-	}
+	$main::pane->[!$self->[SIDE]]->open_path($self->[FILEPATH]);
 
 	return 1;
 }
@@ -204,21 +202,21 @@ sub treeview_event_cb {
 		return 1;
 	}
 
-	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Return'})
-	or ($e->type eq "2button-press" and $e->button == 1))
-	 {
-		$main::pane->[!$self->[SIDE]]->open_path($self->[FILEPATH]);
-
-		my $path = $self->[TREEMODEL]->get_path($self->[FILEPATH_ITER]);
-
-		if ($self->[TREEVIEW]->row_expanded($path)) {
-			$self->[TREEVIEW]->collapse_row($path)
-		} else {
-			$self->[TREEVIEW]->expand_row($path,0);
-		}
-
-		return 1;
-	}
+# 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Return'})
+# 	or ($e->type eq "2button-press" and $e->button == 1))
+# 	 {
+# 		$main::pane->[!$self->[SIDE]]->open_path($self->[FILEPATH]);
+# 
+# 		my $path = $self->[TREEMODEL]->get_path($self->[FILEPATH_ITER]);
+# 
+# 		if ($self->[TREEVIEW]->row_expanded($path)) {
+# 			$self->[TREEVIEW]->collapse_row($path)
+# 		} else {
+# 			$self->[TREEVIEW]->expand_row($path,0);
+# 		}
+# 
+# 		return 1;
+# 	}
 
 	if ($e->type eq "button-press" and $e->button == 3) {
 		$self->show_popup_menu($e);

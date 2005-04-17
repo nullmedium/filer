@@ -1,607 +1,404 @@
-2005-04-07 18:01:16  Jens Luedicke <jens.luedicke@gmail.com>
+2005-04-07 16:29  perldude
 
-	* Changed paths:
-	   M /trunk/Filer/Archive.pm
-	   M /trunk/Filer/FilePane.pm
-	   M /trunk/Filer/FileTreePane.pm
+	* trunk/ChangeLog: update ChangeLog
 
-	* rewritten Archive module (contributed by Sjon)
-	* re-designed context-menu (based on contributions by Sjon)
-	* single-click navigation in tree-view
+2005-04-07 16:01  perldude
 
-2005-04-06 14:16:46  Jens Luedicke <jens.luedicke@gmail.com>
+	* trunk/Filer/Archive.pm, trunk/Filer/FilePane.pm,
+	  trunk/Filer/FileTreePane.pm: rewritten Archive module (contributed
+	  by Sjon) re-designed context-menu (based on contributions by Sjon)
+	  single-click navigation in tree-view
 
-	* Changed paths:
-	   M /trunk/Filer/FilePane.pm
-	   M /trunk/Filer/FileTreePane.pm
-	   M /trunk/Filer/Move.pm
-	   M /trunk/lib.pl
+2005-04-06 12:16  perldude
 
-	* remove some cruft
-	* select item below mouse cursour on right-click
+	* trunk/Filer/FilePane.pm, trunk/Filer/FileTreePane.pm,
+	  trunk/Filer/Move.pm, trunk/lib.pl: remove some cruft select item
+	  below mouse cursour on right-click
 
-2005-04-02 17:21:38  Jens Luedicke <jens.luedicke@gmail.com>
+2005-04-02 15:21  perldude
 
-	* Changed paths:
-	   M /trunk/Filer/Config.pm
-	   M /trunk/Makefile
-	   M /trunk/filer.pl
+	* trunk/Filer/Config.pm, trunk/Makefile, trunk/filer.pl: version
+	  0.0.11-svn fix: create XDG_CONFIG_HOME in case it doesn't exist
+	  fix: add install -d ${PREFIX}/bin to Makefile
 
-	* version 0.0.11-svn
-	* fix: create XDG_CONFIG_HOME in case it doesn't exist
-	* fix: add install -d ${PREFIX}/bin to Makefile
+2005-04-02 08:54  perldude
 
-2005-04-02 10:54:22  Jens Luedicke <jens.luedicke@gmail.com>
+	* trunk/ChangeLog: update changelog
 
-	* Changed paths:
-	   M /trunk/ChangeLog
+2005-04-02 08:53  perldude
 
-	* update changelog
+	* trunk/ChangeLog, trunk/Filer/FilePane.pm,
+	  trunk/Filer/FileTreePane.pm, trunk/filer.pl, trunk/lib.pl: update
+	  version 0.0.10 update changelog more checking of pre-conds in
+	  copy_cb, move_cb, rename_cb, delete_cb misc stuff
 
-2005-04-02 10:53:40  Jens Luedicke <jens.luedicke@gmail.com>
+2005-03-31 10:16  perldude
 
-	* Changed paths:
-	   M /trunk/ChangeLog
-	   M /trunk/Filer/FilePane.pm
-	   M /trunk/Filer/FileTreePane.pm
-	   M /trunk/filer.pl
-	   M /trunk/lib.pl
+	* trunk/Filer/Bookmarks.pm, trunk/Filer/Config.pm,
+	  trunk/Filer/Mime.pm, trunk/lib.pl: use File::BaseDir and
+	  ${XDG_CONFIG_HOME}/filer to store configuration files. existing
+	  config files will be moved to the new location
 
-	* update version 0.0.10
-	* update changelog
-	* more checking of pre-conds in copy_cb, move_cb, rename_cb, delete_cb
-	* misc stuff
+2005-03-31 09:54  perldude
 
-2005-03-31 12:16:05  Jens Luedicke <jens.luedicke@gmail.com>
+	* trunk/lib.pl: improve switch_mode() fix go_home_cb()
 
-	* Changed paths:
-	   M /trunk/Filer/Bookmarks.pm
-	   M /trunk/Filer/Config.pm
-	   M /trunk/Filer/Mime.pm
-	   M /trunk/lib.pl
+2005-03-31 09:41  perldude
 
-	* use File::BaseDir and ${XDG_CONFIG_HOME}/filer to store configuration files.
-	* existing config files will be moved to the new location
+	* trunk/ChangeLog, trunk/update-changelog.sh: update changelog
 
-2005-03-31 11:54:32  Jens Luedicke <jens.luedicke@gmail.com>
+2005-03-31 09:21  perldude
 
-	* Changed paths:
-	   M /trunk/lib.pl
+	* trunk/ChangeLog, trunk/Filer/DND.pm, trunk/Filer/FilePane.pm,
+	  trunk/Filer/FileTreePane.pm: DND changes (path entry above
+	  listviews accepts drags) update changelog
 
-	* improve switch_mode()
-	* fix go_home_cb()
+2005-03-29 19:20  perldude
 
-2005-03-31 11:41:02  Jens Luedicke <jens.luedicke@gmail.com>
+	* trunk/Filer/FilePane.pm, trunk/lib.pl: display the location bar
+	  below the toolbar in explorer mode. requires some reparenting and
+	  two additional parent widgets to hold the location bar widgets.
 
-	* Changed paths:
-	   M /trunk/ChangeLog
-	   M /trunk/update-changelog.sh
+2005-03-25 19:42  perldude
 
-	* update changelog
+	* trunk/Filer/DirWalk.pm: argh!!
 
-2005-03-31 11:21:52  Jens Luedicke <jens.luedicke@gmail.com>
+2005-03-25 19:36  perldude
 
-	* Changed paths:
-	   M /trunk/ChangeLog
-	   M /trunk/Filer/DND.pm
-	   M /trunk/Filer/FilePane.pm
-	   M /trunk/Filer/FileTreePane.pm
+	* trunk/Filer/DirWalk.pm, trunk/lib.pl: be more verbose about errors
+	  fix a misplaced parentheses. caused some big confusion.
 
-	* DND changes (path entry above listviews accepts drags)
-	* update changelog
+2005-03-25 17:47  perldude
 
-2005-03-29 21:20:41  Jens Luedicke <jens.luedicke@gmail.com>
+	* trunk/Filer/Delete.pm, trunk/lib.pl: add a Home button the the
+	  toolbar
 
-	* Changed paths:
-	   M /trunk/Filer/FilePane.pm
-	   M /trunk/lib.pl
+2005-03-24 19:58  perldude
 
-	* display the location bar below the toolbar in explorer mode.
-	* requires some reparenting and two additional parent widgets
-	* to hold the location bar widgets.
+	* trunk/lib.pl: small tweak remove old copy_cb() function
 
-2005-03-25 20:42:39  Jens Luedicke <jens.luedicke@gmail.com>
+2005-03-24 19:54  perldude
 
-	* Changed paths:
-	   M /trunk/Filer/DirWalk.pm
+	* trunk/ChangeLog, trunk/Filer/Config.pm, trunk/Filer/Delete.pm,
+	  trunk/Filer/FilePane.pm, trunk/Filer/Move.pm, trunk/README,
+	  trunk/lib.pl: larger update
 
-	* argh!!
+2005-03-23 15:19  perldude
 
-2005-03-25 20:36:17  Jens Luedicke <jens.luedicke@gmail.com>
+	* trunk/Filer/FilePane.pm, trunk/README: * add README file
 
-	* Changed paths:
-	   M /trunk/Filer/DirWalk.pm
-	   M /trunk/lib.pl
+2005-03-23 14:16  perldude
 
-	* be more verbose about errors
-	* fix a misplaced parentheses. caused some big confusion.
+	* trunk/Filer/Config.pm, trunk/Filer/DND.pm,
+	  trunk/Filer/FilePane.pm, trunk/Filer/Move.pm, trunk/lib.pl: *
+	  lib.pl, Filer/Config.pm, Filer/DND.pm: add options to turn off
+	  confirmation dialogs * Filer/Move.pm: small fix. *
+	  Filer/FilePane.pm: copy selected files to clipboard
 
-2005-03-25 18:47:42  Jens Luedicke <jens.luedicke@gmail.com>
+2005-03-22 17:17  perldude
 
-	* Changed paths:
-	   M /trunk/Filer/Delete.pm
-	   M /trunk/lib.pl
+	* trunk/lib.pl: lib.pl: make right pane focused on startup
 
-	* add a Home button the the toolbar
+2005-03-22 13:22  perldude
 
-2005-03-24 20:58:25  Jens Luedicke <jens.luedicke@gmail.com>
+	* trunk/Makefile: Makefile: add PREFIX (suggested by Christian V. J.
+	  Bruessow)
 
-	* Changed paths:
-	   M /trunk/lib.pl
+2005-03-21 19:17  perldude
 
-	* small tweak
-	* remove old copy_cb() function
+	* trunk/Filer/Move.pm, trunk/lib.pl: * lib.pl: inline function for
+	  moving files * Filer/Move.pm: fix
 
-2005-03-24 20:54:13  Jens Luedicke <jens.luedicke@gmail.com>
+2005-03-20 16:26  perldude
 
-	* Changed paths:
-	   M /trunk/ChangeLog
-	   M /trunk/Filer/Config.pm
-	   M /trunk/Filer/Delete.pm
-	   M /trunk/Filer/FilePane.pm
-	   M /trunk/Filer/Move.pm
-	   M /trunk/README
-	   M /trunk/lib.pl
+	* trunk/Filer/Bookmarks.pm, trunk/Filer/Copy.pm,
+	  trunk/Filer/Dialog.pm, trunk/Filer/FilePane.pm,
+	  trunk/Filer/Move.pm, trunk/Filer/ProgressDialog.pm, trunk/lib.pl:
+	  lib.pl: cleanup move_cb()
 
-	* larger update
+2005-03-16 15:03  perldude
 
-2005-03-23 16:19:38  Jens Luedicke <jens.luedicke@gmail.com>
+	* trunk/Filer/ProgressDialog.pm: forgot to save file...
 
-	* Changed paths:
-	   M /trunk/Filer/FilePane.pm
-	   A /trunk/README
+2005-03-16 15:02  perldude
 
-	* * add README file
+	* trunk/Filer/Copy.pm, trunk/Filer/FileCopy.pm,
+	  trunk/Filer/FilePane.pm, trunk/Filer/Move.pm,
+	  trunk/Filer/ProgressDialog.pm, trunk/lib.pl: * several changes to
+	  progress dialogs / progress indication. * display amount of files
+	  copied inside progressbar * display written bytes/second in file
+	  copy progressbar use timeout to calculate written bytes * use
+	  pango ellipsize to display filenames within the progressdialog *
+	  cleanups
 
-2005-03-23 15:16:37  Jens Luedicke <jens.luedicke@gmail.com>
+2005-03-15 21:12  perldude
 
-	* Changed paths:
-	   M /trunk/Filer/Config.pm
-	   M /trunk/Filer/DND.pm
-	   M /trunk/Filer/FilePane.pm
-	   M /trunk/Filer/Move.pm
-	   M /trunk/lib.pl
+	* trunk/ChangeLog, trunk/update-changelog.sh: ChangeLog: update
+	  ChangeLog update-changelog.sh: helper script
 
-	* * lib.pl, Filer/Config.pm, Filer/DND.pm: add options to turn off confirmation dialogs
-	* * Filer/Move.pm: small fix.
-	* * Filer/FilePane.pm: copy selected files to clipboard
+2005-03-15 21:06  perldude
 
-2005-03-22 18:17:45  Jens Luedicke <jens.luedicke@gmail.com>
+	* trunk/ChangeLog, trunk/Filer/FilePane.pm, trunk/filer.pl,
+	  trunk/lib.pl, trunk/svn2cl.pl: filer.pl: new version: 0.0.9-svn
+	  lib.pl, Filer/FilePane.pm: bookmark menu changes svn2cl.pl:
+	  ChangeLog generation script ChangeLog: new ChangeLog
 
-	* Changed paths:
-	   M /trunk/lib.pl
+2005-03-15 19:31  perldude
 
-	* lib.pl: make right pane focused on startup
+	* trunk/Filer/FilePane.pm, trunk/Filer/Move.pm, trunk/lib.pl:
+	  lib.pl, Filer/FilePane.pm: use Memoize to speed up directory
+	  loading Filer/Move.pm: change behaviour of progressbar
 
-2005-03-22 14:22:13  Jens Luedicke <jens.luedicke@gmail.com>
+2005-03-15 08:52  perldude
 
-	* Changed paths:
-	   M /trunk/Makefile
+	* projects/filer, trunk: create trunk
 
-	* Makefile: add PREFIX (suggested by Christian V. J. Bruessow)
+2005-03-13 18:00  jens
 
-2005-03-21 20:17:20  Jens Luedicke <jens.luedicke@gmail.com>
+	* projects/filer/Filer/Dialog.pm, projects/filer/Filer/FilePane.pm,
+	  projects/filer/Filer/FileTreePane.pm,
+	  projects/filer/Filer/Mime.pm, projects/filer/Filer/Properties.pm,
+	  projects/filer/Filer/Search.pm, projects/filer/lib.pl: clean up
+	  dialogs fixed Archive handling use FileChooserDialogs other things
+	  I forgot by now :)
 
-	* Changed paths:
-	   M /trunk/Filer/Move.pm
-	   M /trunk/lib.pl
+2005-03-12 09:30  jens
 
-	* * lib.pl: inline function for moving files
-	* * Filer/Move.pm: fix
+	* projects/filer/Filer/Bookmarks.pm: rewrite Bookmarks module
 
-2005-03-20 17:26:26  Jens Luedicke <jens.luedicke@gmail.com>
+2005-03-12 09:14  jens
 
-	* Changed paths:
-	   M /trunk/Filer/Bookmarks.pm
-	   M /trunk/Filer/Copy.pm
-	   M /trunk/Filer/Dialog.pm
-	   M /trunk/Filer/FilePane.pm
-	   M /trunk/Filer/Move.pm
-	   M /trunk/Filer/ProgressDialog.pm
-	   M /trunk/lib.pl
+	* projects/filer/AUTHORS, projects/filer/Makefile: add AUTHORS file
 
-	* lib.pl: cleanup move_cb()
+2005-03-12 09:10  jens
 
-2005-03-16 16:03:16  Jens Luedicke <jens.luedicke@gmail.com>
+	* projects/filer/Filer/Archive.pm,
+	  projects/filer/Filer/Bookmarks.pm, projects/filer/Filer/Config.pm,
+	  projects/filer/Filer/Copy.pm, projects/filer/Filer/DND.pm,
+	  projects/filer/Filer/Delete.pm, projects/filer/Filer/Dialog.pm,
+	  projects/filer/Filer/DirWalk.pm, projects/filer/Filer/FileCopy.pm,
+	  projects/filer/Filer/FilePane.pm,
+	  projects/filer/Filer/FileTreePane.pm,
+	  projects/filer/Filer/Mime.pm, projects/filer/Filer/Move.pm,
+	  projects/filer/Filer/ProgressDialog.pm,
+	  projects/filer/Filer/Properties.pm,
+	  projects/filer/Filer/Search.pm, projects/filer/filer.pl,
+	  projects/filer/lib.pl: update copyright headers
 
-	* Changed paths:
-	   M /trunk/Filer/ProgressDialog.pm
+2005-03-11 20:29  jens
 
-	* forgot to save file...
+	* projects/filer/filer.pl: jump to $VERSION 0.0.8
 
-2005-03-16 16:02:37  Jens Luedicke <jens.luedicke@gmail.com>
+2005-03-11 20:27  jens
 
-	* Changed paths:
-	   M /trunk/Filer/Copy.pm
-	   M /trunk/Filer/FileCopy.pm
-	   M /trunk/Filer/FilePane.pm
-	   M /trunk/Filer/Move.pm
-	   M /trunk/Filer/ProgressDialog.pm
-	   M /trunk/lib.pl
+	* projects/filer/Filer/Copy.pm, projects/filer/lib.pl: fix copying
+	  of files and directories inside the same directory
 
-	* * several changes to progress dialogs / progress indication.
-	* * display amount of files copied inside progressbar
-	* * display written bytes/second in file copy progressbar
-	  use timeout to calculate written bytes
-	* * use pango ellipsize to display filenames within the progressdialog
-	* * cleanups
+2005-03-09 16:33  jens
 
-2005-03-15 22:12:12  Jens Luedicke <jens.luedicke@gmail.com>
+	* projects/filer/Filer/FileCopy.pm, projects/filer/Filer/Mime.pm:
+	  Filer/FileCopy.pm: use constants Filer/Mime.pm: tweaks
 
-	* Changed paths:
-	   M /trunk/ChangeLog
-	   A /trunk/update-changelog.sh
+2005-03-09 14:47  jens
 
-	* ChangeLog: update ChangeLog
-	* update-changelog.sh: helper script
+	* projects/filer/Filer/Mime.pm: Filer/Mime.pm: get_icons() changes
 
-2005-03-15 22:06:44  Jens Luedicke <jens.luedicke@gmail.com>
+2005-03-09 14:44  jens
 
-	* Changed paths:
-	   A /trunk/ChangeLog
-	   M /trunk/Filer/FilePane.pm
-	   M /trunk/filer.pl
-	   M /trunk/lib.pl
-	   A /trunk/svn2cl.pl
+	* projects/filer/Filer/Mime.pm: Filer/Mime.pm: improve
+	  set_default_command() method
 
-	* filer.pl: new version: 0.0.9-svn
-	* lib.pl, Filer/FilePane.pm: bookmark menu changes
+2005-03-09 14:30  jens
 
-	* svn2cl.pl: ChangeLog generation script
-	* ChangeLog: new ChangeLog
+	* projects/filer/start-ide.sh: open all source files in nedit
 
-2005-03-15 20:31:44  Jens Luedicke <jens.luedicke@gmail.com>
+2005-03-09 14:27  jens
 
-	* Changed paths:
-	   M /trunk/Filer/FilePane.pm
-	   M /trunk/Filer/Move.pm
-	   M /trunk/lib.pl
-
-	* lib.pl, Filer/FilePane.pm: use Memoize to speed up directory loading
-	* Filer/Move.pm: change behaviour of progressbar
-
-2005-03-15 09:52:55  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   D /projects/filer
-	   A /trunk (from /projects/filer:19)
-
-	* create trunk
-
-2005-03-13 19:00:46  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   M /projects/filer/Filer/Dialog.pm
-	   M /projects/filer/Filer/FilePane.pm
-	   M /projects/filer/Filer/FileTreePane.pm
-	   M /projects/filer/Filer/Mime.pm
-	   M /projects/filer/Filer/Properties.pm
-	   M /projects/filer/Filer/Search.pm
-	   M /projects/filer/lib.pl
-
-	* clean up dialogs
-	* fixed Archive handling
-	* use FileChooserDialogs
-	* other things I forgot by now :)
-
-2005-03-12 10:30:50  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   M /projects/filer/Filer/Bookmarks.pm
-
-	* rewrite Bookmarks module
-
-2005-03-12 10:14:57  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   A /projects/filer/AUTHORS
-	   M /projects/filer/Makefile
-
-	* add AUTHORS file
-
-2005-03-12 10:10:38  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   M /projects/filer/Filer/Archive.pm
-	   M /projects/filer/Filer/Bookmarks.pm
-	   M /projects/filer/Filer/Config.pm
-	   M /projects/filer/Filer/Copy.pm
-	   M /projects/filer/Filer/DND.pm
-	   M /projects/filer/Filer/Delete.pm
-	   M /projects/filer/Filer/Dialog.pm
-	   M /projects/filer/Filer/DirWalk.pm
-	   M /projects/filer/Filer/FileCopy.pm
-	   M /projects/filer/Filer/FilePane.pm
-	   M /projects/filer/Filer/FileTreePane.pm
-	   M /projects/filer/Filer/Mime.pm
-	   M /projects/filer/Filer/Move.pm
-	   M /projects/filer/Filer/ProgressDialog.pm
-	   M /projects/filer/Filer/Properties.pm
-	   M /projects/filer/Filer/Search.pm
-	   M /projects/filer/filer.pl
-	   M /projects/filer/lib.pl
-
-	* update copyright headers
-
-2005-03-11 21:29:19  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   M /projects/filer/filer.pl
-
-	* jump to $VERSION 0.0.8
-
-2005-03-11 21:27:26  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   M /projects/filer/Filer/Copy.pm
-	   M /projects/filer/lib.pl
-
-	* fix copying of files and directories inside the same directory
-
-2005-03-09 17:33:50  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   M /projects/filer/Filer/FileCopy.pm
-	   M /projects/filer/Filer/Mime.pm
-
-	* Filer/FileCopy.pm: use constants
-	* Filer/Mime.pm: tweaks
-
-2005-03-09 15:47:22  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   M /projects/filer/Filer/Mime.pm
-
-	* Filer/Mime.pm: get_icons() changes
-
-2005-03-09 15:44:36  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   M /projects/filer/Filer/Mime.pm
-
-	* Filer/Mime.pm: improve set_default_command() method
-
-2005-03-09 15:30:23  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   A /projects/filer/start-ide.sh
-
-	* open all source files in nedit
-
-2005-03-09 15:27:31  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   M /projects/filer/Filer/Archive.pm
-	   M /projects/filer/Filer/Config.pm
-	   M /projects/filer/Filer/Copy.pm
-	   M /projects/filer/Filer/DND.pm
-	   M /projects/filer/Filer/Delete.pm
-	   M /projects/filer/Filer/Dialog.pm
-	   M /projects/filer/Filer/DirWalk.pm
-	   M /projects/filer/Filer/FileCopy.pm
-	   M /projects/filer/Filer/FilePane.pm
-	   M /projects/filer/Filer/FileTreePane.pm
-	   M /projects/filer/Filer/Mime.pm
-	   M /projects/filer/Filer/Move.pm
-	   M /projects/filer/Filer/Properties.pm
-	   M /projects/filer/Filer/Search.pm
-	   M /projects/filer/lib.pl
-
-	* remove whitespace at end of lines
-
-2005-03-09 15:21:26  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   M /projects/filer/Filer/Copy.pm
-
-	* Filer/Copy.pm: small tweak
-
-2005-03-09 11:51:09  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   M /projects/filer/Filer/Copy.pm
-	   A /projects/filer/Filer/DND.pm
-	   M /projects/filer/Filer/DirWalk.pm
-	   M /projects/filer/Filer/FileCopy.pm
-	   M /projects/filer/Filer/FilePane.pm
-	   M /projects/filer/Filer/FileTreePane.pm
-	   M /projects/filer/Filer/Move.pm
-	   M /projects/filer/lib.pl
-
-	* use constants instead of 0,1,-1 to indicate failure, success and aborting.
-	* add Drag'n Drop module.
-
-2005-03-08 21:22:43  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   M /projects/filer/Filer/DirWalk.pm
-	   M /projects/filer/lib.pl
-
-	* lib.pl: fix rename_cb()
-	* Filer/DirWalk.pm: more cleanups.
-
-2005-03-08 16:09:52  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   M /projects/filer/Filer/DirWalk.pm
-	   M /projects/filer/Filer/Mime.pm
-
-	* DirWalk.pm: get rid of $r, check return result within if statements.
-	* Mimme.pm: small modifications
-
-2005-03-08 15:41:08  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   M /projects/filer/Filer/Mime.pm
-
-	* code cleanup
-
-2005-03-06 13:30:44  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   D /projects/filer/TEST
-
-	* remove TEST file
-
-2005-03-06 13:30:26  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   A /projects/filer/TEST
-
-	* added TEST file
-
-2005-03-06 13:26:31  Jens Luedicke <jens.luedicke@gmail.com>
-
-	* Changed paths:
-	   A /projects
-	   A /projects/filer
-	   A /projects/filer/COPYING
-	   A /projects/filer/Filer
-	   A /projects/filer/Filer/Archive.pm
-	   A /projects/filer/Filer/Bookmarks.pm
-	   A /projects/filer/Filer/Config.pm
-	   A /projects/filer/Filer/Copy.pm
-	   A /projects/filer/Filer/Delete.pm
-	   A /projects/filer/Filer/Dialog.pm
-	   A /projects/filer/Filer/DirWalk.pm
-	   A /projects/filer/Filer/FileCopy.pm
-	   A /projects/filer/Filer/FilePane.pm
-	   A /projects/filer/Filer/FileTreePane.pm
-	   A /projects/filer/Filer/Mime.pm
-	   A /projects/filer/Filer/Move.pm
-	   A /projects/filer/Filer/ProgressDialog.pm
-	   A /projects/filer/Filer/Properties.pm
-	   A /projects/filer/Filer/Search.pm
-	   A /projects/filer/Makefile
-	   A /projects/filer/filer.pl
-	   A /projects/filer/icons
-	   A /projects/filer/icons/blockdevice.png
-	   A /projects/filer/icons/chardevice.png
-	   A /projects/filer/icons/default.png
-	   A /projects/filer/icons/desktop.png
-	   A /projects/filer/icons/exec.png
-	   A /projects/filer/icons/folder.png
-	   A /projects/filer/icons/link.png
-	   A /projects/filer/icons/mimetypes
-	   A /projects/filer/icons/mimetypes/applix.png
-	   A /projects/filer/icons/mimetypes/ascii.png
-	   A /projects/filer/icons/mimetypes/audio.png
-	   A /projects/filer/icons/mimetypes/binary.png
-	   A /projects/filer/icons/mimetypes/bz2.png
-	   A /projects/filer/icons/mimetypes/cdbo_list.png
-	   A /projects/filer/icons/mimetypes/cdimage.png
-	   A /projects/filer/icons/mimetypes/cdr.png
-	   A /projects/filer/icons/mimetypes/cdtrack.png
-	   A /projects/filer/icons/mimetypes/colorscm.png
-	   A /projects/filer/icons/mimetypes/colorset.png
-	   A /projects/filer/icons/mimetypes/core.png
-	   A /projects/filer/icons/mimetypes/deb.png
-	   A /projects/filer/icons/mimetypes/doc.png
-	   A /projects/filer/icons/mimetypes/document.png
-	   A /projects/filer/icons/mimetypes/document2.png
-	   A /projects/filer/icons/mimetypes/dvi.png
-	   A /projects/filer/icons/mimetypes/empty.png
-	   A /projects/filer/icons/mimetypes/encrypted.png
-	   A /projects/filer/icons/mimetypes/exec_wine.png
-	   A /projects/filer/icons/mimetypes/file_locked.png
-	   A /projects/filer/icons/mimetypes/file_temporary.png
-	   A /projects/filer/icons/mimetypes/font.png
-	   A /projects/filer/icons/mimetypes/font_bitmap.png
-	   A /projects/filer/icons/mimetypes/font_truetype.png
-	   A /projects/filer/icons/mimetypes/font_type1.png
-	   A /projects/filer/icons/mimetypes/gettext.png
-	   A /projects/filer/icons/mimetypes/gf.png
-	   A /projects/filer/icons/mimetypes/html.png
-	   A /projects/filer/icons/mimetypes/image.png
-	   A /projects/filer/icons/mimetypes/image2.png
-	   A /projects/filer/icons/mimetypes/images.png
-	   A /projects/filer/icons/mimetypes/info.png
-	   A /projects/filer/icons/mimetypes/java_src.png
-	   A /projects/filer/icons/mimetypes/karbon.png
-	   A /projects/filer/icons/mimetypes/karbon_karbon.png
-	   A /projects/filer/icons/mimetypes/kchart_chrt.png
-	   A /projects/filer/icons/mimetypes/kexi_kexi.png
-	   A /projects/filer/icons/mimetypes/kformula_kfo.png
-	   A /projects/filer/icons/mimetypes/kivio_flw.png
-	   A /projects/filer/icons/mimetypes/kmultiple.png
-	   A /projects/filer/icons/mimetypes/kpresenter_kpr.png
-	   A /projects/filer/icons/mimetypes/krita_kra.png
-	   A /projects/filer/icons/mimetypes/kspread_ksp.png
-	   A /projects/filer/icons/mimetypes/kugar_kud.png
-	   A /projects/filer/icons/mimetypes/kugardata.png
-	   A /projects/filer/icons/mimetypes/kword_kwd.png
-	   A /projects/filer/icons/mimetypes/log.png
-	   A /projects/filer/icons/mimetypes/make.png
-	   A /projects/filer/icons/mimetypes/man.png
-	   A /projects/filer/icons/mimetypes/message.png
-	   A /projects/filer/icons/mimetypes/metafont.png
-	   A /projects/filer/icons/mimetypes/midi.png
-	   A /projects/filer/icons/mimetypes/mime-cdr.png
-	   A /projects/filer/icons/mimetypes/mime-colorset.png
-	   A /projects/filer/icons/mimetypes/mime-postscript.png
-	   A /projects/filer/icons/mimetypes/mime-resource.png
-	   A /projects/filer/icons/mimetypes/mime-template_source.png
-	   A /projects/filer/icons/mimetypes/mime_ascii.png
-	   A /projects/filer/icons/mimetypes/mime_empty.png
-	   A /projects/filer/icons/mimetypes/mime_koffice.png
-	   A /projects/filer/icons/mimetypes/misc.png
-	   A /projects/filer/icons/mimetypes/misc_doc.png
-	   A /projects/filer/icons/mimetypes/mozilla_doc.png
-	   A /projects/filer/icons/mimetypes/netscape.png
-	   A /projects/filer/icons/mimetypes/netscape_doc.png
-	   A /projects/filer/icons/mimetypes/news.png
-	   A /projects/filer/icons/mimetypes/pdf-document.png
-	   A /projects/filer/icons/mimetypes/pdf.png
-	   A /projects/filer/icons/mimetypes/php.png
-	   A /projects/filer/icons/mimetypes/pk.png
-	   A /projects/filer/icons/mimetypes/postscript.png
-	   A /projects/filer/icons/mimetypes/ps.png
-	   A /projects/filer/icons/mimetypes/quicktime.png
-	   A /projects/filer/icons/mimetypes/readme.png
-	   A /projects/filer/icons/mimetypes/real.png
-	   A /projects/filer/icons/mimetypes/real_doc.png
-	   A /projects/filer/icons/mimetypes/recycled.png
-	   A /projects/filer/icons/mimetypes/resource.png
-	   A /projects/filer/icons/mimetypes/rpm.png
-	   A /projects/filer/icons/mimetypes/shellscript.png
-	   A /projects/filer/icons/mimetypes/soffice.png
-	   A /projects/filer/icons/mimetypes/sound.png
-	   A /projects/filer/icons/mimetypes/source.png
-	   A /projects/filer/icons/mimetypes/source_c.png
-	   A /projects/filer/icons/mimetypes/source_cpp.png
-	   A /projects/filer/icons/mimetypes/source_f.png
-	   A /projects/filer/icons/mimetypes/source_h.png
-	   A /projects/filer/icons/mimetypes/source_j.png
-	   A /projects/filer/icons/mimetypes/source_java.png
-	   A /projects/filer/icons/mimetypes/source_l.png
-	   A /projects/filer/icons/mimetypes/source_moc.png
-	   A /projects/filer/icons/mimetypes/source_o.png
-	   A /projects/filer/icons/mimetypes/source_p.png
-	   A /projects/filer/icons/mimetypes/source_php.png
-	   A /projects/filer/icons/mimetypes/source_pl.png
-	   A /projects/filer/icons/mimetypes/source_py.png
-	   A /projects/filer/icons/mimetypes/source_s.png
-	   A /projects/filer/icons/mimetypes/source_y.png
-	   A /projects/filer/icons/mimetypes/spreadsheet.png
-	   A /projects/filer/icons/mimetypes/tar.png
-	   A /projects/filer/icons/mimetypes/template_source.png
-	   A /projects/filer/icons/mimetypes/tex.png
-	   A /projects/filer/icons/mimetypes/tgz.png
-	   A /projects/filer/icons/mimetypes/trash.png
-	   A /projects/filer/icons/mimetypes/txt.png
-	   A /projects/filer/icons/mimetypes/txt2.png
-	   A /projects/filer/icons/mimetypes/unknown.png
-	   A /projects/filer/icons/mimetypes/vcalendar.png
-	   A /projects/filer/icons/mimetypes/vcard.png
-	   A /projects/filer/icons/mimetypes/vectorgfx.png
-	   A /projects/filer/icons/mimetypes/video.png
-	   A /projects/filer/icons/mimetypes/widget_doc.png
-	   A /projects/filer/icons/mimetypes/wordprocessing.png
-	   A /projects/filer/icons/mimetypes/zip.png
-	   A /projects/filer/icons/pipe.png
-	   A /projects/filer/icons/socket.png
-	   A /projects/filer/icons/symlink.png
-	   A /projects/filer/lib.pl
-
-	* initial import
+	* projects/filer/Filer/Archive.pm, projects/filer/Filer/Config.pm,
+	  projects/filer/Filer/Copy.pm, projects/filer/Filer/DND.pm,
+	  projects/filer/Filer/Delete.pm, projects/filer/Filer/Dialog.pm,
+	  projects/filer/Filer/DirWalk.pm, projects/filer/Filer/FileCopy.pm,
+	  projects/filer/Filer/FilePane.pm,
+	  projects/filer/Filer/FileTreePane.pm,
+	  projects/filer/Filer/Mime.pm, projects/filer/Filer/Move.pm,
+	  projects/filer/Filer/Properties.pm,
+	  projects/filer/Filer/Search.pm, projects/filer/lib.pl: remove
+	  whitespace at end of lines
+
+2005-03-09 14:21  jens
+
+	* projects/filer/Filer/Copy.pm: Filer/Copy.pm: small tweak
+
+2005-03-09 10:51  jens
+
+	* projects/filer/Filer/Copy.pm, projects/filer/Filer/DND.pm,
+	  projects/filer/Filer/DirWalk.pm, projects/filer/Filer/FileCopy.pm,
+	  projects/filer/Filer/FilePane.pm,
+	  projects/filer/Filer/FileTreePane.pm,
+	  projects/filer/Filer/Move.pm, projects/filer/lib.pl: use constants
+	  instead of 0,1,-1 to indicate failure, success and aborting. add
+	  Drag'n Drop module.
+
+2005-03-08 20:22  jens
+
+	* projects/filer/Filer/DirWalk.pm, projects/filer/lib.pl: lib.pl:
+	  fix rename_cb() Filer/DirWalk.pm: more cleanups.
+
+2005-03-08 15:09  jens
+
+	* projects/filer/Filer/DirWalk.pm, projects/filer/Filer/Mime.pm:
+	  DirWalk.pm: get rid of $r, check return result within if
+	  statements. Mimme.pm: small modifications
+
+2005-03-08 14:41  jens
+
+	* projects/filer/Filer/Mime.pm: code cleanup
+
+2005-03-06 12:30  jens
+
+	* projects/filer/TEST: remove TEST file
+
+2005-03-06 12:30  jens
+
+	* projects/filer/TEST: added TEST file
+
+2005-03-06 12:26  jens
+
+	* projects, projects/filer, projects/filer/COPYING,
+	  projects/filer/Filer, projects/filer/Filer/Archive.pm,
+	  projects/filer/Filer/Bookmarks.pm, projects/filer/Filer/Config.pm,
+	  projects/filer/Filer/Copy.pm, projects/filer/Filer/Delete.pm,
+	  projects/filer/Filer/Dialog.pm, projects/filer/Filer/DirWalk.pm,
+	  projects/filer/Filer/FileCopy.pm,
+	  projects/filer/Filer/FilePane.pm,
+	  projects/filer/Filer/FileTreePane.pm,
+	  projects/filer/Filer/Mime.pm, projects/filer/Filer/Move.pm,
+	  projects/filer/Filer/ProgressDialog.pm,
+	  projects/filer/Filer/Properties.pm,
+	  projects/filer/Filer/Search.pm, projects/filer/Makefile,
+	  projects/filer/filer.pl, projects/filer/icons,
+	  projects/filer/icons/blockdevice.png,
+	  projects/filer/icons/chardevice.png,
+	  projects/filer/icons/default.png,
+	  projects/filer/icons/desktop.png, projects/filer/icons/exec.png,
+	  projects/filer/icons/folder.png, projects/filer/icons/link.png,
+	  projects/filer/icons/mimetypes,
+	  projects/filer/icons/mimetypes/applix.png,
+	  projects/filer/icons/mimetypes/ascii.png,
+	  projects/filer/icons/mimetypes/audio.png,
+	  projects/filer/icons/mimetypes/binary.png,
+	  projects/filer/icons/mimetypes/bz2.png,
+	  projects/filer/icons/mimetypes/cdbo_list.png,
+	  projects/filer/icons/mimetypes/cdimage.png,
+	  projects/filer/icons/mimetypes/cdr.png,
+	  projects/filer/icons/mimetypes/cdtrack.png,
+	  projects/filer/icons/mimetypes/colorscm.png,
+	  projects/filer/icons/mimetypes/colorset.png,
+	  projects/filer/icons/mimetypes/core.png,
+	  projects/filer/icons/mimetypes/deb.png,
+	  projects/filer/icons/mimetypes/doc.png,
+	  projects/filer/icons/mimetypes/document.png,
+	  projects/filer/icons/mimetypes/document2.png,
+	  projects/filer/icons/mimetypes/dvi.png,
+	  projects/filer/icons/mimetypes/empty.png,
+	  projects/filer/icons/mimetypes/encrypted.png,
+	  projects/filer/icons/mimetypes/exec_wine.png,
+	  projects/filer/icons/mimetypes/file_locked.png,
+	  projects/filer/icons/mimetypes/file_temporary.png,
+	  projects/filer/icons/mimetypes/font.png,
+	  projects/filer/icons/mimetypes/font_bitmap.png,
+	  projects/filer/icons/mimetypes/font_truetype.png,
+	  projects/filer/icons/mimetypes/font_type1.png,
+	  projects/filer/icons/mimetypes/gettext.png,
+	  projects/filer/icons/mimetypes/gf.png,
+	  projects/filer/icons/mimetypes/html.png,
+	  projects/filer/icons/mimetypes/image.png,
+	  projects/filer/icons/mimetypes/image2.png,
+	  projects/filer/icons/mimetypes/images.png,
+	  projects/filer/icons/mimetypes/info.png,
+	  projects/filer/icons/mimetypes/java_src.png,
+	  projects/filer/icons/mimetypes/karbon.png,
+	  projects/filer/icons/mimetypes/karbon_karbon.png,
+	  projects/filer/icons/mimetypes/kchart_chrt.png,
+	  projects/filer/icons/mimetypes/kexi_kexi.png,
+	  projects/filer/icons/mimetypes/kformula_kfo.png,
+	  projects/filer/icons/mimetypes/kivio_flw.png,
+	  projects/filer/icons/mimetypes/kmultiple.png,
+	  projects/filer/icons/mimetypes/kpresenter_kpr.png,
+	  projects/filer/icons/mimetypes/krita_kra.png,
+	  projects/filer/icons/mimetypes/kspread_ksp.png,
+	  projects/filer/icons/mimetypes/kugar_kud.png,
+	  projects/filer/icons/mimetypes/kugardata.png,
+	  projects/filer/icons/mimetypes/kword_kwd.png,
+	  projects/filer/icons/mimetypes/log.png,
+	  projects/filer/icons/mimetypes/make.png,
+	  projects/filer/icons/mimetypes/man.png,
+	  projects/filer/icons/mimetypes/message.png,
+	  projects/filer/icons/mimetypes/metafont.png,
+	  projects/filer/icons/mimetypes/midi.png,
+	  projects/filer/icons/mimetypes/mime-cdr.png,
+	  projects/filer/icons/mimetypes/mime-colorset.png,
+	  projects/filer/icons/mimetypes/mime-postscript.png,
+	  projects/filer/icons/mimetypes/mime-resource.png,
+	  projects/filer/icons/mimetypes/mime-template_source.png,
+	  projects/filer/icons/mimetypes/mime_ascii.png,
+	  projects/filer/icons/mimetypes/mime_empty.png,
+	  projects/filer/icons/mimetypes/mime_koffice.png,
+	  projects/filer/icons/mimetypes/misc.png,
+	  projects/filer/icons/mimetypes/misc_doc.png,
+	  projects/filer/icons/mimetypes/mozilla_doc.png,
+	  projects/filer/icons/mimetypes/netscape.png,
+	  projects/filer/icons/mimetypes/netscape_doc.png,
+	  projects/filer/icons/mimetypes/news.png,
+	  projects/filer/icons/mimetypes/pdf-document.png,
+	  projects/filer/icons/mimetypes/pdf.png,
+	  projects/filer/icons/mimetypes/php.png,
+	  projects/filer/icons/mimetypes/pk.png,
+	  projects/filer/icons/mimetypes/postscript.png,
+	  projects/filer/icons/mimetypes/ps.png,
+	  projects/filer/icons/mimetypes/quicktime.png,
+	  projects/filer/icons/mimetypes/readme.png,
+	  projects/filer/icons/mimetypes/real.png,
+	  projects/filer/icons/mimetypes/real_doc.png,
+	  projects/filer/icons/mimetypes/recycled.png,
+	  projects/filer/icons/mimetypes/resource.png,
+	  projects/filer/icons/mimetypes/rpm.png,
+	  projects/filer/icons/mimetypes/shellscript.png,
+	  projects/filer/icons/mimetypes/soffice.png,
+	  projects/filer/icons/mimetypes/sound.png,
+	  projects/filer/icons/mimetypes/source.png,
+	  projects/filer/icons/mimetypes/source_c.png,
+	  projects/filer/icons/mimetypes/source_cpp.png,
+	  projects/filer/icons/mimetypes/source_f.png,
+	  projects/filer/icons/mimetypes/source_h.png,
+	  projects/filer/icons/mimetypes/source_j.png,
+	  projects/filer/icons/mimetypes/source_java.png,
+	  projects/filer/icons/mimetypes/source_l.png,
+	  projects/filer/icons/mimetypes/source_moc.png,
+	  projects/filer/icons/mimetypes/source_o.png,
+	  projects/filer/icons/mimetypes/source_p.png,
+	  projects/filer/icons/mimetypes/source_php.png,
+	  projects/filer/icons/mimetypes/source_pl.png,
+	  projects/filer/icons/mimetypes/source_py.png,
+	  projects/filer/icons/mimetypes/source_s.png,
+	  projects/filer/icons/mimetypes/source_y.png,
+	  projects/filer/icons/mimetypes/spreadsheet.png,
+	  projects/filer/icons/mimetypes/tar.png,
+	  projects/filer/icons/mimetypes/template_source.png,
+	  projects/filer/icons/mimetypes/tex.png,
+	  projects/filer/icons/mimetypes/tgz.png,
+	  projects/filer/icons/mimetypes/trash.png,
+	  projects/filer/icons/mimetypes/txt.png,
+	  projects/filer/icons/mimetypes/txt2.png,
+	  projects/filer/icons/mimetypes/unknown.png,
+	  projects/filer/icons/mimetypes/vcalendar.png,
+	  projects/filer/icons/mimetypes/vcard.png,
+	  projects/filer/icons/mimetypes/vectorgfx.png,
+	  projects/filer/icons/mimetypes/video.png,
+	  projects/filer/icons/mimetypes/widget_doc.png,
+	  projects/filer/icons/mimetypes/wordprocessing.png,
+	  projects/filer/icons/mimetypes/zip.png,
+	  projects/filer/icons/pipe.png, projects/filer/icons/socket.png,
+	  projects/filer/icons/symlink.png, projects/filer/lib.pl: initial
+	  import
 
