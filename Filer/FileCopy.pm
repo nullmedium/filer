@@ -41,10 +41,10 @@ sub new {
 sub filecopy {
 	my ($self,$source,$dest) = @_;
 
-	my $mode = (stat $source)[2] || return Filer::DirWalk::FAILED;
+	my $mode = (stat $source)[2] || return File::DirWalk::FAILED;
 	my $size = -s $source;
 	my $buf;
-	my $buf_size = (stat $source)[11] || return Filer::DirWalk::FAILED; # use filesystem blocksize
+	my $buf_size = (stat $source)[11] || return File::DirWalk::FAILED; # use filesystem blocksize
 	my $written = 0;
 	my $written_avg = 0;
 
@@ -57,13 +57,13 @@ sub filecopy {
 		return 1;
 	});
 
-	sysopen(SOURCE, $source, O_RDONLY) || return Filer::DirWalk::FAILED;
-	sysopen(DEST, $dest, O_CREAT|O_WRONLY) || return Filer::DirWalk::FAILED;
+	sysopen(SOURCE, $source, O_RDONLY) || return File::DirWalk::FAILED;
+	sysopen(DEST, $dest, O_CREAT|O_WRONLY) || return File::DirWalk::FAILED;
 
 	while (sysread(SOURCE, $buf, $buf_size)) {
 		syswrite DEST, $buf, $buf_size;
 
-		return Filer::DirWalk::ABORTED if (${$self->[STOPPED]} == STOP);
+		return File::DirWalk::ABORTED if (${$self->[STOPPED]} == STOP);
 
 		my $l = length($buf);
 		$written += $l;

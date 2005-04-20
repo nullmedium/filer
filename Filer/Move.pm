@@ -64,7 +64,7 @@ sub move {
 	my ($self,$source,$dest) = @_;
 	my $r;
 
-	return Filer::DirWalk::FAILED if ($source eq $dest);
+	return File::DirWalk::FAILED if ($source eq $dest);
 
 	if (dirname($dest) ne '.') {
 		$r = rename($source,Cwd::abs_path("$dest/" . basename($source)));
@@ -73,22 +73,22 @@ sub move {
 	}
 
 	if (!$r) {
-		my $dirwalk = new Filer::DirWalk;
+		my $dirwalk = new File::DirWalk;
 
 		$dirwalk->onBeginWalk(sub {
 			if ($self->{progress} == 0) {
-				return Filer::DirWalk::ABORTED;
+				return File::DirWalk::ABORTED;
 			}
 
-			return Filer::DirWalk::SUCCESS;
+			return File::DirWalk::SUCCESS;
 		});
 
 		$dirwalk->onLink(sub {
 			my ($source) = @_;
 
-			symlink(readlink($source), Cwd::abs_path("$dest/" . basename($source))) || return Filer::DirWalk::FAILED;
+			symlink(readlink($source), Cwd::abs_path("$dest/" . basename($source))) || return File::DirWalk::FAILED;
 
-			return Filer::DirWalk::SUCCESS;
+			return File::DirWalk::SUCCESS;
 		});
 
 		$dirwalk->onDirEnter(sub {
@@ -97,19 +97,19 @@ sub move {
 			$dest = Cwd::abs_path("$dest/" . basename($dir));
 
 			if (! -e $dest) {
-				mkdir($dest) || return Filer::DirWalk::FAILED;
+				mkdir($dest) || return File::DirWalk::FAILED;
 			}
 
-			return Filer::DirWalk::SUCCESS;
+			return File::DirWalk::SUCCESS;
 		});
 
 		$dirwalk->onDirLeave(sub {
 			my ($dir) = @_;
 			$dest = Cwd::abs_path("$dest/..");
 
-			rmdir($dir) || return Filer::DirWalk::FAILED;
+			rmdir($dir) || return File::DirWalk::FAILED;
 
-			return Filer::DirWalk::SUCCESS;
+			return File::DirWalk::SUCCESS;
 		});
 
 		$dirwalk->onFile(sub {
@@ -124,23 +124,23 @@ sub move {
 			if ($file ne $dest) {
 				my $filecopy = new Filer::FileCopy($self->{progressbar_part}, \$self->{progress});
 
-				if ((my $r = $filecopy->filecopy($file,$dest)) != Filer::DirWalk::SUCCESS) {
+				if ((my $r = $filecopy->filecopy($file,$dest)) != File::DirWalk::SUCCESS) {
 					return $r;
 				}
 
-				unlink($file) || return Filer::DirWalk::FAILED;
+				unlink($file) || return File::DirWalk::FAILED;
 
-				return Filer::DirWalk::SUCCESS;
+				return File::DirWalk::SUCCESS;
 			} else {
 				Filer::Dialog->msgbox_error("Destination and target are the same! Aborting!");
-				return Filer::DirWalk::ABORTED;
+				return File::DirWalk::ABORTED;
 			}
 		});
 
 		return $dirwalk->walk($source);
 	}
 
-	return Filer::DirWalk::SUCCESS;
+	return File::DirWalk::SUCCESS;
 }
 
 *action = \&move;

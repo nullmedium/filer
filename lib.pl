@@ -30,6 +30,7 @@ use File::BaseDir;
 use File::Basename;
 use File::MimeInfo::Magic;
 use File::Temp;
+use File::DirWalk;
 use Stat::lsMode;
 
 use Filer::Config;
@@ -39,7 +40,6 @@ use Filer::Archive;
 use Filer::Properties;
 use Filer::Dialog;
 use Filer::ProgressDialog;
-use Filer::DirWalk;
 
 use Filer::DND;
 use Filer::FilePane;
@@ -506,10 +506,10 @@ sub copy_cb {
 		foreach (@{$files}) {
 			my $r = $copy->copy($_, $target);
 
-			if ($r == Filer::DirWalk::FAILED) {
+			if ($r == File::DirWalk::FAILED) {
 				Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed: $!");
 				last;
-			} elsif ($r == Filer::DirWalk::ABORTED) {
+			} elsif ($r == File::DirWalk::ABORTED) {
 				Filer::Dialog->msgbox_info("Copying of $_ to " . $inactive_pane->get_pwd . " aborted!");
 				last;
 			}
@@ -562,10 +562,10 @@ sub move_cb {
 		foreach (@{$files}) {
 			my $r = $move->move($_, $target);
 
-			if ($r == Filer::DirWalk::FAILED) {
+			if ($r == File::DirWalk::FAILED) {
 				Filer::Dialog->msgbox_error("Moving of $_ to " . $inactive_pane->get_pwd . " failed: $!");
 				last;
-			} elsif ($r == Filer::DirWalk::ABORTED) {
+			} elsif ($r == File::DirWalk::ABORTED) {
 				Filer::Dialog->msgbox_info("Moving of $_ to " . $inactive_pane->get_pwd . " aborted!");
 				last;
 			}
@@ -673,10 +673,10 @@ sub delete_cb {
 		foreach (@{$active_pane->get_selected_items}) {
 			my $r = rename($_, "$ENV{HOME}/.local/share/Trash/files/" . basename($_));
 
-			if ($r == Filer::DirWalk::FAILED) {
+			if ($r == File::DirWalk::FAILED) {
 				Filer::Dialog->msgbox_info("Moving of $_ to Trash failed: $!");
 				last;
-			} elsif ($r == Filer::DirWalk::ABORTED) {
+			} elsif ($r == File::DirWalk::ABORTED) {
 				Filer::Dialog->msgbox_info("Moving of $_ to Trash aborted!");
 				last;
 			}
@@ -693,10 +693,10 @@ sub delete_cb {
 		foreach (@{$active_pane->get_selected_items}) {
 			my $r = $delete->delete($_);
 
-			if ($r == Filer::DirWalk::FAILED) {
+			if ($r == File::DirWalk::FAILED) {
 				Filer::Dialog->msgbox_info("Deleting of $_ failed: $!");
 				last;
-			} elsif ($r == Filer::DirWalk::ABORTED) {
+			} elsif ($r == File::DirWalk::ABORTED) {
 				Filer::Dialog->msgbox_info("Deleting of $_ aborted!");
 				last;
 			}
@@ -804,7 +804,7 @@ sub symlink_cb {
 
 sub files_count {
 	my $c = 0;
-	my $dirwalk = new Filer::DirWalk;
+	my $dirwalk = new File::DirWalk;
 
 	my $dialog = new Filer::ProgressDialog;
 	$dialog->dialog->set_title("Please wait ...");
@@ -823,7 +823,7 @@ sub files_count {
 	$dirwalk->onFile(sub {
 		++$c;
 		while (Gtk2->events_pending) { Gtk2->main_iteration }
-		return Filer::DirWalk::SUCCESS;
+		return File::DirWalk::SUCCESS;
 	});
 
 	foreach (@{$active_pane->get_selected_items}) {

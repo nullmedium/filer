@@ -6,9 +6,15 @@ README:
 
 Filer has a few dependencies (mainly Perl modules):
 
+* Gtk+ 2.6.x (http://gtk.org/)
+
 * shared-mime-info (http://freedesktop.org/)
 
-* Gtk+ 2.6.x (http://gtk.org/)
+* File::MimeInfo
+
+* Stat::lsMode
+
+* File::DirWalk
 
 * Gtk2-Perl 1.080 (http://gtk2-perl.sf.net/)
 
@@ -16,10 +22,6 @@ Filer has a few dependencies (mainly Perl modules):
  - ExtUtils::PkgConfig
  - Glib
  - Gtk2
-
-* File::MimeInfo
-
-* Stat::lsMode
 
 If possible use the packages provided by your distribution. 
 Filer is available as a in Gentoo and Lunar Linux.

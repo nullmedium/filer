@@ -105,10 +105,10 @@ sub filepane_treeview_drag_data_received_cb {
 
 			my $r = $do->action($_, $path);
 
-			if ($r == Filer::DirWalk::FAILED) {
+			if ($r == File::DirWalk::FAILED) {
 				Filer::Dialog->msgbox_info("Copying of $_ to $path failed!");
 				last;
-			} elsif ($r == Filer::DirWalk::ABORTED) {
+			} elsif ($r == File::DirWalk::ABORTED) {
 				Filer::Dialog->msgbox_info("Moving of $_ to $path aborted!");
 				last;
 			}

@@ -39,30 +39,30 @@ sub new {
 		$self->{progress_dialog}->destroy;
 	});
 
-	$self->{dirwalk} = new Filer::DirWalk;
+	$self->{dirwalk} = new File::DirWalk;
 
 	$self->{dirwalk}->onBeginWalk(sub {
 		if ($self->{progress} == 0) {
-			return Filer::DirWalk::ABORTED;
+			return File::DirWalk::ABORTED;
 		}
 
-		return Filer::DirWalk::SUCCESS;
+		return File::DirWalk::SUCCESS;
 	});
 
 	$self->{dirwalk}->onLink(sub {
 		my ($source) = @_;
 
-		unlink($source) || return Filer::DirWalk::FAILED;
+		unlink($source) || return File::DirWalk::FAILED;
 
-		return Filer::DirWalk::SUCCESS;
+		return File::DirWalk::SUCCESS;
 	});
 
 	$self->{dirwalk}->onDirLeave(sub {
 		my ($source) = @_;
 
-		rmdir($source) || return Filer::DirWalk::FAILED;
+		rmdir($source) || return File::DirWalk::FAILED;
 
-		return Filer::DirWalk::SUCCESS;
+		return File::DirWalk::SUCCESS;
 	});
 
 	$self->{dirwalk}->onFile(sub {
@@ -72,9 +72,9 @@ sub new {
 		$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
 		while (Gtk2->events_pending) { Gtk2->main_iteration; }
 
-		unlink($source) || return Filer::DirWalk::FAILED;
+		unlink($source) || return File::DirWalk::FAILED;
 
-		return Filer::DirWalk::SUCCESS;
+		return File::DirWalk::SUCCESS;
 	});
 
 	return $self;

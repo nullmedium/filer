@@ -124,7 +124,7 @@ sub new {
 sub init_dirwalk {
 	my ($self) = @_;
 
-	$self->{dirwalk} = new Filer::DirWalk;
+	$self->{dirwalk} = new File::DirWalk;
 
 	$self->{dirwalk}->onBeginWalk(sub {
 		if ($self->{search_stop} == 1) {
