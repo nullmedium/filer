@@ -1,0 +1,6 @@
+DirWalk.pm
+MANIFEST
+Makefile.PL
+README
+configure
+t/1.t
