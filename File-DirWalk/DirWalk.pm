@@ -72,57 +72,68 @@ sub walk {
 	my ($self,$path) = @_;
 
 	eval {
-		if ((my $r = &{$self->{onBeginWalk}}($path)) != SUCCESS) {
+		$self->_walk($path);
+	};
+	
+	if ($@) {
+		if ($@ =~  /aborted/) {
+			return ABORTED;
+		} elsif ($@ =~ /failed/) {
+			return FAILED;
+		}
+	}
+	
+	return SUCCESS;
+}
+
+sub _walk {
+	my ($self,$path) = @_;
+
+	if ((my $r = &{$self->{onBeginWalk}}($path)) != SUCCESS) {
+		return $r;
+	}
+
+	if (-l $path) {
+
+		if ((my $r = &{$self->{onLink}}($path)) != SUCCESS) {
 			return $r;
 		}
 
-		if (-l $path) {
+	} elsif (-d $path) {
 
-			if ((my $r = &{$self->{onLink}}($path)) != SUCCESS) {
-				return $r;
-			}
-
-		} elsif (-d $path) {
-
-			if ((my $r = &{$self->{onDirEnter}}($path)) != SUCCESS) {
-				return $r;
-			}
-
-			opendir(my $dirh, $path) || return FAILED;
-
-			foreach my $f (readdir($dirh)) {
-				next if ($f eq "." or $f eq "..");
-
-				# be portable.
-				my @dirs = File::Spec->splitdir($path);
-				my $path = File::Spec->catfile(@dirs, $f);
-
-				my $r = $self->walk($path);
-
-				if ($r == PRUNE) {
-					last;
-				}
-				
-				if ($r == FAILED) {
-					die "Exception: DirWalk failed!\n\n";
-				}			
-			}
-
-			closedir($dirh);
-
-			if ((my $r = &{$self->{onDirLeave}}($path)) != SUCCESS) {
-				return $r;
-			}
-		} else {
-			if ((my $r = &{$self->{onFile}}($path)) != SUCCESS) {
-				return $r;
-			}
+		if ((my $r = &{$self->{onDirEnter}}($path)) != SUCCESS) {
+			return $r;
 		}
-	}; 
 
-	if ($@) {
-		print "Exception: DirWalk failed!\n\n";
-		return FAILED;
+		opendir(my $dirh, $path) || return FAILED;
+
+		foreach my $f (readdir($dirh)) {
+			next if ($f eq "." or $f eq "..");
+
+			# be portable.
+			my @dirs = File::Spec->splitdir($path);
+			my $path = File::Spec->catfile(@dirs, $f);
+
+			my $r = $self->_walk($path);
+
+			if ($r == PRUNE) {
+				last;
+			} elsif ($r == ABORTED) {
+				die "aborted";
+			} elsif ($r == FAILED) {
+				die "failed";
+			}			
+		}
+
+		closedir($dirh);
+
+		if ((my $r = &{$self->{onDirLeave}}($path)) != SUCCESS) {
+			return $r;
+		}
+	} else {
+		if ((my $r = &{$self->{onFile}}($path)) != SUCCESS) {
+			return $r;
+		}
 	}
 
 	return SUCCESS;
