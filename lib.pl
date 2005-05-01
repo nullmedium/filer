@@ -496,55 +496,64 @@ sub copy_cb {
 	return if ($active_pane->count_selected_items == 0);
 	return if (not defined $active_pane->get_selected_item);
 
-	my $f = sub {
-		my ($files,$target) = @_;
-		my $copy = new Filer::Copy;
+	if ($config->get_option("Mode") == EXPLORER_MODE) {
+		my @items = $active_pane->get_selected_items;
 
-		$copy->set_total(&files_count);
-		$copy->show;
+		my $clipboard = Gtk2::Clipboard->get_for_display(Gtk2::Gdk::Display->open($ENV{'DISPLAY'}), Gtk2::Gdk::Atom->new('GDK_SELECTION_CLIPBOARD'));
+		my $contents = join "\r\n", @items;
+		$clipboard->set_text($contents);
 
-		foreach (@{$files}) {
-			my $r = $copy->copy($_, $target);
-
-			if ($r == File::DirWalk::FAILED) {
-				Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed: $!");
-				last;
-			} elsif ($r == File::DirWalk::ABORTED) {
-				Filer::Dialog->msgbox_info("Copying of $_ to " . $inactive_pane->get_pwd . " aborted!");
-				last;
-			}
-		}
-
-		$copy->destroy;
-		$inactive_pane->refresh;
-	};
-
-	if ($active_pane->count_selected_items == 1) {
-		if ($config->get_option("ConfirmCopy") == 1) {
-			my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
-
-			$dialog->set_title("Copy");
-			$source_label->set_markup("<b>Copy: </b>");
-			$source_entry->set_text($active_pane->get_selected_item);
-			$dest_label->set_markup("<b>to: </b>");
-			$dest_entry->set_text($inactive_pane->get_pwd);
-
-			$dialog->show_all;
-
-			if ($dialog->run eq 'ok') {
-				&{$f}([$source_entry->get_text], $dest_entry->get_text);
-			}
-
-			$dialog->destroy;
-		} else {
-			&{$f}([$active_pane->get_selected_item], $inactive_pane->get_pwd);
-		}
 	} else {
-		if ($config->get_option("ConfirmCopy") == 1) {
-			return if (Filer::Dialog->yesno_dialog("Copy selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
-		}
+		my $f = sub {
+			my ($files,$target) = @_;
+			my $copy = new Filer::Copy;
 
-		&{$f}($active_pane->get_selected_items, $inactive_pane->get_pwd);
+			$copy->set_total(&files_count);
+			$copy->show;
+
+			foreach (@{$files}) {
+				my $r = $copy->copy($_, $target);
+
+				if ($r == File::DirWalk::FAILED) {
+					Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed: $!");
+					last;
+				} elsif ($r == File::DirWalk::ABORTED) {
+					Filer::Dialog->msgbox_info("Copying of $_ to " . $inactive_pane->get_pwd . " aborted!");
+					last;
+				}
+			}
+
+			$copy->destroy;
+			$inactive_pane->refresh;
+		};
+
+		if ($active_pane->count_selected_items == 1) {
+			if ($config->get_option("ConfirmCopy") == 1) {
+				my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
+
+				$dialog->set_title("Copy");
+				$source_label->set_markup("<b>Copy: </b>");
+				$source_entry->set_text($active_pane->get_selected_item);
+				$dest_label->set_markup("<b>to: </b>");
+				$dest_entry->set_text($inactive_pane->get_pwd);
+
+				$dialog->show_all;
+
+				if ($dialog->run eq 'ok') {
+					&{$f}([$source_entry->get_text], $dest_entry->get_text);
+				}
+
+				$dialog->destroy;
+			} else {
+				&{$f}([$active_pane->get_selected_item], $inactive_pane->get_pwd);
+			}
+		} else {
+			if ($config->get_option("ConfirmCopy") == 1) {
+				return if (Filer::Dialog->yesno_dialog("Copy selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
+			}
+
+			&{$f}($active_pane->get_selected_items, $inactive_pane->get_pwd);
+		}
 	}
 }
 
