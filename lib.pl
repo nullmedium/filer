@@ -493,15 +493,16 @@ sub search_cb {
 }
 
 sub copy_cb {
-	return if ($active_pane->count_selected_items == 0);
-	return if (not defined $active_pane->get_selected_item);
+	return if (($active_pane->count_selected_items == 0) or (not defined $active_pane->get_selected_item));
 
 	if ($config->get_option("Mode") == EXPLORER_MODE) {
-		my @items = $active_pane->get_selected_items;
 
-		my $clipboard = Gtk2::Clipboard->get_for_display(Gtk2::Gdk::Display->open($ENV{'DISPLAY'}), Gtk2::Gdk::Atom->new('GDK_SELECTION_CLIPBOARD'));
-		my $contents = join "\r\n", @items;
-		$clipboard->set_text($contents);
+		my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
+
+		my @files = map { "file://$_" } @{$active_pane->get_selected_items};
+		my $contents = join "\n", @files;
+
+		$clipboard->set_text($contents . "\n" . chr(0));
 
 	} else {
 		my $f = sub {
@@ -558,8 +559,7 @@ sub copy_cb {
 }
 
 sub move_cb {
-	return if ($active_pane->count_selected_items == 0);
-	return if (not defined $active_pane->get_selected_item);
+	return if (($active_pane->count_selected_items == 0) or (not defined $active_pane->get_selected_item));
 
 	my $f = sub {
 		my ($files,$target) = @_;
@@ -617,8 +617,7 @@ sub move_cb {
 sub rename_cb {
 	my ($dialog,$hbox,$label,$entry);
 
-	return if ($active_pane->count_selected_items == 0);
-	return if (not defined $active_pane->get_selected_item);
+	return if (($active_pane->count_selected_items == 0) or (not defined $active_pane->get_selected_item));
 
 	$dialog = new Gtk2::Dialog("Rename", undef, 'modal', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
 	$dialog->set_size_request(450,150);
@@ -658,8 +657,7 @@ sub rename_cb {
 }
 
 sub delete_cb {
-	return if ($active_pane->count_selected_items == 0);
-	return if (not defined $active_pane->get_selected_item);
+	return if (($active_pane->count_selected_items == 0) or (not defined $active_pane->get_selected_item));
 
 	if ($config->get_option("ConfirmDelete") == 1) {
 		return if (Filer::Dialog->yesno_dialog("Delete selected files?") eq 'no');
