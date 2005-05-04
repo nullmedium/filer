@@ -492,17 +492,53 @@ sub search_cb {
 	new Filer::Search;
 }
 
+sub paste_cb {
+	my $f = sub {
+		my ($files,$target) = @_;
+		my $copy = new Filer::Copy;
+
+		$copy->set_total(&files_count_paste);
+		$copy->show;
+
+		foreach (@{$files}) {
+			return if (! -e $_);
+
+			my $r = $copy->copy($_, $target);
+
+			if ($r == File::DirWalk::FAILED) {
+				Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed: $!");
+				last;
+			} elsif ($r == File::DirWalk::ABORTED) {
+				Filer::Dialog->msgbox_info("Copying of $_ to " . $inactive_pane->get_pwd . " aborted!");
+				last;
+			}
+		}
+
+		$copy->destroy;
+		$inactive_pane->refresh;
+	};
+	
+	my @files = ();
+	my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
+
+	$clipboard->request_text(sub { 
+		my ($c,$t) = @_;
+		@files = split /\n/, $t;
+	});
+
+	&{$f}(\@files, $active_pane->get_pwd);
+	$active_pane->refresh;
+}
+
 sub copy_cb {
 	return if (($active_pane->count_selected_items == 0) or (not defined $active_pane->get_selected_item));
 
 	if ($config->get_option("Mode") == EXPLORER_MODE) {
 
 		my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
+		my $contents = join "\n", @{$active_pane->get_selected_items};
 
-		my @files = map { "file://$_" } @{$active_pane->get_selected_items};
-		my $contents = join "\n", @files;
-
-		$clipboard->set_text($contents . "\n" . chr(0));
+		$clipboard->set_text($contents);
 
 	} else {
 		my $f = sub {
@@ -835,6 +871,51 @@ sub files_count {
 
 	foreach (@{$active_pane->get_selected_items}) {
 		$dirwalk->walk($_);
+	}
+
+	Glib::Source->remove($id);
+
+	$dialog->destroy;
+
+	return $c;
+}
+
+sub files_count_paste {
+	my $c = 0;
+	my $dirwalk = new File::DirWalk;
+
+	my $dialog = new Filer::ProgressDialog;
+	$dialog->dialog->set_title("Please wait ...");
+	$dialog->label1->set_markup("<b>Please wait ...</b>");
+
+	my $progressbar = $dialog->add_progressbar;
+
+	$dialog->show;
+
+	my $id = Glib::Timeout->add(50, sub {
+		$progressbar->pulse;
+		while (Gtk2->events_pending) { Gtk2->main_iteration }
+		return 1;
+	});
+
+	$dirwalk->onFile(sub {
+		++$c;
+		while (Gtk2->events_pending) { Gtk2->main_iteration }
+		return File::DirWalk::SUCCESS;
+	});
+
+	my @files = ();
+	my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
+		
+	$clipboard->request_text(sub { 
+		my ($c,$t) = @_;
+		@files = split /\n/, $t;
+	});
+
+	foreach (@files) {
+		if (-e $_) {
+			$dirwalk->walk($_);
+		}
 	}
 
 	Glib::Source->remove($id);

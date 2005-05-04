@@ -116,7 +116,10 @@ sub show_popup_menu {
 
 	my @menu_items =
 	(
+	{ path => '/sep4',								        			item_type => '<Separator>'},
 	{ path => '/Copy',					callback => \&main::copy_cb,				item_type => '<Item>'},
+	{ path => '/Paste',					callback => \&main::paste_cb,				item_type => '<Item>'},
+	{ path => '/sep5',								        			item_type => '<Separator>'},
 	{ path => '/Move',					callback => \&main::move_cb,				item_type => '<Item>'},
 	{ path => '/Rename',					callback => \&main::rename_cb,				item_type => '<Item>'},
 	{ path => '/MkDir',					callback => \&main::mkdir_cb,				item_type => '<Item>'},
@@ -132,6 +135,12 @@ sub show_popup_menu {
 	);
 
 	$item_factory->create_items(undef, @menu_items);
+
+	if ($main::config->get_option("Mode") != &main::EXPLORER_MODE) {
+		$item_factory->delete_item('/Paste');
+		$item_factory->delete_item('/sep4');
+		$item_factory->delete_item('/sep5');
+	}
 
 	# Bookmarks Menu
 
