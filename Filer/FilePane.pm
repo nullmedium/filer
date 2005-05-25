@@ -177,7 +177,6 @@ sub show_popup_menu {
 	{ path => '/sep4',								      		item_type => '<Separator>'},
 	{ path => '/Copy',			callback => \&main::copy_cb,				item_type => '<Item>'},
 #	{ path => '/Paste',			callback => \&main::paste_cb,				item_type => '<Item>'},
-	{ path => '/sep5',								      		item_type => '<Separator>'},
 
 	{ path => '/Move',			callback => \&main::move_cb,				item_type => '<Item>'},
 	{ path => '/Rename',			callback => \&main::rename_cb,				item_type => '<Item>'},
@@ -198,9 +197,9 @@ sub show_popup_menu {
 	if ($main::config->get_option("Mode") != &main::EXPLORER_MODE) {
 #		$item_factory->delete_item('/Paste');
 		$item_factory->delete_item('/sep4');
-		$item_factory->delete_item('/sep5');
-	} else {
-		$item_factory->delete_item('/Move');
+#		$item_factory->delete_item('/sep5');
+#	} else {
+#		$item_factory->delete_item('/Move');
 	}
 
 	# Customize archive submenu
