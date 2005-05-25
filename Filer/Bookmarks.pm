@@ -50,6 +50,8 @@ sub set_bookmark {
 	my ($self,$path) = @_;
 	my @bookmarks = $self->get_bookmarks;
 
+	return if (!$path); 
+
 	push @bookmarks, $path;
 
 	$self->store(\@bookmarks);
