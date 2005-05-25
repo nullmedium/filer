@@ -25,7 +25,8 @@ my %supported_archives = (
 	'application/zip' =>			{ extension => 'zip',		create => 'zip',	extract => 'unzip'},
 	'application/x-tar' =>			{ extension => 'tar',		create => 'tar -cf',	extract => 'tar -xf'},
 	'application/x-compressed-tar' =>	{ extension => 'tar.gz',	create => 'tar -czf',	extract => 'tar -xzf'},
-	'application/x-bzip-compressed-tar' =>	{ extension => 'tar.bz2',	create => 'tar -cjf',	extract => 'tar -xjf'}
+	'application/x-bzip-compressed-tar' =>	{ extension => 'tar.bz2',	create => 'tar -cjf',	extract => 'tar -xjf'},
+	'application/x-rar' =>			{ extension => 'rar',		create => 'rar a',	extract => 'unrar e'}
 );
 
 sub new {

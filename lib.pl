@@ -70,7 +70,10 @@ sub main_window {
 	{ path => '/_File/Open With',							callback => \&open_with_cb,	item_type => '<Item>'},
 	{ path => '/_File/sep', 									 		item_type => '<Separator>'},
 	{ path => '/_File/Quit',			accelerator => 'F10',		callback => \&quit_cb, 	 	item_type => '<Item>'},
+
 	{ path => '/_Edit/_Copy',			accelerator => 'F5',		callback => \&copy_cb, 	 	item_type => '<Item>'},
+	{ path => '/_Edit/_Paste',			accelerator => '<control>V',	callback => \&paste_cb,	 	item_type => '<Item>'},
+
 	{ path => '/_Edit/_Rename',							callback => \&rename_cb, 	item_type => '<Item>'},
 	{ path => '/_Edit/_Move',			accelerator => 'F6',		callback => \&move_cb, 	 	item_type => '<Item>'},
 	{ path => '/_Edit/M_kDir',			accelerator => 'F7',		callback => \&mkdir_cb,	 	item_type => '<Item>'},
@@ -100,18 +103,23 @@ sub main_window {
 	{ path => '/_Help/About',							callback => \&about_cb,		item_type => '<Item>'},
 	);
 
-	$window = new Gtk2::Window('toplevel');
-	$window->set_title("Filer $VERSION");
-	$window->resize(800,600);
-	$window->signal_connect("event", \&window_event_cb);
-	$window->signal_connect("delete-event", \&quit_cb);
-	$window->set_icon(Gtk2::Gdk::Pixbuf->new_from_file(Filer::Mime->new->get_icon('inode/directory')));
+	$widgets->{main_window} = new Gtk2::Window('toplevel');
+	$widgets->{main_window}->set_title("Filer $VERSION");
+
+	my $size = $config->get_option("WindowSize");
+	my ($w,$h) = split /:/, $size;		
+
+	$widgets->{main_window}->resize($w,$h);
+
+	$widgets->{main_window}->signal_connect("event", \&window_event_cb);
+	$widgets->{main_window}->signal_connect("delete-event", \&quit_cb);
+	$widgets->{main_window}->set_icon(Gtk2::Gdk::Pixbuf->new_from_file(Filer::Mime->new->get_icon('inode/directory')));
 
 	$widgets->{vbox} = new Gtk2::VBox(0,0);
-	$window->add($widgets->{vbox});
+	$widgets->{main_window}->add($widgets->{vbox});
 
 	$accel_group = new Gtk2::AccelGroup;
-	$window->add_accel_group($accel_group);
+	$widgets->{main_window}->add_accel_group($accel_group);
 
 	$widgets->{item_factory} = new Gtk2::ItemFactory("Gtk2::MenuBar", '<main>', $accel_group);
 	$widgets->{item_factory}->create_items(undef, @menu_items);
@@ -143,7 +151,7 @@ sub main_window {
 	$widgets->{hbox}->pack_start($widgets->{list2}->get_vbox,1,1,0);
 	$widgets->{vbox}->pack_start($widgets->{hpaned},1,1,0);
 
-	$hbox = new Gtk2::HBox(0,0);
+	$hbox = new Gtk2::HBox(1,0);
 	$widgets->{vbox}->pack_start($hbox, 0, 0, 0);
 
 	$button = new Gtk2::Button("Refresh");
@@ -154,9 +162,9 @@ sub main_window {
 	$button->signal_connect("clicked", \&copy_cb);
 	$hbox->pack_start($button, 1, 1, 0);
 
-	$button = new Gtk2::Button("Move/Rename");
-	$button->signal_connect("clicked", \&move_cb);
-	$hbox->pack_start($button, 1, 1, 0);
+	$widgets->{move_button} = new Gtk2::Button("Move/Rename");
+	$widgets->{move_button}->signal_connect("clicked", \&move_cb);
+	$hbox->pack_start($widgets->{move_button}, 1, 1, 0);
 
 	$button = new Gtk2::Button("Rename");
 	$button->signal_connect("clicked", \&rename_cb);
@@ -184,15 +192,19 @@ sub main_window {
 	if ($config->get_option('Mode') == NORTON_COMMANDER_MODE) {
 		$i1->set_active(1);
 		$i2->set_active(0);
+
+		$widgets->{item_factory}->get_item("/Edit/Paste")->set("visible", 0);
 	} elsif ($config->get_option('Mode') == EXPLORER_MODE) {
 		$i1->set_active(0);
 		$i2->set_active(1);
+
+		$widgets->{item_factory}->get_item("/Edit/Paste")->set("visible", 1);
 	}
 
 	$widgets->{list1}->open_path($config->get_option('PathLeft'));
 	$widgets->{list2}->open_path((defined $ARGV[0] and -d $ARGV[0]) ? $ARGV[0] : $config->get_option('PathRight'));
 
-	$window->show_all;
+	$widgets->{main_window}->show_all;
 
 	$widgets->{sync_button}->hide;
 	$widgets->{tree}->get_vbox->hide;
@@ -277,6 +289,10 @@ sub quit_cb {
 
 	$config->set_option('PathRight', $pane->[RIGHT]->get_pwd);
 
+	my ($w,$h) = $widgets->{main_window}->get_size(); 
+
+	$config->set_option('WindowSize', "$w:$h");
+
 	Gtk2->main_quit;
 }
 
@@ -351,6 +367,11 @@ sub switch_mode {
 
 		$pane->[LEFT] = $widgets->{tree};
 
+#		$widgets->{item_factory}->get_item("/Edit/Copy")->set_accel_path("<control>C");
+#		$widgets->{item_factory}->get_item("/Edit/Paste")->set("visible", 1);
+#		$widgets->{item_factory}->get_item("/Edit/Move")->set("visible", 0);
+#		$widgets->{move_button}->set("visible", 0);
+
 	} elsif ($opt == NORTON_COMMANDER_MODE) {
 		$widgets->{list2}->get_location_bar->reparent($widgets->{list2}->get_location_bar_parent);
 
@@ -359,6 +380,11 @@ sub switch_mode {
 		$widgets->{list1}->get_vbox->set("visible", 1);
 
 		$pane->[LEFT] = $widgets->{list1};
+
+#		$widgets->{item_factory}->get_item("/Edit/Copy")->set_accel_path("F5");
+#		$widgets->{item_factory}->get_item("/Edit/Paste")->set("visible", 0);
+#		$widgets->{item_factory}->get_item("/Edit/Move")->set("visible", 1);
+#		$widgets->{move_button}->set("visible", 1);
 	}
 }
 
@@ -492,55 +518,55 @@ sub search_cb {
 	new Filer::Search;
 }
 
-sub paste_cb {
-	my $f = sub {
-		my ($files,$target) = @_;
-		my $copy = new Filer::Copy;
-
-		$copy->set_total(&files_count_paste);
-		$copy->show;
-
-		foreach (@{$files}) {
-			return if (! -e $_);
-
-			my $r = $copy->copy($_, $target);
-
-			if ($r == File::DirWalk::FAILED) {
-				Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed: $!");
-				last;
-			} elsif ($r == File::DirWalk::ABORTED) {
-				Filer::Dialog->msgbox_info("Copying of $_ to " . $inactive_pane->get_pwd . " aborted!");
-				last;
-			}
-		}
-
-		$copy->destroy;
-		$inactive_pane->refresh;
-	};
-	
-	my @files = ();
-	my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
-
-	$clipboard->request_text(sub { 
-		my ($c,$t) = @_;
-		@files = split /\n/, $t;
-	});
-
-	&{$f}(\@files, $active_pane->get_pwd);
-	$active_pane->refresh;
-}
+# sub paste_cb {
+# 	my $f = sub {
+# 		my ($files,$target) = @_;
+# 		my $copy = new Filer::Copy;
+# 
+# 		$copy->set_total(&files_count_paste);
+# 		$copy->show;
+# 
+# 		foreach (@{$files}) {
+# 			return if (! -e $_);
+# 
+# 			my $r = $copy->copy($_, $target);
+# 
+# 			if ($r == File::DirWalk::FAILED) {
+# 				Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed: $!");
+# 				last;
+# 			} elsif ($r == File::DirWalk::ABORTED) {
+# 				Filer::Dialog->msgbox_info("Copying of $_ to " . $inactive_pane->get_pwd . " aborted!");
+# 				last;
+# 			}
+# 		}
+# 
+# 		$copy->destroy;
+# 		$inactive_pane->refresh;
+# 	};
+# 	
+# 	my @files = ();
+# 	my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
+# 
+# 	$clipboard->request_text(sub { 
+# 		my ($c,$t) = @_;
+# 		@files = split /\n/, $t;
+# 	});
+# 
+# 	&{$f}(\@files, $active_pane->get_pwd);
+# 	$active_pane->refresh;
+# }
 
 sub copy_cb {
 	return if (($active_pane->count_selected_items == 0) or (not defined $active_pane->get_selected_item));
 
-	if ($config->get_option("Mode") == EXPLORER_MODE) {
-
-		my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
-		my $contents = join "\n", @{$active_pane->get_selected_items};
-
-		$clipboard->set_text($contents);
-
-	} else {
+# 	if ($config->get_option("Mode") == EXPLORER_MODE) {
+# 
+# 		my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
+# 		my $contents = join "\n", @{$active_pane->get_selected_items};
+# 
+# 		$clipboard->set_text($contents);
+# 
+# 	} else {
 		my $f = sub {
 			my ($files,$target) = @_;
 			my $copy = new Filer::Copy;
@@ -591,7 +617,7 @@ sub copy_cb {
 
 			&{$f}($active_pane->get_selected_items, $inactive_pane->get_pwd);
 		}
-	}
+#	}
 }
 
 sub move_cb {

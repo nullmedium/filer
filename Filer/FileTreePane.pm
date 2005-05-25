@@ -118,7 +118,7 @@ sub show_popup_menu {
 	(
 	{ path => '/sep4',								        			item_type => '<Separator>'},
 	{ path => '/Copy',					callback => \&main::copy_cb,				item_type => '<Item>'},
-	{ path => '/Paste',					callback => \&main::paste_cb,				item_type => '<Item>'},
+#	{ path => '/Paste',					callback => \&main::paste_cb,				item_type => '<Item>'},
 	{ path => '/sep5',								        			item_type => '<Separator>'},
 	{ path => '/Move',					callback => \&main::move_cb,				item_type => '<Item>'},
 	{ path => '/Rename',					callback => \&main::rename_cb,				item_type => '<Item>'},
@@ -137,9 +137,11 @@ sub show_popup_menu {
 	$item_factory->create_items(undef, @menu_items);
 
 	if ($main::config->get_option("Mode") != &main::EXPLORER_MODE) {
-		$item_factory->delete_item('/Paste');
+#		$item_factory->delete_item('/Paste');
 		$item_factory->delete_item('/sep4');
 		$item_factory->delete_item('/sep5');
+	} else {
+		$item_factory->delete_item('/Move');
 	}
 
 	# Bookmarks Menu
@@ -189,7 +191,7 @@ sub selection_changed_cb {
 	$self->[FILEPATH] = $self->get_selected_items->[0];
 	$self->[FILEPATH_ITER] = $self->get_selected_iters->[0];
 
-	$main::pane->[!$self->[SIDE]]->open_path($self->[FILEPATH]);
+#	$main::pane->[!$self->[SIDE]]->open_path($self->[FILEPATH]);
 
 	return 1;
 }

@@ -88,6 +88,33 @@ sub set_properties_dialog {
 	$dialog->set_position('center');
 	$dialog->set_modal(1);
 
+	$table = new Gtk2::Table(2,2);
+	$table->set_homogeneous(0);
+	$table->set_col_spacings(5);
+	$table->set_row_spacings(1);
+	$dialog->vbox->pack_start($table,1,1,5);
+
+	$label = new Gtk2::Label("<b>Filename</b>");
+	$label->set_use_markup(1);
+	$label->set_alignment(0.0,0.0);
+	$table->attach($label, 0, 1, 0, 1, [ "fill" ], [ ], 0, 0);
+
+	$label = new Gtk2::Label("<b>Size</b>");
+	$label->set_use_markup(1);
+	$label->set_alignment(0.0,0.0);
+	$table->attach($label, 0, 1, 1, 2, [ "fill" ], [ ], 0, 0);
+
+	$label = new Gtk2::Label($file);
+	$label->set_use_markup(1);
+	$label->set_alignment(0.0,0.0);
+	$label->set_ellipsize('PANGO_ELLIPSIZE_MIDDLE');
+	$table->attach($label, 1, 2, 0, 1, [ "fill", "expand" ], [ ], 0, 0);
+
+	$label = new Gtk2::Label(Filer::FilePane::calculate_size($stat[7]));
+	$label->set_use_markup(1);
+	$label->set_alignment(0.0,0.0);
+	$table->attach($label, 1, 2, 1, 2, [ "fill" ], [ ], 0, 0);
+
 	$table = new Gtk2::Table(4,4);
 	$table->set_homogeneous(0);
 	$table->set_col_spacings(5);
