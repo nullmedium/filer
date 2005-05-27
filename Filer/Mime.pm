@@ -24,7 +24,7 @@ use constant COMMANDS => 1;
 use constant MIME => 2;
 
 sub new {
-	my ($class,$side) = @_;
+	my ($class) = @_;
 	my $self = bless {}, $class;
 	$self->{cfg_home} = File::BaseDir::xdg_config_home . "/filer";
 

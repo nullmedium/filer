@@ -38,6 +38,8 @@ use constant FOLDER_STATUS	=> 12;
 use constant LOCATION_BAR	=> 13;
 use constant HBOX		=> 14;
 
+use constant MOUSE_MOTION_SELECT => 15;
+
 Memoize::memoize("calculate_size");
 Memoize::memoize("Stat::lsMode::format_mode");
 Memoize::memoize("File::MimeInfo::mimetype");
@@ -93,9 +95,11 @@ sub new {
 
 	$self->[TREEVIEW] = new Gtk2::TreeView;
 	$self->[TREEVIEW]->set_rules_hint(1);
-	$self->[TREEVIEW]->signal_connect("grab-focus", \&treeview_grab_focus_cb, $self);
-	$self->[TREEVIEW]->signal_connect("key-press-event", \&treeview_event_cb, $self);
-	$self->[TREEVIEW]->signal_connect("button-press-event", \&treeview_event_cb, $self);
+ 	$self->[TREEVIEW]->signal_connect("grab-focus", \&treeview_grab_focus_cb, $self);
+
+# 	$self->[TREEVIEW]->signal_connect("key-press-event", \&treeview_event_cb, $self);
+# 	$self->[TREEVIEW]->signal_connect("button-press-event", \&treeview_event_cb, $self);
+	$self->[TREEVIEW]->signal_connect("event", \&treeview_event_cb, $self);
 
 	$self->[TREEMODEL] = new Gtk2::ListStore('Glib::Object','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String');
 	$self->[TREEVIEW]->set_model($self->[TREEMODEL]);
@@ -136,6 +140,8 @@ sub new {
 	}
 
 	$self->init_icons;
+	
+	$self->[MOUSE_MOTION_SELECT] = 0;
 
 	return $self;
 }
@@ -239,13 +245,13 @@ sub show_popup_menu {
 	} else {
 	       $item_factory->delete_item('/Rename');
 	       $item_factory->delete_item('/MkDir');
-	       $item_factory->delete_item('/Bookmarks');
+#	       $item_factory->delete_item('/Bookmarks');
 	       $item_factory->delete_item('/Open');
 	       $item_factory->delete_item('/Open Terminal');
-	       $item_factory->delete_item('/Archive');
+#	       $item_factory->delete_item('/Archive');
 	       $item_factory->delete_item('/Set Icon');
 	       $item_factory->delete_item('/Refresh');
-	       $item_factory->delete_item('/Properties');
+#	       $item_factory->delete_item('/Properties');
 	       $item_factory->delete_item('/sep2');
 	       $item_factory->delete_item('/sep3');
 	}
@@ -299,6 +305,26 @@ sub treeview_event_cb {
 	if ($e->type eq "button-press" and $e->button == 3) {
 		$self->show_popup_menu($e);
 		return 1;
+	}
+
+	if ($e->type eq "button-press" and $e->button == 2) {
+		$self->[MOUSE_MOTION_SELECT] = 1;
+		return 1;
+	}
+
+	if ($e->type eq "button-release" and $e->button == 2) {
+		$self->[MOUSE_MOTION_SELECT] = 0;
+		return 1;
+	}
+
+	if ($e->type eq "motion-notify") {
+		if ($self->[MOUSE_MOTION_SELECT] == 1) {
+			my ($p) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
+
+			if (defined $p) {
+				$self->[TREESELECTION]->select_path($p);
+			}
+		}
 	}
 
 	return 0;
@@ -667,14 +693,14 @@ sub get_temp_archive_dir {
 
 sub create_tar_gz_archive {
 	my ($self) = @_;
-	my $archive = Filer::Archive->new($self->[SELECTED_ITEM]);
+	my $archive = Filer::Archive->new($self->get_selected_items);
 	$archive->create_tar_gz_archive;
 	$self->refresh;
 }
 
 sub create_tar_bz2_archive {
 	my ($self) = @_;
-	my $archive = Filer::Archive->new($self->[SELECTED_ITEM]);
+	my $archive = Filer::Archive->new($self->get_selected_items);
 	$archive->create_tar_bz2_archive;
 	$self->refresh;
 }

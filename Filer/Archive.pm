@@ -33,9 +33,11 @@ sub new {
 	my ($class,$filepath) = @_;
 	my $self = bless {}, $class;
 
-	$self->{filepath} = $filepath;
-	$self->{path} = File::Basename::dirname($filepath);
-	$self->{file} = File::Basename::basename($filepath);
+	$self->{filepath} = @{$filepath}[0];
+	$self->{files} = $filepath;
+
+	$self->{path} = File::Basename::dirname(@{$filepath}[0]);
+	$self->{file} = File::Basename::basename(@{$filepath}[0]);
 
 	return $self;
 }
@@ -56,29 +58,31 @@ sub create_tar_gz_archive {
 
 sub create_archive {
 	my ($self) = @_;
-	my $path = $self->{path};
-	my $file = $self->{file};
+	my $path = quotemeta($self->{path});
+	my $file = quotemeta($self->{file});
+
 	my $type = $self->{requested_archivetype};
-	my $archive_file = $file.'.'.$supported_archives{$type}{extension};
 	my $archive_command = $supported_archives{$type}{create};
 
-#TODO check if binary exists; split by space
-	if (1){
-		system("cd '$path' && $archive_command '$archive_file' '$file'");
-	} else {
-		Filer::Dialog->msgbox_error("This is not an supported Archive!");
-	}
+	# use first filename + extension as archive filename
+	my $archive_file = quotemeta("$file." . $supported_archives{$type}{extension});
+	
+	# create a space delimited list of files and escape it properly to make shell happy
+	my $f = join " ", map { File::Basename::basename(quotemeta($_)) } @{$self->{files}};
+
+	system("cd $path && $archive_command $archive_file $f");
 }
 
 sub extract_archive {
 	my ($self) = @_;
-	my $path = $self->{path};
-	my $file = $self->{file};
-	my $type = File::MimeInfo::Magic::mimetype($self->{filepath});
+	my $path = quotemeta($self->{path});
+	my $file = quotemeta($self->{file});
 
+	my $type = File::MimeInfo::Magic::mimetype($self->{filepath});
 	my $archive_extract_command = $supported_archives{$type}{'extract'};
-	if ($archive_extract_command){
-		system("cd '$path' && $archive_extract_command '$file'");
+
+	if ($archive_extract_command) {
+		system("cd $path && $archive_extract_command $file");
 	} else {
 		Filer::Dialog->msgbox_error("This is not an supported Archive!");
 	}
@@ -87,11 +91,7 @@ sub extract_archive {
 sub is_supported_archive {
 	my ($type) = @_;
 
-	if (exists($supported_archives{$type})) {
-		return 1;
-	} else {
-		return 0;
-	}
+	return (defined $supported_archives{$type}) ? 1 : 0;
 }
 
 1;

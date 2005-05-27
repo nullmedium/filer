@@ -49,6 +49,10 @@ use constant S_IXOTH => 00001;
 sub set_properties_dialog {
 	my ($file) = pop;
 	my ($dialog,$table,$label,$checkbutton,$entry);
+	my ($frame,$type_label,$icon_image,$icon_entry,$icon_browse_button);
+	my ($button,$alignment,$hbox);
+	my $expander;
+
 	my $owner_combo;
 	my $group_combo;
 
@@ -63,6 +67,9 @@ sub set_properties_dialog {
 	my $group;
 	my $multiple = 0;
 
+	my $type = File::MimeInfo::mimetype($file);
+	my $mime = new Filer::Mime(); 
+
 	if ($main::active_pane->count_selected_items == 1) {
 		@stat = stat($file);
 		$owner = getpwuid($stat[4]);
@@ -76,6 +83,7 @@ sub set_properties_dialog {
 
 	my $mode_clicked = sub {
 		my ($w,$mode_ref,$x) = @_;
+			
 		if ($w->get_active) {
 			${$mode_ref} += $x;
 		} else {
@@ -88,39 +96,121 @@ sub set_properties_dialog {
 	$dialog->set_position('center');
 	$dialog->set_modal(1);
 
-	$table = new Gtk2::Table(2,2);
-	$table->set_homogeneous(0);
-	$table->set_col_spacings(5);
-	$table->set_row_spacings(1);
-	$dialog->vbox->pack_start($table,1,1,5);
+	# Filename and Size
 
-	$label = new Gtk2::Label("<b>Filename</b>");
-	$label->set_use_markup(1);
-	$label->set_alignment(0.0,0.0);
-	$table->attach($label, 0, 1, 0, 1, [ "fill" ], [ ], 0, 0);
+	if (!$multiple) {
+		$table = new Gtk2::Table(2,2);
+		$table->set_homogeneous(0);
+		$table->set_col_spacings(5);
+		$table->set_row_spacings(1);
+		$dialog->vbox->pack_start($table,1,1,5);
 
-	$label = new Gtk2::Label("<b>Size</b>");
-	$label->set_use_markup(1);
-	$label->set_alignment(0.0,0.0);
-	$table->attach($label, 0, 1, 1, 2, [ "fill" ], [ ], 0, 0);
+		$label = new Gtk2::Label("<b>Filename</b>");
+		$label->set_use_markup(1);
+		$label->set_alignment(0.0,0.0);
+		$table->attach($label, 0, 1, 0, 1, [ "fill" ], [ ], 0, 0);
 
-	$label = new Gtk2::Label($file);
-	$label->set_use_markup(1);
-	$label->set_alignment(0.0,0.0);
-	$label->set_ellipsize('PANGO_ELLIPSIZE_MIDDLE');
-	$table->attach($label, 1, 2, 0, 1, [ "fill", "expand" ], [ ], 0, 0);
+		$label = new Gtk2::Label("<b>Size</b>");
+		$label->set_use_markup(1);
+		$label->set_alignment(0.0,0.0);
+		$table->attach($label, 0, 1, 1, 2, [ "fill" ], [ ], 0, 0);
 
-	$label = new Gtk2::Label(Filer::FilePane::calculate_size($stat[7]));
-	$label->set_use_markup(1);
-	$label->set_alignment(0.0,0.0);
-	$table->attach($label, 1, 2, 1, 2, [ "fill" ], [ ], 0, 0);
+		$label = new Gtk2::Label($file);
+		$label->set_use_markup(1);
+		$label->set_alignment(0.0,0.0);
+		$label->set_ellipsize('PANGO_ELLIPSIZE_MIDDLE');
+		$table->attach($label, 1, 2, 0, 1, [ "fill", "expand" ], [ ], 0, 0);
+
+		$label = new Gtk2::Label(Filer::FilePane::calculate_size($stat[7]));
+		$label->set_use_markup(1);
+		$label->set_alignment(0.0,0.0);
+		$table->attach($label, 1, 2, 1, 2, [ "fill" ], [ ], 0, 0);
+
+		# Icon
+
+		my $expander = new Gtk2::Expander("<b>Mimetype Icon</b>");
+		$expander->signal_connect("activate", \&expander_callback);
+			$expander->set_expanded(1);
+		$expander->set_use_markup(1);
+		$dialog->vbox->pack_start($expander,0,0,5);
+
+		$table = new Gtk2::Table(2,4);
+		$table->set_homogeneous(0);
+		$table->set_col_spacings(5);
+		$table->set_row_spacings(1);
+		$expander->add($table);
+
+		$frame = new Gtk2::Frame;
+		$frame->set_size_request(50, 50);
+		$frame->set_shadow_type('out');
+		$table->attach($frame, 0, 1, 0, 2, [], [], 0, 0);
+
+		$icon_image = new Gtk2::Image;
+		$icon_image->set_from_file($mime->get_icon($type));
+		$icon_image->set_alignment(0.50,0.50);
+		$frame->add($icon_image);
+
+		$label = new Gtk2::Label;
+		$label->set_justify('left');
+		$label->set_text("Type: ");
+		$label->set_alignment(0.0,0.0);
+		$table->attach($label, 1, 2, 0, 1, [ "fill" ], [], 0, 0);
+
+		$type_label = new Gtk2::Label;
+		$type_label->set_justify('right');
+		$type_label->set_text($type);
+		$type_label->set_alignment(0.0,0.0);
+		$table->attach($type_label, 2, 4, 0, 1, [ "expand","fill" ], [], 0, 0);
+
+		$label = new Gtk2::Label;
+		$label->set_justify('left');
+		$label->set_text("Icon:");
+		$label->set_alignment(0.0,0.0);
+		$table->attach($label, 1, 2, 1, 2, [ "fill" ], [], 0, 0);
+
+		$icon_entry = new Gtk2::Entry;
+		$icon_entry->set_text($mime->get_icon($type));
+		$table->attach($icon_entry, 2, 3, 1, 2, [ "expand","fill" ], [], 0, 0);
+
+		$icon_browse_button = new Gtk2::Button;
+		$icon_browse_button->add(Gtk2::Image->new_from_stock('gtk-open', 'button'));
+		$icon_browse_button->signal_connect("clicked", sub {
+			my $fs = Filer::Dialog->preview_file_selection;
+			$fs->set_filename($mime->get_icon($type));
+
+			if ($fs->run eq 'ok') {
+				my $mimeicon = $fs->get_filename;
+				my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($mimeicon) || return;
+
+				$icon_entry->set_text($mimeicon);
+				$icon_image->set_from_pixbuf(&main::intelligent_scale($pixbuf,100));
+				$mime->set_icon($type, $mimeicon);
+			}
+
+			$fs->destroy;
+		});
+		$table->attach($icon_browse_button, 3, 4, 1, 2, [ "fill" ], [], 0, 0);
+	} else {
+		$label = new Gtk2::Label("<b>Set permissions for multiple files</b>");
+		$label->set_use_markup(1);
+		$label->set_alignment(0.0,0.0);
+		$dialog->vbox->pack_start($label,0,0,5);
+	}
+
+	# Properties
+
+	$expander = new Gtk2::Expander("<b>Properties</b>");
+	$expander->signal_connect("activate", \&expander_callback);
+	$expander->set_expanded(1);
+	$expander->set_use_markup(1);
+	$dialog->vbox->pack_start($expander,0,0,5);
 
 	$table = new Gtk2::Table(4,4);
 	$table->set_homogeneous(0);
 	$table->set_col_spacings(5);
 	$table->set_row_spacings(1);
-	$dialog->vbox->pack_start($table,0,0,5);
-
+	$expander->add($table);
+	
 	$label = new Gtk2::Label("<b>Owner</b>");
 	$label->set_use_markup(1);
 	$label->set_alignment(0.0,0.0);
@@ -240,11 +330,17 @@ sub set_properties_dialog {
 	$checkbutton->set_active(S_IXOTH & $stat[2]) if ($multiple == 0);
 	$table->attach($checkbutton, 3, 4, 3, 4, [ "fill" ], [], 0, 0);
 
+	$expander = new Gtk2::Expander("<b>Owner and Group</b>");
+	$expander->signal_connect("activate", \&expander_callback);
+	$expander->set_expanded(1);
+	$expander->set_use_markup(1);
+	$dialog->vbox->pack_start($expander,0,0,5);
+
 	$table = new Gtk2::Table(2,2);
 	$table->set_homogeneous(0);
 	$table->set_col_spacings(5);
 	$table->set_row_spacings(1);
-	$dialog->vbox->pack_start($table,0,0,5);
+	$expander->add($table);
 
 	$label = new Gtk2::Label("<b>Owner: </b>");
 	$label->set_use_markup(1);
@@ -289,6 +385,13 @@ sub set_properties_dialog {
 	}
 
 	$dialog->destroy;
+}
+
+sub expander_callback {
+	my ($e) = @_;
+	my $w = $e->parent->parent;
+
+	$w->queue_resize();
 }
 
 1;
