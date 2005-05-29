@@ -31,6 +31,8 @@ use constant FILEPATH		=> 5;
 use constant FILEPATH_ITER	=> 6;
 use constant MIMEICONS		=> 7;
 
+use constant MOUSE_MOTION_SELECT => 8;
+
 sub new {
 	my ($class,$side) = @_;
 	my $self = bless [], $class;
@@ -54,8 +56,9 @@ sub new {
 	$self->[TREEVIEW]->set_rules_hint(1);
 	$self->[TREEVIEW]->set_headers_visible(0);
 	$self->[TREEVIEW]->signal_connect("grab-focus", \&treeview_grab_focus_cb, $self);
-	$self->[TREEVIEW]->signal_connect("key-press-event", \&treeview_event_cb, $self);
-	$self->[TREEVIEW]->signal_connect("button-press-event", \&treeview_event_cb, $self);
+# 	$self->[TREEVIEW]->signal_connect("key-press-event", \&treeview_event_cb, $self);
+# 	$self->[TREEVIEW]->signal_connect("button-press-event", \&treeview_event_cb, $self);
+	$self->[TREEVIEW]->signal_connect("event", \&treeview_event_cb, $self);
 	$self->[TREEVIEW]->signal_connect("row-expanded", \&treeview_row_expanded_cb, $self);
 	$self->[TREEVIEW]->signal_connect("row-collapsed", \&treeview_row_collapsed_cb, $self);
 
@@ -71,7 +74,7 @@ sub new {
 	$scrolled_window->add($self->[TREEVIEW]);
 
 	$self->[TREESELECTION] = $self->[TREEVIEW]->get_selection;
-	$self->[TREESELECTION]->set_mode("single");
+	$self->[TREESELECTION]->set_mode("multiple");
 	$self->[TREESELECTION]->signal_connect("changed", \&selection_changed_cb, $self);
 
 	# a column with a pixbuf renderer and a text renderer
@@ -91,6 +94,8 @@ sub new {
 	$self->init_icons;
 
 	$self->open_path("/");
+
+	$self->[MOUSE_MOTION_SELECT] = 0;
 
 	return $self;
 }
@@ -119,7 +124,7 @@ sub show_popup_menu {
 	{ path => '/sep4',								        			item_type => '<Separator>'},
 	{ path => '/Copy',					callback => \&main::copy_cb,				item_type => '<Item>'},
 #	{ path => '/Paste',					callback => \&main::paste_cb,				item_type => '<Item>'},
-	{ path => '/sep5',								        			item_type => '<Separator>'},
+#	{ path => '/sep5',								        			item_type => '<Separator>'},
 	{ path => '/Move',					callback => \&main::move_cb,				item_type => '<Item>'},
 	{ path => '/Rename',					callback => \&main::rename_cb,				item_type => '<Item>'},
 	{ path => '/MkDir',					callback => \&main::mkdir_cb,				item_type => '<Item>'},
@@ -135,14 +140,6 @@ sub show_popup_menu {
 	);
 
 	$item_factory->create_items(undef, @menu_items);
-
-	if ($main::config->get_option("Mode") != &main::EXPLORER_MODE) {
-#		$item_factory->delete_item('/Paste');
-		$item_factory->delete_item('/sep4');
-		$item_factory->delete_item('/sep5');
-	} else {
-		$item_factory->delete_item('/Move');
-	}
 
 	# Bookmarks Menu
 
@@ -228,6 +225,27 @@ sub treeview_event_cb {
 # 
 # 		return 1;
 # 	}
+
+	if ($e->type eq "button-press" and $e->button == 2) {
+		$self->set_focus;
+		$self->[MOUSE_MOTION_SELECT] = 1;
+		return 1;
+	}
+
+	if ($e->type eq "button-release" and $e->button == 2) {
+		$self->[MOUSE_MOTION_SELECT] = 0;
+		return 1;
+	}
+
+	if ($e->type eq "motion-notify") {
+		if ($self->[MOUSE_MOTION_SELECT] == 1) {
+			my ($p) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
+
+			if (defined $p) {
+				$self->[TREESELECTION]->select_path($p);
+			}
+		}
+	}
 
 	if ($e->type eq "button-press" and $e->button == 3) {
 		$self->show_popup_menu($e);

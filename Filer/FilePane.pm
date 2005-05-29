@@ -173,40 +173,29 @@ sub show_popup_menu {
 	my $item;
 	my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
 	my $popup_menu = $item_factory->get_widget('<main>');
-	my $commands_menu = new Gtk2::Menu;
 	my $mime = new Filer::Mime;
 	my $type = File::MimeInfo::Magic::mimetype($self->[SELECTED_ITEM]);
 
 	my @menu_items = (
 	{ path => '/Open',										item_type => '<Item>'},
-
-	{ path => '/sep4',								      		item_type => '<Separator>'},
+	{ path => '/sep2',								      		item_type => '<Separator>'},
 	{ path => '/Copy',			callback => \&main::copy_cb,				item_type => '<Item>'},
 #	{ path => '/Paste',			callback => \&main::paste_cb,				item_type => '<Item>'},
-
 	{ path => '/Move',			callback => \&main::move_cb,				item_type => '<Item>'},
 	{ path => '/Rename',			callback => \&main::rename_cb,				item_type => '<Item>'},
 	{ path => '/MkDir',			callback => \&main::mkdir_cb,				item_type => '<Item>'},
 	{ path => '/Delete',			callback => \&main::delete_cb,				item_type => '<Item>'},
-	{ path => '/sep1',								      		item_type => '<Separator>'},
+	{ path => '/sep3',								      		item_type => '<Separator>'},
 	{ path => '/Bookmarks',								 		item_type => '<Item>'},
-	{ path => '/sep2',										item_type => '<Separator>'},
+	{ path => '/sep4',										item_type => '<Separator>'},
 	{ path => '/Archive/Create tar.gz',	callback => sub { $self->create_tar_gz_archive },	item_type => '<Item>'},
 	{ path => '/Archive/Create tar.bz2',	callback => sub { $self->create_tar_bz2_archive },      item_type => '<Item>'},
 	{ path => '/Archive/Extract',		callback => sub { $self->extract_archive },		item_type => '<Item>'},
-	{ path => '/sep3',										item_type => '<Separator>'},
-	{ path => '/Properties',			callback => sub { $self->set_properties },		item_type => '<Item>'},
+	{ path => '/sep5',										item_type => '<Separator>'},
+	{ path => '/Properties',		callback => sub { $self->set_properties },		item_type => '<Item>'},
 	);
 
 	$item_factory->create_items(undef, @menu_items);
-
-	if ($main::config->get_option("Mode") != &main::EXPLORER_MODE) {
-#		$item_factory->delete_item('/Paste');
-		$item_factory->delete_item('/sep4');
-#		$item_factory->delete_item('/sep5');
-#	} else {
-#		$item_factory->delete_item('/Move');
-	}
 
 	# Customize archive submenu
 	if (! Filer::Archive::is_supported_archive($type)) {
@@ -221,22 +210,20 @@ sub show_popup_menu {
        $item->set_submenu(&main::get_bookmarks_menu);
 
 	if ($self->count_selected_items == 1) {
-	       $item = new Gtk2::SeparatorMenuItem;
-	       $commands_menu->add($item);
+		my $commands_menu = new Gtk2::Menu; 
+		$item = $item_factory->get_item('/Open');
+		$item->set_submenu($commands_menu);
 
-	       $item = $item_factory->get_item('/Open');
-	       $item->set_submenu($commands_menu);
-
-	       if (-e $self->[SELECTED_ITEM]) {
+		if (-e $self->[SELECTED_ITEM]) {
 		       foreach ($mime->get_commands($type)) {
 			       $item = new Gtk2::MenuItem(File::Basename::basename($_));
 			       $item->signal_connect("activate", sub {
 					my $command = $_[1];
 					my $item = quotemeta($self->[SELECTED_ITEM]);
 					system("$command $item & exit");
-			       }, $_);
-			       $commands_menu->add($item);
-		       }
+				}, $_);
+				$commands_menu->add($item);
+			}
 	       }
 
 	       $item = new Gtk2::MenuItem('Other ...');
@@ -245,15 +232,10 @@ sub show_popup_menu {
 	} else {
 	       $item_factory->delete_item('/Rename');
 	       $item_factory->delete_item('/MkDir');
-#	       $item_factory->delete_item('/Bookmarks');
 	       $item_factory->delete_item('/Open');
 	       $item_factory->delete_item('/Open Terminal');
-#	       $item_factory->delete_item('/Archive');
 	       $item_factory->delete_item('/Set Icon');
 	       $item_factory->delete_item('/Refresh');
-#	       $item_factory->delete_item('/Properties');
-	       $item_factory->delete_item('/sep2');
-	       $item_factory->delete_item('/sep3');
 	}
 
 	$popup_menu->show_all;
@@ -303,11 +285,13 @@ sub treeview_event_cb {
 	}
 
 	if ($e->type eq "button-press" and $e->button == 3) {
+		$self->set_focus;
 		$self->show_popup_menu($e);
 		return 1;
 	}
 
 	if ($e->type eq "button-press" and $e->button == 2) {
+		$self->set_focus;
 		$self->[MOUSE_MOTION_SELECT] = 1;
 		return 1;
 	}
