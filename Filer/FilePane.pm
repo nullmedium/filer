@@ -217,10 +217,10 @@ sub show_popup_menu {
 		$item_factory->delete_item('/Archive/Create tar.bz2');
 	}
 
-	if ($self->count_selected_items == 1) {
-	       $item = $item_factory->get_item('/Bookmarks');
-	       $item->set_submenu(&main::get_bookmarks_menu);
+       $item = $item_factory->get_item('/Bookmarks');
+       $item->set_submenu(&main::get_bookmarks_menu);
 
+	if ($self->count_selected_items == 1) {
 	       $item = new Gtk2::SeparatorMenuItem;
 	       $commands_menu->add($item);
 

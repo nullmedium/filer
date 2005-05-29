@@ -94,7 +94,6 @@ sub set_properties_dialog {
 	$dialog = new Gtk2::Dialog("Set File Properties", undef, 'modal', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
 	$dialog->set_has_separator(1);
 	$dialog->set_position('center');
-	$dialog->set_modal(1);
 
 	# Filename and Size
 

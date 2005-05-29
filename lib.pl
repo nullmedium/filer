@@ -232,7 +232,10 @@ sub get_bookmarks_menu {
 	$menuitem = new Gtk2::MenuItem("Set Bookmark");
 	$menuitem->signal_connect("activate", sub {
 		my $bookmarks = new Filer::Bookmarks;
-		$bookmarks->set_bookmark($active_pane->get_selected_item);
+
+		foreach (@{$active_pane->get_selected_items}) {
+			$bookmarks->set_bookmark($_);
+		}
 
 		my $menu = $widgets->{item_factory}->get_item("/Bookmarks");
 		$menu->set_submenu(&get_bookmarks_menu());
@@ -243,7 +246,10 @@ sub get_bookmarks_menu {
 	$menuitem = new Gtk2::MenuItem("Remove Bookmark");
 	$menuitem->signal_connect("activate", sub {
 		my $bookmarks = new Filer::Bookmarks;
-		$bookmarks->remove_bookmark($active_pane->get_selected_item);
+
+		foreach (@{$active_pane->get_selected_items}) {
+			$bookmarks->remove_bookmark($_);
+		}
 
 		my $menu = $widgets->{item_factory}->get_item("/Bookmarks");
 		$menu->set_submenu(&get_bookmarks_menu());
