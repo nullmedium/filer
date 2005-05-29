@@ -707,7 +707,7 @@ sub create_tar_bz2_archive {
 
 sub extract_archive {
 	my ($self) = @_;
-	my $archive = Filer::Archive->new($self->[SELECTED_ITEM]);
+	my $archive = Filer::Archive->new([$self->[SELECTED_ITEM]]);
 	$archive->extract_archive;
 	$self->refresh;
 }
