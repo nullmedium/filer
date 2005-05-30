@@ -1,3 +1,93 @@
+2005-05-29 20:21  perldude
+
+	* trunk/Filer/FilePane.pm, trunk/Filer/FileTreePane.pm: set focus on
+	  middle and right click remove some cruft from explorer treeview
+	  context-menu
+
+2005-05-29 19:14  perldude
+
+	* trunk/Filer/Archive.pm, trunk/Filer/FilePane.pm,
+	  trunk/Filer/Properties.pm, trunk/lib.pl: use 'unrar x' instead of
+	  'unrar e' to extract rar archives add and remove multiple
+	  bookmarks at once don't hide bookmarks menu in context menu if
+	  multiple items are selected
+
+2005-05-29 18:21  perldude
+
+	* trunk/Filer/FilePane.pm: fix
+
+2005-05-27 19:40  perldude
+
+	* trunk/Filer/Archive.pm, trunk/Filer/FilePane.pm,
+	  trunk/Filer/Mime.pm, trunk/Filer/Properties.pm: add multiple
+	  selection of files using only the mouse (by dragging over the
+	  files with mouse-button 2 pressed) don't hide Permissions and
+	  Archive in context menu when multiple files are selected support
+	  to add multiple files to archive show mimetype (icon) in
+	  Permission dialog
+
+2005-05-25 13:27  perldude
+
+	* trunk/Filer/FilePane.pm: fix context-menu.
+
+2005-05-25 13:19  perldude
+
+	* trunk/Filer/Bookmarks.pm: prevent adding of empty bookmarks
+
+2005-05-25 13:04  perldude
+
+	* trunk/Filer/Archive.pm, trunk/Filer/Config.pm,
+	  trunk/Filer/FilePane.pm, trunk/Filer/FileTreePane.pm,
+	  trunk/Filer/Properties.pm, trunk/lib.pl: properly escape filenames
+	  remember window size add filename and size to Properties dialog
+
+2005-05-04 00:32  perldude
+
+	* trunk/Filer/FilePane.pm, trunk/Filer/FileTreePane.pm,
+	  trunk/lib.pl: copy/paste of files in clipboard (Explorer mode)
+
+2005-05-03 11:19  perldude
+
+	* trunk/lib.pl: Copy selected files to clipboard
+
+2005-05-01 07:29  perldude
+
+	* trunk/lib.pl: add copy to clipboard code. doesn't work yet.
+
+2005-04-24 12:46  perldude
+
+	* trunk/File-DirWalk/DirWalk.pm: add wrapper function to catch die
+	  exceptions in _walk
+
+2005-04-24 11:29  perldude
+
+	* trunk/File-DirWalk, trunk/File-DirWalk/DirWalk.pm,
+	  trunk/File-DirWalk/MANIFEST, trunk/File-DirWalk/Makefile,
+	  trunk/File-DirWalk/Makefile.PL, trunk/File-DirWalk/README,
+	  trunk/File-DirWalk/configure, trunk/File-DirWalk/t,
+	  trunk/File-DirWalk/t/1.t: add File-DirWalk module
+
+2005-04-20 08:52  perldude
+
+	* trunk/Filer/Copy.pm, trunk/Filer/DND.pm, trunk/Filer/Delete.pm,
+	  trunk/Filer/DirWalk.pm, trunk/Filer/FileCopy.pm,
+	  trunk/Filer/Move.pm, trunk/Filer/Search.pm, trunk/README,
+	  trunk/lib.pl: remove Filer/DirWalk.pm functionality is now
+	  provided by File::DirWalk
+
+2005-04-17 10:44  perldude
+
+	* trunk/start-ide.sh: delete old helper script
+
+2005-04-17 10:43  perldude
+
+	* trunk/svn2cl.xsl: add ChangeLog stylesheet
+
+2005-04-17 10:43  perldude
+
+	* trunk/ChangeLog, trunk/Filer/FileTreePane.pm, trunk/svn2cl.pl,
+	  trunk/update-changelog.sh: updates
+
 2005-04-07 16:29  perldude
 
 	* trunk/ChangeLog: update ChangeLog
