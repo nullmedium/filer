@@ -39,6 +39,7 @@ use constant LOCATION_BAR	=> 13;
 use constant HBOX		=> 14;
 
 use constant MOUSE_MOTION_SELECT => 15;
+use constant MOUSE_MOTION_DESELECT => 16;
 
 Memoize::memoize("calculate_size");
 Memoize::memoize("Stat::lsMode::format_mode");
@@ -142,6 +143,7 @@ sub new {
 	$self->init_icons;
 	
 	$self->[MOUSE_MOTION_SELECT] = 0;
+	$self->[MOUSE_MOTION_DESELECT] = 0;
 
 	return $self;
 }
@@ -284,15 +286,18 @@ sub treeview_event_cb {
 		return 1;
 	}
 
-	if ($e->type eq "button-press" and $e->button == 3) {
-		$self->set_focus;
-		$self->show_popup_menu($e);
-		return 1;
+	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Control_L'})) {
+		$self->[MOUSE_MOTION_DESELECT] = 1;
+	}
+
+	if (($e->type eq "key-release" and $e->keyval == $Gtk2::Gdk::Keysyms{'Control_L'})) {
+		$self->[MOUSE_MOTION_DESELECT] = 0;
 	}
 
 	if ($e->type eq "button-press" and $e->button == 2) {
 		$self->set_focus;
 		$self->[MOUSE_MOTION_SELECT] = 1;
+		$self->_select_helper($e->x,$e->y);
 		return 1;
 	}
 
@@ -302,16 +307,32 @@ sub treeview_event_cb {
 	}
 
 	if ($e->type eq "motion-notify") {
-		if ($self->[MOUSE_MOTION_SELECT] == 1) {
-			my ($p) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
+		$self->_select_helper($e->x,$e->y);
+		return 1;
+	}
 
-			if (defined $p) {
-				$self->[TREESELECTION]->select_path($p);
-			}
-		}
+	if ($e->type eq "button-press" and $e->button == 3) {
+		$self->set_focus;
+		$self->show_popup_menu($e);
+		return 1;
 	}
 
 	return 0;
+}
+
+sub _select_helper {
+	my ($self,$x,$y) = @_;
+	my ($p) = $self->[TREEVIEW]->get_path_at_pos($x,$y);
+
+	if (defined $p) {
+		if ($self->[MOUSE_MOTION_SELECT] == 1) {
+			if ($self->[MOUSE_MOTION_DESELECT] != 1) {
+				$self->[TREESELECTION]->select_path($p);
+			} else {
+				$self->[TREESELECTION]->unselect_path($p);
+			}
+		}
+	}
 }
 
 # internal and external functions and methods.
