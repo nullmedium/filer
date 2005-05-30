@@ -250,9 +250,8 @@ sub treeview_event_cb {
 
 	if ($e->type eq "motion-notify") {
 		$self->_select_helper($e->x,$e->y);
-		return 1;
+		return 0;
 	}
-
 
 	if ($e->type eq "button-press" and $e->button == 3) {
 		$self->show_popup_menu($e);

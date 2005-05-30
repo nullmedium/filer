@@ -288,10 +288,12 @@ sub treeview_event_cb {
 
 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Control_L'})) {
 		$self->[MOUSE_MOTION_DESELECT] = 1;
+		return 1;
 	}
 
 	if (($e->type eq "key-release" and $e->keyval == $Gtk2::Gdk::Keysyms{'Control_L'})) {
 		$self->[MOUSE_MOTION_DESELECT] = 0;
+		return 1;
 	}
 
 	if ($e->type eq "button-press" and $e->button == 2) {
@@ -308,7 +310,7 @@ sub treeview_event_cb {
 
 	if ($e->type eq "motion-notify") {
 		$self->_select_helper($e->x,$e->y);
-		return 1;
+		return 0;
 	}
 
 	if ($e->type eq "button-press" and $e->button == 3) {
@@ -712,7 +714,7 @@ sub create_tar_bz2_archive {
 
 sub extract_archive {
 	my ($self) = @_;
-	my $archive = Filer::Archive->new([$self->[SELECTED_ITEM]]);
+	my $archive = Filer::Archive->new($self->get_selected_items);
 	$archive->extract_archive;
 	$self->refresh;
 }

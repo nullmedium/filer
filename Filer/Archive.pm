@@ -24,8 +24,8 @@ my %supported_archives = (
 	'application/x-bzip' =>			{ extension => 'bz2',		create => 'bzip2 -c',	extract => 'gzip2 -d'},
 	'application/zip' =>			{ extension => 'zip',		create => 'zip',	extract => 'unzip'},
 	'application/x-tar' =>			{ extension => 'tar',		create => 'tar -cf',	extract => 'tar -xf'},
-	'application/x-compressed-tar' =>	{ extension => 'tar.gz',	create => 'tar -czf',	extract => 'tar -xzf'},
-	'application/x-bzip-compressed-tar' =>	{ extension => 'tar.bz2',	create => 'tar -cjf',	extract => 'tar -xjf'},
+	'application/x-compressed-tar' =>	{ extension => 'tar.gz',	create => 'tar -cf',	extract => 'tar -xzf'},
+	'application/x-bzip-compressed-tar' =>	{ extension => 'tar.bz2',	create => 'tar -cf',	extract => 'tar -xjf'},
 	'application/x-rar' =>			{ extension => 'rar',		create => 'rar a',	extract => 'unrar x'}
 );
 
@@ -75,16 +75,18 @@ sub create_archive {
 
 sub extract_archive {
 	my ($self) = @_;
-	my $path = quotemeta($self->{path});
-	my $file = quotemeta($self->{file});
 
-	my $type = File::MimeInfo::Magic::mimetype($self->{filepath});
-	my $archive_extract_command = $supported_archives{$type}{'extract'};
+	foreach (@{$self->{files}}) {
+		my $f = quotemeta($_);
+		my $type = File::MimeInfo::mimetype($f);
+		my $archive_extract_command = $supported_archives{$type}{'extract'};
 
-	if ($archive_extract_command) {
-		system("cd $path && $archive_extract_command $file");
-	} else {
-		Filer::Dialog->msgbox_error("This is not an supported Archive!");
+		print "extracting $type: $_\n";
+
+		if ($archive_extract_command) {
+			my $path = quotemeta($self->{path}); # use path of first file in list.
+			system("cd $path && $archive_extract_command $f");
+		}
 	}
 }
 
