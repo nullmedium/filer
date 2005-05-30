@@ -21,23 +21,20 @@ use warnings;
 
 my %supported_archives = (
 	'application/x-gzip' =>			{ extension => 'gz',		create => 'gzip -c',	extract => 'gzip -d'},
-	'application/x-bzip' =>			{ extension => 'bz2',		create => 'bzip2 -c',	extract => 'gzip2 -d'},
+	'application/x-bzip' =>			{ extension => 'bz2',		create => 'bzip2 -c',	extract => 'bzip2 -d'},
 	'application/zip' =>			{ extension => 'zip',		create => 'zip',	extract => 'unzip'},
 	'application/x-tar' =>			{ extension => 'tar',		create => 'tar -cf',	extract => 'tar -xf'},
-	'application/x-compressed-tar' =>	{ extension => 'tar.gz',	create => 'tar -cf',	extract => 'tar -xzf'},
-	'application/x-bzip-compressed-tar' =>	{ extension => 'tar.bz2',	create => 'tar -cf',	extract => 'tar -xjf'},
+	'application/x-compressed-tar' =>	{ extension => 'tar.gz',	create => 'tar -czf',	extract => 'tar -xzf'},
+	'application/x-bzip-compressed-tar' =>	{ extension => 'tar.bz2',	create => 'tar -cjf',	extract => 'tar -xjf'},
 	'application/x-rar' =>			{ extension => 'rar',		create => 'rar a',	extract => 'unrar x'}
 );
 
 sub new {
-	my ($class,$filepath) = @_;
+	my ($class,$filepath,$files) = @_;
 	my $self = bless {}, $class;
 
-	$self->{filepath} = @{$filepath}[0];
-	$self->{files} = $filepath;
-
-	$self->{path} = File::Basename::dirname(@{$filepath}[0]);
-	$self->{file} = File::Basename::basename(@{$filepath}[0]);
+	$self->{path} = quotemeta($filepath);
+	$self->{files} = $files;
 
 	return $self;
 }
@@ -46,26 +43,23 @@ sub create_tar_bz2_archive {
 	my ($self) = @_;
 	$self->{requested_archivetype} = 'application/x-bzip-compressed-tar';
 
-	create_archive($self)
+	$self->create_archive;
 }
 
 sub create_tar_gz_archive {
 	my ($self) = @_;
 	$self->{requested_archivetype} = 'application/x-compressed-tar';
 
-	create_archive($self)
+	$self->create_archive;
 }
 
 sub create_archive {
 	my ($self) = @_;
-	my $path = quotemeta($self->{path});
-	my $file = quotemeta($self->{file});
-
+	my $path = $self->{path};
 	my $type = $self->{requested_archivetype};
-	my $archive_command = $supported_archives{$type}{create};
 
-	# use first filename + extension as archive filename
-	my $archive_file = quotemeta("$file." . $supported_archives{$type}{extension});
+	my $archive_command = $supported_archives{$type}{create};
+	my $archive_file = quotemeta(sprintf("%s.%s", $self->{files}->[0], $supported_archives{$type}{extension}));
 	
 	# create a space delimited list of files and escape it properly to make shell happy
 	my $f = join " ", map { File::Basename::basename(quotemeta($_)) } @{$self->{files}};
@@ -75,16 +69,14 @@ sub create_archive {
 
 sub extract_archive {
 	my ($self) = @_;
+	my $path = $self->{path};
 
 	foreach (@{$self->{files}}) {
+		my $type = File::MimeInfo::mimetype($_);
+		my $archive_extract_command = $supported_archives{$type}{extract};
 		my $f = quotemeta($_);
-		my $type = File::MimeInfo::mimetype($f);
-		my $archive_extract_command = $supported_archives{$type}{'extract'};
-
-		print "extracting $type: $_\n";
 
 		if ($archive_extract_command) {
-			my $path = quotemeta($self->{path}); # use path of first file in list.
 			system("cd $path && $archive_extract_command $f");
 		}
 	}

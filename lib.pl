@@ -618,7 +618,7 @@ sub copy_cb {
 			}
 		} else {
 			if ($config->get_option("ConfirmCopy") == 1) {
-				return if (Filer::Dialog->yesno_dialog("Copy selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
+				return if (Filer::Dialog->yesno_dialog(sprintf("Copy %s selected files to %s?", $active_pane->count_selected_items, $inactive_pane->get_pwd)) eq 'no');
 			}
 
 			&{$f}($active_pane->get_selected_items, $inactive_pane->get_pwd);
@@ -675,7 +675,7 @@ sub move_cb {
 		}
 	} else {
 		if ($config->get_option("ConfirmMove") == 1) {
-			return if (Filer::Dialog->yesno_dialog("Move selected files to " . $inactive_pane->get_pwd . "?") eq 'no');
+			return if (Filer::Dialog->yesno_dialog(sprintf("Move %s selected files to %s?", $active_pane->count_selected_items, $inactive_pane->get_pwd)) eq 'no');
 		}
 
 		&{$f}($active_pane->get_selected_items, $inactive_pane->get_pwd);
@@ -728,7 +728,7 @@ sub delete_cb {
 	return if (($active_pane->count_selected_items == 0) or (not defined $active_pane->get_selected_item));
 
 	if ($config->get_option("ConfirmDelete") == 1) {
-		return if (Filer::Dialog->yesno_dialog("Delete selected files?") eq 'no');
+		return if (Filer::Dialog->yesno_dialog(sprintf("Delete %s selected files?", $active_pane->count_selected_items)) eq 'no');
 	}
 
 	if ($config->get_option("MoveToTrash") == 1) {

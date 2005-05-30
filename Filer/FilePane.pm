@@ -202,10 +202,6 @@ sub show_popup_menu {
 	# Customize archive submenu
 	if (! Filer::Archive::is_supported_archive($type)) {
 		$item_factory->delete_item('/Archive/Extract');
-		$item_factory->delete_item('sep3');
-	} else {
-		$item_factory->delete_item('/Archive/Create tar.gz');
-		$item_factory->delete_item('/Archive/Create tar.bz2');
 	}
 
        $item = $item_factory->get_item('/Bookmarks');
@@ -700,21 +696,21 @@ sub get_temp_archive_dir {
 
 sub create_tar_gz_archive {
 	my ($self) = @_;
-	my $archive = Filer::Archive->new($self->get_selected_items);
+	my $archive = Filer::Archive->new($self->[FILEPATH], $self->get_selected_items);
 	$archive->create_tar_gz_archive;
 	$self->refresh;
 }
 
 sub create_tar_bz2_archive {
 	my ($self) = @_;
-	my $archive = Filer::Archive->new($self->get_selected_items);
+	my $archive = Filer::Archive->new($self->[FILEPATH], $self->get_selected_items);
 	$archive->create_tar_bz2_archive;
 	$self->refresh;
 }
 
 sub extract_archive {
 	my ($self) = @_;
-	my $archive = Filer::Archive->new($self->get_selected_items);
+	my $archive = Filer::Archive->new($self->[FILEPATH], $self->get_selected_items);
 	$archive->extract_archive;
 	$self->refresh;
 }
