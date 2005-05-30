@@ -228,12 +228,14 @@ sub treeview_event_cb {
 # 		return 1;
 # 	}
 
-	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Control_L'})) {
+	if (($e->type eq "key-press") and (($e->keyval == $Gtk2::Gdk::Keysyms{'Control_L'}) or ($e->keyval == $Gtk2::Gdk::Keysyms{'Control_R'}))) {
 		$self->[MOUSE_MOTION_DESELECT] = 1;
+		return 1;
 	}
 
-	if (($e->type eq "key-release" and $e->keyval == $Gtk2::Gdk::Keysyms{'Control_L'})) {
+	if (($e->type eq "key-release") and (($e->keyval == $Gtk2::Gdk::Keysyms{'Control_L'}) or ($e->keyval == $Gtk2::Gdk::Keysyms{'Control_R'}))) {
 		$self->[MOUSE_MOTION_DESELECT] = 0;
+		return 1;
 	}
 
 	if ($e->type eq "button-press" and $e->button == 2) {
