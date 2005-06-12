@@ -1,3 +1,39 @@
+2005-06-12 16:28  perldude
+
+	* trunk/Filer/Archive.pm, trunk/Filer/FilePane.pm, trunk/lib.pl: set
+	  default action (Enter) for Select dialog change context-menu to
+	  select only the file below the mouse cursor (patch contributed by
+	  Bjoern Martensen <bjoern.martensen@gmail.com>) some other changes
+	  ;)
+
+2005-05-30 21:29  perldude
+
+	* trunk/Filer/Archive.pm, trunk/Filer/FilePane.pm,
+	  trunk/Filer/Mime.pm, trunk/lib.pl: fix Archive behaviour. add
+	  new/more default mimetype icon definitions (contributed by baze).
+
+2005-05-30 17:45  perldude
+
+	* trunk/Filer/FilePane.pm, trunk/Filer/FileTreePane.pm: check
+	  Control_L and Control_R keys
+
+2005-05-30 17:34  perldude
+
+	* trunk/Filer/Archive.pm, trunk/Filer/FilePane.pm,
+	  trunk/Filer/FileTreePane.pm: fix DnD extract multiple files at
+	  once
+
+2005-05-30 16:59  perldude
+
+	* trunk/Filer/FilePane.pm, trunk/Filer/FileTreePane.pm: select row
+	  below cursor on middle click control + middle click deselects row
+	  below mouse cursor same for mouse movement add helper function for
+	  row (de)selection
+
+2005-05-30 03:40  perldude
+
+	* trunk/ChangeLog: update ChangeLog
+
 2005-05-29 20:21  perldude
 
 	* trunk/Filer/FilePane.pm, trunk/Filer/FileTreePane.pm: set focus on
