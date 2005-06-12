@@ -55,8 +55,7 @@ sub create_tar_gz_archive {
 
 sub create_archive {
 	my ($self) = @_;
-	my $path = $self->{path};
-	my $type = $self->{requested_archivetype};
+	my ($path,$type) = ($self->{path}, $self->{requested_archivetype});
 
 	my $archive_command = $supported_archives{$type}{create};
 	my $archive_file = quotemeta(sprintf("%s.%s", $self->{files}->[0], $supported_archives{$type}{extension}));
@@ -85,7 +84,7 @@ sub extract_archive {
 sub is_supported_archive {
 	my ($type) = @_;
 
-	return (defined $supported_archives{$type}) ? 1 : 0;
+	return (defined $supported_archives{$type});
 }
 
 1;

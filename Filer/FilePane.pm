@@ -106,7 +106,7 @@ sub new {
 	$self->[TREEVIEW]->set_model($self->[TREEMODEL]);
 
 	# Drag and Drop
-	$self->[TREEVIEW]->drag_source_set(['button1_mask', 'button3_mask'], ['copy', 'move'], &Filer::DND::target_table);
+	$self->[TREEVIEW]->drag_source_set(['button1_mask'], ['copy', 'move'], &Filer::DND::target_table);
 	$self->[TREEVIEW]->drag_dest_set('all', ['copy', 'move'], &Filer::DND::target_table);
 	$self->[TREEVIEW]->signal_connect("drag_data_get", \&Filer::DND::filepane_treeview_drag_data_get_cb, $self);
 	$self->[TREEVIEW]->signal_connect("drag_data_received", \&Filer::DND::filepane_treeview_drag_data_received_cb, $self);
@@ -166,10 +166,11 @@ sub get_location_bar {
 sub show_popup_menu {
 	my ($self,$e) = @_;
 
-	my ($p,$d) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
+	my ($p) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
 
-	if (defined $p) {
-		$self->[TREESELECTION]->select_iter($self->[TREEMODEL]->get_iter($p));
+	if ((defined $p) and (! $self->[TREESELECTION]->path_is_selected($p))) {
+			$self->[TREESELECTION]->unselect_all;
+			$self->[TREESELECTION]->select_path($p);
 	}
 
 	my $item;
@@ -293,8 +294,8 @@ sub treeview_event_cb {
 	}
 
 	if ($e->type eq "button-press" and $e->button == 2) {
-		$self->set_focus;
 		$self->[MOUSE_MOTION_SELECT] = 1;
+		$self->set_focus;
 		$self->_select_helper($e->x,$e->y);
 		return 1;
 	}
@@ -329,9 +330,18 @@ sub _select_helper {
 			} else {
 				$self->[TREESELECTION]->unselect_path($p);
 			}
+
+# 			if ($self->[MOUSE_MOTION_SELECT] == 1) {
+# 				if (! $self->[TREESELECTION]->path_is_selected($p)) {
+# 					$self->[TREESELECTION]->select_path($p);
+# 				} else {
+# 					$self->[TREESELECTION]->unselect_path($p);
+# 				}
+# 			}
 		}
 	}
 }
+
 
 # internal and external functions and methods.
 

@@ -455,6 +455,7 @@ sub select_dialog {
 	my ($dialog,$hbox,$label,$entry);
 
 	$dialog = new Gtk2::Dialog("", undef, 'modal', 'gtk-ok' => 'ok');
+	$dialog->set_default_response('ok');
 	$dialog->set_has_separator(1);
 	$dialog->set_position('center');
 	$dialog->set_modal(1);
@@ -466,6 +467,7 @@ sub select_dialog {
 	$hbox->pack_start($label,0,0,0);
 
 	$entry = new Gtk2::Entry;
+	$entry->set_activates_default(1);
 	$entry->set_text("*");
 	$hbox->pack_start($entry,0,0,0);
 
