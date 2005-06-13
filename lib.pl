@@ -70,10 +70,8 @@ sub main_window {
 	{ path => '/_File/Open With',							callback => \&open_with_cb,	item_type => '<Item>'},
 	{ path => '/_File/sep', 									 		item_type => '<Separator>'},
 	{ path => '/_File/Quit',			accelerator => 'F10',		callback => \&quit_cb, 	 	item_type => '<Item>'},
-
 	{ path => '/_Edit/_Copy',			accelerator => 'F5',		callback => \&copy_cb, 	 	item_type => '<Item>'},
-	{ path => '/_Edit/_Paste',			accelerator => '<control>V',	callback => \&paste_cb,	 	item_type => '<Item>'},
-
+#	{ path => '/_Edit/_Paste',			accelerator => '<control>V',	callback => \&paste_cb,	 	item_type => '<Item>'},
 	{ path => '/_Edit/_Rename',							callback => \&rename_cb, 	item_type => '<Item>'},
 	{ path => '/_Edit/_Move',			accelerator => 'F6',		callback => \&move_cb, 	 	item_type => '<Item>'},
 	{ path => '/_Edit/M_kDir',			accelerator => 'F7',		callback => \&mkdir_cb,	 	item_type => '<Item>'},
@@ -193,12 +191,12 @@ sub main_window {
 		$i1->set_active(1);
 		$i2->set_active(0);
 
-		$widgets->{item_factory}->get_item("/Edit/Paste")->set("visible", 0);
+#		$widgets->{item_factory}->get_item("/Edit/Paste")->set("visible", 0);
 	} elsif ($config->get_option('Mode') == EXPLORER_MODE) {
 		$i1->set_active(0);
 		$i2->set_active(1);
 
-		$widgets->{item_factory}->get_item("/Edit/Paste")->set("visible", 1);
+#		$widgets->{item_factory}->get_item("/Edit/Paste")->set("visible", 1);
 	}
 
 	$widgets->{list1}->open_path($config->get_option('PathLeft'));
@@ -708,10 +706,25 @@ sub rename_cb {
 	$dialog->show_all;
 
 	if ($dialog->run eq 'ok') {
-		my $old_name = $active_pane->get_selected_item;
-		my $new_name = File::Basename::dirname($old_name) . "/" . $entry->get_text;
+#		my $old_name = $active_pane->get_selected_item;
+#		my $new_name = File::Basename::dirname($old_name) . "/" . $entry->get_text;
 
-		if (rename($old_name, $new_name)) {
+#		if (rename($old_name, $new_name)) {
+#			my $trashdir = (new File::BaseDir)->xdg_data_home . "/Trash";
+#			my $trashdir_files = "$trashdir/files";
+#			my $trashdir_info = "$trashdir/info";
+#			my $file_basename = basename($old_name);
+
+#			# file is renamed inside the trash -> rename its .trashinfo file too
+#			if (dirname($old_name) eq $trashdir_files) {
+#				rename("$trashdir_info/$file_basename.trashinfo", "$trashdir_info/" . basename($new_name)   .".trashinfo");
+#			}
+
+		my $old_name = $active_pane->get_selected_item;
+		my $new_name = $entry->get_text;
+
+		if ((new Filer::Move)->move($old_name, $entry->get_text) == File::DirWalk::SUCCESS) {
+
 			my $model = $active_pane->get_treeview->get_model;
 			my $iter = $active_pane->get_selected_iter;
 
@@ -733,54 +746,23 @@ sub delete_cb {
 		return if (Filer::Dialog->yesno_dialog(sprintf("Delete %s selected files?", $active_pane->count_selected_items)) eq 'no');
 	}
 
-	if ($config->get_option("MoveToTrash") == 1) {
+	my $delete = Filer::Delete->new;
+	$delete->set_total(&files_count);
+	$delete->show;
 
-		if (! -e "$ENV{HOME}/.local/share/Trash") {
-			return Filer::Dialog->msgbox_info("$ENV{HOME}/.local/share/Trash doesn't exist: $!");
+	foreach (@{$active_pane->get_selected_items}) {
+		my $r = $delete->delete($_);
+
+		if ($r == File::DirWalk::FAILED) {
+			Filer::Dialog->msgbox_info(($config->get_option("MoveToTrash") != 1) ? "Deleting of $_ failed: $!" : "Moving of $_ to Trash failed: $!");
+			last;
+		} elsif ($r == File::DirWalk::ABORTED) {
+			Filer::Dialog->msgbox_info(($config->get_option("MoveToTrash") != 1) ? "Deleting of $_ aborted!" : "Moving of $_ to Trash aborted!");
+			last;
 		}
-
-		if (! -W "$ENV{HOME}/.local/share/Trash/files") {
-			return Filer::Dialog->msgbox_info("$ENV{HOME}/.local/share/Trash/files not writable: $!");
-		}
-
-		if (! -W "$ENV{HOME}/.local/share/Trash/info") {
-			return Filer::Dialog->msgbox_info("$ENV{HOME}/.local/share/Trash/info not writable:  $!");
-		}
-
-		foreach (@{$active_pane->get_selected_items}) {
-			my $r = rename($_, "$ENV{HOME}/.local/share/Trash/files/" . basename($_));
-
-			if ($r == File::DirWalk::FAILED) {
-				Filer::Dialog->msgbox_info("Moving of $_ to Trash failed: $!");
-				last;
-			} elsif ($r == File::DirWalk::ABORTED) {
-				Filer::Dialog->msgbox_info("Moving of $_ to Trash aborted!");
-				last;
-			}
-
-			open(TRASHINFO, ">$ENV{HOME}/.local/share/Trash/info/" . basename($_) . ".trashinfo");
-			print TRASHINFO "[Trash Info]\nPath=$_\nDeletionDate=" . `date +%Y-%m-%d-T%H:%M:%S`;
-			close(TRASHINFO);
-		}
-	} else {
-		my $delete = Filer::Delete->new;
-		$delete->set_total(&files_count);
-		$delete->show;
-
-		foreach (@{$active_pane->get_selected_items}) {
-			my $r = $delete->delete($_);
-
-			if ($r == File::DirWalk::FAILED) {
-				Filer::Dialog->msgbox_info("Deleting of $_ failed: $!");
-				last;
-			} elsif ($r == File::DirWalk::ABORTED) {
-				Filer::Dialog->msgbox_info("Deleting of $_ aborted!");
-				last;
-			}
-		}
-
-		$delete->destroy;
 	}
+
+	$delete->destroy;
 
 	$active_pane->remove_selected;
 }

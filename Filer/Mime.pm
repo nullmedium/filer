@@ -26,7 +26,7 @@ use constant MIME => 2;
 sub new {
 	my ($class) = @_;
 	my $self = bless {}, $class;
-	$self->{cfg_home} = File::BaseDir::xdg_config_home . "/filer";
+	$self->{cfg_home} = (new File::BaseDir)->xdg_config_home . "/filer";
 
 	if (! -e "$self->{cfg_home}/mime") {
 		my $mime = {

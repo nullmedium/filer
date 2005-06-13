@@ -22,7 +22,7 @@ use warnings;
 sub new {
 	my ($class,$side) = @_;
 	my $self = bless {}, $class;
-	$self->{cfg_home} = File::BaseDir::xdg_config_home . "/filer";
+	$self->{cfg_home} = (new File::BaseDir)->xdg_config_home . "/filer";
 
 	# move old config directory if it exists:
 	if (-e "$ENV{HOME}/.filer/") {

@@ -41,6 +41,8 @@ use constant HBOX		=> 14;
 use constant MOUSE_MOTION_SELECT => 15;
 use constant MOUSE_MOTION_DESELECT => 16;
 
+our ($y_old);
+
 Memoize::memoize("calculate_size");
 Memoize::memoize("Stat::lsMode::format_mode");
 Memoize::memoize("File::MimeInfo::mimetype");
@@ -168,77 +170,76 @@ sub show_popup_menu {
 
 	my ($p) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
 
-	if ((defined $p) and (! $self->[TREESELECTION]->path_is_selected($p))) {
+	if (defined $p) {
+		if (! $self->[TREESELECTION]->path_is_selected($p)) {
 			$self->[TREESELECTION]->unselect_all;
 			$self->[TREESELECTION]->select_path($p);
-	}
+		}
 
-	my $item;
-	my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
-	my $popup_menu = $item_factory->get_widget('<main>');
-	my $mime = new Filer::Mime;
-	my $type = File::MimeInfo::Magic::mimetype($self->[SELECTED_ITEM]);
+		my $item;
+		my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
+		my $popup_menu = $item_factory->get_widget('<main>');
+		my $mime = new Filer::Mime;
+		my $type = File::MimeInfo::Magic::mimetype($self->[SELECTED_ITEM]);
 
-	my @menu_items = (
-	{ path => '/Open',										item_type => '<Item>'},
-	{ path => '/sep2',								      		item_type => '<Separator>'},
-	{ path => '/Copy',			callback => \&main::copy_cb,				item_type => '<Item>'},
-#	{ path => '/Paste',			callback => \&main::paste_cb,				item_type => '<Item>'},
-	{ path => '/Move',			callback => \&main::move_cb,				item_type => '<Item>'},
-	{ path => '/Rename',			callback => \&main::rename_cb,				item_type => '<Item>'},
-	{ path => '/MkDir',			callback => \&main::mkdir_cb,				item_type => '<Item>'},
-	{ path => '/Delete',			callback => \&main::delete_cb,				item_type => '<Item>'},
-	{ path => '/sep3',								      		item_type => '<Separator>'},
-	{ path => '/Bookmarks',								 		item_type => '<Item>'},
-	{ path => '/sep4',										item_type => '<Separator>'},
-	{ path => '/Archive/Create tar.gz',	callback => sub { $self->create_tar_gz_archive },	item_type => '<Item>'},
-	{ path => '/Archive/Create tar.bz2',	callback => sub { $self->create_tar_bz2_archive },      item_type => '<Item>'},
-	{ path => '/Archive/Extract',		callback => sub { $self->extract_archive },		item_type => '<Item>'},
-	{ path => '/sep5',										item_type => '<Separator>'},
-	{ path => '/Properties',		callback => sub { $self->set_properties },		item_type => '<Item>'},
-	);
+		my @menu_items = (
+		{ path => '/Open',										item_type => '<Item>'},
+		{ path => '/sep2',								      		item_type => '<Separator>'},
+		{ path => '/Copy',			callback => \&main::copy_cb,				item_type => '<Item>'},
+#		{ path => '/Paste',			callback => \&main::paste_cb,				item_type => '<Item>'},
+		{ path => '/Move',			callback => \&main::move_cb,				item_type => '<Item>'},
+		{ path => '/Rename',			callback => \&main::rename_cb,				item_type => '<Item>'},
+		{ path => '/MkDir',			callback => \&main::mkdir_cb,				item_type => '<Item>'},
+		{ path => '/Delete',			callback => \&main::delete_cb,				item_type => '<Item>'},
+		{ path => '/sep3',								      		item_type => '<Separator>'},
+		{ path => '/Archive/Create tar.gz',	callback => sub { $self->create_tar_gz_archive },	item_type => '<Item>'},
+		{ path => '/Archive/Create tar.bz2',	callback => sub { $self->create_tar_bz2_archive },	item_type => '<Item>'},
+		{ path => '/Archive/Extract',		callback => sub { $self->extract_archive },		item_type => '<Item>'},
+		{ path => '/sep4',										item_type => '<Separator>'},
+		{ path => '/Bookmarks',								 		item_type => '<Item>'},
+		{ path => '/sep5',										item_type => '<Separator>'},
+		{ path => '/Properties',		callback => sub { $self->set_properties },		item_type => '<Item>'},
+		);
 
-	$item_factory->create_items(undef, @menu_items);
+		$item_factory->create_items(undef, @menu_items);
 
-	# Customize archive submenu
-	if (! Filer::Archive::is_supported_archive($type)) {
-		$item_factory->delete_item('/Archive/Extract');
-	}
+		# Customize archive submenu
+		if (! Filer::Archive::is_supported_archive($type)) {
+			$item_factory->delete_item('/Archive/Extract');
+		}
 
-       $item = $item_factory->get_item('/Bookmarks');
-       $item->set_submenu(&main::get_bookmarks_menu);
+		$item = $item_factory->get_item('/Bookmarks');
+		$item->set_submenu(&main::get_bookmarks_menu);
 
-	if ($self->count_selected_items == 1) {
-		my $commands_menu = new Gtk2::Menu; 
-		$item = $item_factory->get_item('/Open');
-		$item->set_submenu($commands_menu);
+		if ($self->count_selected_items == 1) {
+			my $commands_menu = new Gtk2::Menu;
+			$item = $item_factory->get_item('/Open');
+			$item->set_submenu($commands_menu);
 
-		if (-e $self->[SELECTED_ITEM]) {
-		       foreach ($mime->get_commands($type)) {
-			       $item = new Gtk2::MenuItem(File::Basename::basename($_));
-			       $item->signal_connect("activate", sub {
-					my $command = $_[1];
-					my $item = quotemeta($self->[SELECTED_ITEM]);
-					system("$command $item & exit");
-				}, $_);
-				$commands_menu->add($item);
+			if (-e $self->[SELECTED_ITEM]) {
+				foreach ($mime->get_commands($type)) {
+					$item = new Gtk2::MenuItem(File::Basename::basename($_));
+					$item->signal_connect("activate", sub {
+						my $command = $_[1];
+						my $item = quotemeta($self->[SELECTED_ITEM]);
+						system("$command $item & exit");
+					}, $_);
+					$commands_menu->add($item);
+				}
 			}
-	       }
 
-	       $item = new Gtk2::MenuItem('Other ...');
-	       $item->signal_connect("activate", sub { $self->open_file_with });
-	       $commands_menu->add($item);
-	} else {
-	       $item_factory->delete_item('/Rename');
-	       $item_factory->delete_item('/MkDir');
-	       $item_factory->delete_item('/Open');
-	       $item_factory->delete_item('/Open Terminal');
-	       $item_factory->delete_item('/Set Icon');
-	       $item_factory->delete_item('/Refresh');
+			$item = new Gtk2::MenuItem('Other ...');
+			$item->signal_connect("activate", sub { $self->open_file_with });
+			$commands_menu->add($item);
+		} else {
+			$item_factory->delete_item('/sep2');
+			$item_factory->delete_item('/Rename');
+			$item_factory->delete_item('/Open');
+		}
+
+		$popup_menu->show_all;
+		$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
 	}
-
-	$popup_menu->show_all;
-	$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
 }
 
 sub selection_changed_cb {
@@ -283,20 +284,12 @@ sub treeview_event_cb {
 		return 1;
 	}
 
-	if (($e->type eq "key-press") and (($e->keyval == $Gtk2::Gdk::Keysyms{'Control_L'}) or ($e->keyval == $Gtk2::Gdk::Keysyms{'Control_R'}))) {
-		$self->[MOUSE_MOTION_DESELECT] = 1;
-		return 1;
-	}
-
-	if (($e->type eq "key-release") and (($e->keyval == $Gtk2::Gdk::Keysyms{'Control_L'}) or ($e->keyval == $Gtk2::Gdk::Keysyms{'Control_R'}))) {
-		$self->[MOUSE_MOTION_DESELECT] = 0;
-		return 1;
-	}
-
 	if ($e->type eq "button-press" and $e->button == 2) {
 		$self->[MOUSE_MOTION_SELECT] = 1;
 		$self->set_focus;
-		$self->_select_helper($e->x,$e->y);
+		$self->[TREESELECTION]->unselect_all;
+		$y_old = $e->y;
+		$self->_select_helper_click($e->x,$e->y);
 		return 1;
 	}
 
@@ -305,8 +298,8 @@ sub treeview_event_cb {
 		return 1;
 	}
 
-	if ($e->type eq "motion-notify") {
-		$self->_select_helper($e->x,$e->y);
+	if (($e->type eq "motion-notify") and ($self->[MOUSE_MOTION_SELECT] == 1)) {
+		$self->_select_helper_motion($e->x,$y_old,$e->y);
 		return 0;
 	}
 
@@ -319,26 +312,23 @@ sub treeview_event_cb {
 	return 0;
 }
 
-sub _select_helper {
+sub _select_helper_click {
 	my ($self,$x,$y) = @_;
 	my ($p) = $self->[TREEVIEW]->get_path_at_pos($x,$y);
 
 	if (defined $p) {
-		if ($self->[MOUSE_MOTION_SELECT] == 1) {
-			if ($self->[MOUSE_MOTION_DESELECT] != 1) {
-				$self->[TREESELECTION]->select_path($p);
-			} else {
-				$self->[TREESELECTION]->unselect_path($p);
-			}
+		$self->[TREESELECTION]->select_path($p);
+	}
+}
 
-# 			if ($self->[MOUSE_MOTION_SELECT] == 1) {
-# 				if (! $self->[TREESELECTION]->path_is_selected($p)) {
-# 					$self->[TREESELECTION]->select_path($p);
-# 				} else {
-# 					$self->[TREESELECTION]->unselect_path($p);
-# 				}
-# 			}
-		}
+sub _select_helper_motion {
+	my ($self,$x,$y_old,$y_new) = @_;
+	my ($p_old) = $self->[TREEVIEW]->get_path_at_pos($x,$y_old);
+	my ($p_new) = $self->[TREEVIEW]->get_path_at_pos($x,$y_new);
+
+	if ((defined $p_old) and (defined $p_new)) {
+		$self->[TREESELECTION]->unselect_all;
+		$self->[TREESELECTION]->select_range($p_old,$p_new);
 	}
 }
 
@@ -427,6 +417,11 @@ sub remove_selected {
 
 sub open_file {
 	my ($self,$filepath) = @_;
+
+	if ($filepath eq "trash:/") {
+		my $trashdir = (new File::BaseDir)->xdg_data_home . "/Trash/files";
+		$filepath = $trashdir;
+	}
 
 	return 0 if ((not defined $filepath) or (not -R $filepath));
 
