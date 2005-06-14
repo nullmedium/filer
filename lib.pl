@@ -723,12 +723,12 @@ sub rename_cb {
 		my $old_name = $active_pane->get_selected_item;
 		my $new_name = $entry->get_text;
 
-		if ((new Filer::Move)->move($old_name, $entry->get_text) == File::DirWalk::SUCCESS) {
+		if ((new Filer::Move)->move($old_name, $new_name) == File::DirWalk::SUCCESS) {
 
 			my $model = $active_pane->get_treeview->get_model;
 			my $iter = $active_pane->get_selected_iter;
 
-			$model->set($iter, 1, $entry->get_text);
+			$model->set($iter, 1, $new_name);
 			$model->set($iter, ($active_pane->get_type eq "TREE") ? 2 : 9, $new_name);
 			$active_pane->set_selected_item($new_name);
 		} else {
@@ -765,6 +765,7 @@ sub delete_cb {
 	$delete->destroy;
 
 	$active_pane->remove_selected;
+	$main::inactive_pane->refresh;
 }
 
 sub mkdir_cb {
@@ -799,16 +800,19 @@ sub mkdir_cb {
 	}
 
 	$dialog->destroy;
+	$main::inactive_pane->refresh;
 }
 
 sub link_cb {
 	my ($dialog,$link_label,$target_label,$link_entry,$target_entry) = Filer::Dialog->source_target_dialog;
 
+	return if (! defined $active_pane->get_selected_item);
+	
 	$dialog->set_title("Link");
 	$dialog->set_size_request(450,150);
 	$link_label->set_markup("<b>Link: </b>");
 	$link_entry->set_text($inactive_pane->get_pwd . "/" . basename($active_pane->get_selected_item));
-	$target_label->set_markup("<b>to: </b>");
+	$target_label->set_markup("<b>linked object: </b>");
 	$target_entry->set_text($active_pane->get_selected_item);
 
 	$dialog->show_all;
@@ -834,11 +838,13 @@ sub link_cb {
 sub symlink_cb {
 	my ($dialog,$symlink_label,$target_label,$symlink_entry,$target_entry) = Filer::Dialog->source_target_dialog;
 
+	return if (! defined $active_pane->get_selected_item);
+
 	$dialog->set_title("Symlink");
 	$dialog->set_size_request(450,150);
 	$symlink_label->set_markup("<b>Symlink: </b>");
 	$symlink_entry->set_text($inactive_pane->get_pwd . "/" . basename($active_pane->get_selected_item));
-	$target_label->set_markup("<b>to: </b>");
+	$target_label->set_markup("<b>linked object: </b>");
 	$target_entry->set_text($active_pane->get_selected_item);
 
 	$dialog->show_all;

@@ -78,10 +78,10 @@ sub new {
 		}
 	});
 
-	$self->[PATH_ENTRY]->drag_source_set(['button1_mask', 'button3_mask'], ['copy', 'move'], &Filer::DND::target_table);
-	$self->[PATH_ENTRY]->drag_dest_set('all', ['copy', 'move'], &Filer::DND::target_table);
-	$self->[PATH_ENTRY]->signal_connect("drag_data_get", \&Filer::DND::filepane_path_entry_drag_data_get_cb, $self);
-	$self->[PATH_ENTRY]->signal_connect("drag_data_received", \&Filer::DND::filepane_path_entry_drag_data_received_cb, $self);
+#	$self->[PATH_ENTRY]->drag_source_set(['button1_mask', 'button3_mask'], ['copy', 'move'], &Filer::DND::target_table);
+#	$self->[PATH_ENTRY]->drag_dest_set('all', ['copy', 'move'], &Filer::DND::target_table);
+#	$self->[PATH_ENTRY]->signal_connect("drag_data_get", \&Filer::DND::filepane_path_entry_drag_data_get_cb, $self);
+#	$self->[PATH_ENTRY]->signal_connect("drag_data_received", \&Filer::DND::filepane_path_entry_drag_data_received_cb, $self);
 
 	$self->[HBOX]->pack_start($self->[PATH_ENTRY], 1, 1, 0);
 
@@ -239,6 +239,8 @@ sub show_popup_menu {
 
 		$popup_menu->show_all;
 		$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
+	} else {
+		$self->[TREESELECTION]->unselect_all;
 	}
 }
 
@@ -278,6 +280,11 @@ sub treeview_event_cb {
 		return 1;
 	}
 
+	if ($e->type eq "button-press" and $e->button == 1) {
+		$self->set_focus;
+		$self->_select_helper_button1($e->x,$e->y);
+	}
+
 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Return'})
 	 or ($e->type eq "2button-press" and $e->button == 1)) {
 		$self->open_file($self->[SELECTED_ITEM]);
@@ -287,9 +294,8 @@ sub treeview_event_cb {
 	if ($e->type eq "button-press" and $e->button == 2) {
 		$self->[MOUSE_MOTION_SELECT] = 1;
 		$self->set_focus;
-		$self->[TREESELECTION]->unselect_all;
 		$y_old = $e->y;
-		$self->_select_helper_click($e->x,$e->y);
+		$self->_select_helper_button2($e->x,$e->y);
 		return 1;
 	}
 
@@ -312,12 +318,24 @@ sub treeview_event_cb {
 	return 0;
 }
 
-sub _select_helper_click {
+sub _select_helper_button1 {
+	my ($self,$x,$y) = @_;
+	my ($p) = $self->[TREEVIEW]->get_path_at_pos($x,$y);
+	
+	if (! defined $p) {
+		$self->[TREESELECTION]->unselect_all;
+	}
+}
+
+sub _select_helper_button2 {
 	my ($self,$x,$y) = @_;
 	my ($p) = $self->[TREEVIEW]->get_path_at_pos($x,$y);
 
 	if (defined $p) {
+		$self->[TREESELECTION]->unselect_all;
 		$self->[TREESELECTION]->select_path($p);
+	} else {
+		$self->[TREESELECTION]->unselect_all;
 	}
 }
 

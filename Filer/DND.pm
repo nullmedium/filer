@@ -25,31 +25,31 @@ sub target_table {
 	return ({'target' => "text/uri-list", 'flags' => [], 'info' => TARGET_URI_LIST});
 }
 
-sub filepane_path_entry_drag_data_get_cb {
-	my ($widget,$context,$data,$info,$time,$self) = @_;
+#sub filepane_path_entry_drag_data_get_cb {
+#	my ($widget,$context,$data,$info,$time,$self) = @_;
+#
+#	if ($info == TARGET_URI_LIST) {
+#		my $d = $widget->get_text . "\r\n";
+#		$data->set($data->target, 8, $d);
+#	}
+#}
 
-	if ($info == TARGET_URI_LIST) {
-		my $d = $widget->get_text . "\r\n";
-		$data->set($data->target, 8, $d);
-	}
-}
-
-sub filepane_path_entry_drag_data_received_cb {
-	my ($widget,$context,$x,$y,$data,$info,$time,$self) = @_;
-
-	if (($data->length >= 0) && ($data->format == 8)) {
-		# get first item from uri-list and remove file:// prefix
-
-		my @d = split /\r\n/, $data->data;
-		$d[0] =~ s/file:\/\///g;
-
-		$self->open_file($d[0]);
-		$context->finish (1, 0, $time);
-		return;
-	}
-
- 	$context->finish (0, 0, $time);
-}
+#sub filepane_path_entry_drag_data_received_cb {
+#	my ($widget,$context,$x,$y,$data,$info,$time,$self) = @_;
+#
+#	if (($data->length >= 0) && ($data->format == 8)) {
+#		# get first item from uri-list and remove file:// prefix
+#
+#		my @d = split /\r\n/, $data->data;
+#		$d[0] =~ s/file:\/\///g;
+#
+#		$self->open_file($d[0]);
+#		$context->finish (1, 0, $time);
+#		return;
+#	}
+#
+# 	$context->finish (0, 0, $time);
+#}
 
 sub filepane_treeview_drag_data_get_cb {
 	my ($widget,$context,$data,$info,$time,$self) = @_;
@@ -66,67 +66,68 @@ sub filepane_treeview_drag_data_received_cb {
 	my ($widget,$context,$x,$y,$data,$info,$time,$self) = @_;
 
 	if (($data->length >= 0) && ($data->format == 8)) {
-		my ($p,$d) = $widget->get_dest_row_at_pos($x,$y);
+		my ($p) = $widget->get_dest_row_at_pos($x,$y);
 		my $action = $context->action;
 		my $path;
 		my $do;
 
 		if (defined $p) {
 			$path = $self->get_path_by_treepath($p);
+		}
 
-			if (! -d $path) {
-				return;
-			}
-		} else {
+		if (! -d $path) {
 			$path = $self->get_pwd;
 		}
 
-		if ($action eq "copy") {
-			if ($main::config->get_option("ConfirmCopy") == 1) {
-				return if (Filer::Dialog->yesno_dialog("Copy selected files to $path?") eq 'no');
+		if ($main::active_pane->get_pwd ne $path) {
+
+			if ($action eq "copy") {
+				if ($main::config->get_option("ConfirmCopy") == 1) {
+					return if (Filer::Dialog->yesno_dialog("Copy selected files to $path?") eq 'no');
+				}
+
+				$do = Filer::Copy->new;
+			} elsif ($action eq "move") {
+				if ($main::config->get_option("ConfirmMove") == 1) {
+					return if (Filer::Dialog->yesno_dialog("Move selected files to $path?") eq 'no');
+				}
+
+				$do = Filer::Move->new;
 			}
 
-			$do = Filer::Copy->new;
-		} elsif ($action eq "move") {
-			if ($main::config->get_option("ConfirmMove") == 1) {
-				return if (Filer::Dialog->yesno_dialog("Move selected files to $path?") eq 'no');
+			$do->set_total(&main::files_count);
+			$do->show;
+
+			for (split /\r\n/, $data->data) {
+				$_ =~ s/file:\/\///g;
+
+				last if ($_ eq $path);
+
+				my $r = $do->action($_, $path);
+
+				if ($r == File::DirWalk::FAILED) {
+					Filer::Dialog->msgbox_info("Copying of $_ to $path failed!");
+					last;
+				} elsif ($r == File::DirWalk::ABORTED) {
+					Filer::Dialog->msgbox_info("Moving of $_ to $path aborted!");
+					last;
+				}
 			}
 
-			$do = Filer::Move->new;
-		}
+			$do->destroy;
 
-		$do->set_total(&main::files_count);
-		$do->show;
-
-		for (split /\r\n/, $data->data) {
-			$_ =~ s/file:\/\///g;
-
-			last if ($_ eq $path);
-
-			my $r = $do->action($_, $path);
-
-			if ($r == File::DirWalk::FAILED) {
-				Filer::Dialog->msgbox_info("Copying of $_ to $path failed!");
-				last;
-			} elsif ($r == File::DirWalk::ABORTED) {
-				Filer::Dialog->msgbox_info("Moving of $_ to $path aborted!");
-				last;
+			if ($action eq "move") {
+				$main::active_pane->remove_selected;
 			}
+
+			$main::inactive_pane->refresh;
+
+			$context->finish (1, 0, $time);
+			return;
 		}
 
-		$do->destroy;
-
-		if ($action eq "move") {
-			$main::active_pane->remove_selected;
-		}
-
-		$main::inactive_pane->refresh;
-
-		$context->finish (1, 0, $time);
-		return;
+ 		$context->finish (0, 0, $time);
 	}
-
- 	$context->finish (0, 0, $time);
 }
 
 1;
