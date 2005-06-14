@@ -77,9 +77,9 @@ sub filepane_treeview_drag_data_received_cb {
 			$path = $self->get_pwd;
 		}		
 
-# 		if (! -d $path) {
-#			$path = $self->get_pwd;
-#		}
+ 		if (! -d $path) {
+			$path = $self->get_pwd;
+		}
 
 		if ($main::active_pane->get_pwd ne $path) {
 

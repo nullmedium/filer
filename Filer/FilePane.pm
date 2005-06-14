@@ -39,7 +39,6 @@ use constant LOCATION_BAR	=> 13;
 use constant HBOX		=> 14;
 
 use constant MOUSE_MOTION_SELECT => 15;
-use constant MOUSE_MOTION_DESELECT => 16;
 
 our ($y_old);
 
@@ -145,7 +144,6 @@ sub new {
 	$self->init_icons;
 	
 	$self->[MOUSE_MOTION_SELECT] = 0;
-	$self->[MOUSE_MOTION_DESELECT] = 0;
 
 	return $self;
 }
@@ -239,8 +237,6 @@ sub show_popup_menu {
 
 		$popup_menu->show_all;
 		$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
-	} else {
-		$self->[TREESELECTION]->unselect_all;
 	}
 }
 
@@ -280,11 +276,6 @@ sub treeview_event_cb {
 		return 1;
 	}
 
-	if ($e->type eq "button-press" and $e->button == 1) {
-		$self->set_focus;
-		$self->_select_helper_button1($e->x,$e->y);
-	}
-
 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Return'})
 	 or ($e->type eq "2button-press" and $e->button == 1)) {
 		$self->open_file($self->[SELECTED_ITEM]);
@@ -318,15 +309,6 @@ sub treeview_event_cb {
 	return 0;
 }
 
-sub _select_helper_button1 {
-	my ($self,$x,$y) = @_;
-	my ($p) = $self->[TREEVIEW]->get_path_at_pos($x,$y);
-	
-	if (! defined $p) {
-		$self->[TREESELECTION]->unselect_all;
-	}
-}
-
 sub _select_helper_button2 {
 	my ($self,$x,$y) = @_;
 	my ($p) = $self->[TREEVIEW]->get_path_at_pos($x,$y);
@@ -334,8 +316,6 @@ sub _select_helper_button2 {
 	if (defined $p) {
 		$self->[TREESELECTION]->unselect_all;
 		$self->[TREESELECTION]->select_path($p);
-	} else {
-		$self->[TREESELECTION]->unselect_all;
 	}
 }
 
