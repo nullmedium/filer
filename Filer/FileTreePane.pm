@@ -34,6 +34,8 @@ use constant MIMEICONS		=> 7;
 use constant MOUSE_MOTION_SELECT => 8;
 use constant MOUSE_MOTION_DESELECT => 9;
 
+our ($y_old);
+
 sub new {
 	my ($class,$side) = @_;
 	my $self = bless [], $class;
@@ -109,79 +111,84 @@ sub get_type {
 
 sub show_popup_menu {
 	my ($self,$e) = @_;
-	my ($p,$d) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
+
+	$self->[TREESELECTION]->unselect_all;
+
+	my ($p) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
 
 	if (defined $p) {
-		$self->[TREESELECTION]->select_iter($self->[TREEMODEL]->get_iter($p));
-	}
+		$self->[TREESELECTION]->select_path($p);
 
-	my $item;
-	my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
-	my $popup_menu = $item_factory->get_widget('<main>');
-	my $bookmarks_menu = new Gtk2::Menu;
-	my $commands_menu = new Gtk2::Menu;
+		my $item;
+		my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
+		my $popup_menu = $item_factory->get_widget('<main>');
+		my $bookmarks_menu = new Gtk2::Menu;
+		my $commands_menu = new Gtk2::Menu;
 
-	my @menu_items =
-	(
-	{ path => '/sep4',								        			item_type => '<Separator>'},
-	{ path => '/Copy',					callback => \&main::copy_cb,				item_type => '<Item>'},
-#	{ path => '/Paste',					callback => \&main::paste_cb,				item_type => '<Item>'},
-#	{ path => '/sep5',								        			item_type => '<Separator>'},
-	{ path => '/Move',					callback => \&main::move_cb,				item_type => '<Item>'},
-	{ path => '/Rename',					callback => \&main::rename_cb,				item_type => '<Item>'},
-	{ path => '/MkDir',					callback => \&main::mkdir_cb,				item_type => '<Item>'},
-	{ path => '/Delete',					callback => \&main::delete_cb,		        	item_type => '<Item>'},
-	{ path => '/sep1',								        			item_type => '<Separator>'},
-	{ path => '/Bookmarks',												item_type => '<Item>'},
-	{ path => '/sep2',								        			item_type => '<Separator>'},
-#	{ path => '/Open Terminal',				callback => sub { $self->open_terminal },	        item_type => '<Item>'},
-	{ path => '/Archive/Create tar.gz',			callback => sub { $self->create_tar_gz_archive },	item_type => '<Item>'},
-	{ path => '/Archive/Create tar.bz2',			callback => sub { $self->create_tar_bz2_archive },	item_type => '<Item>'},
-	{ path => '/sep3',								       				item_type => '<Separator>'},
-	{ path => '/Properties',				callback => sub { $self->set_properties },	        item_type => '<Item>'},
-	);
+		my @menu_items =
+		(
+		{ path => '/sep4',								        			item_type => '<Separator>'},
+		{ path => '/Copy',					callback => \&main::copy_cb,				item_type => '<Item>'},
+#		{ path => '/Paste',					callback => \&main::paste_cb,				item_type => '<Item>'},
+#		{ path => '/sep5',								        			item_type => '<Separator>'},
+		{ path => '/Move',					callback => \&main::move_cb,				item_type => '<Item>'},
+		{ path => '/Rename',					callback => \&main::rename_cb,				item_type => '<Item>'},
+		{ path => '/MkDir',					callback => \&main::mkdir_cb,				item_type => '<Item>'},
+		{ path => '/Delete',					callback => \&main::delete_cb,		        	item_type => '<Item>'},
+		{ path => '/sep1',								        			item_type => '<Separator>'},
+#		{ path => '/Open Terminal',				callback => sub { $self->open_terminal },	        item_type => '<Item>'},
+		{ path => '/Archive/Create tar.gz',			callback => sub { $self->create_tar_gz_archive },	item_type => '<Item>'},
+		{ path => '/Archive/Create tar.bz2',			callback => sub { $self->create_tar_bz2_archive },	item_type => '<Item>'},
+		{ path => '/sep2',								        			item_type => '<Separator>'},
+		{ path => '/Bookmarks',												item_type => '<Item>'},
+		{ path => '/sep3',								       				item_type => '<Separator>'},
+		{ path => '/Properties',				callback => sub { $self->set_properties },	        item_type => '<Item>'},
+		);
 
-	$item_factory->create_items(undef, @menu_items);
+		$item_factory->create_items(undef, @menu_items);
 
-	# Bookmarks Menu
+		# Bookmarks Menu
 
-	$item = $item_factory->get_item('/Bookmarks');
-	$item->set_submenu($bookmarks_menu);
+		$item = $item_factory->get_item('/Bookmarks');
+		$item->set_submenu($bookmarks_menu);
 
-	$item = new Gtk2::MenuItem("Set Bookmark");
-	$item->signal_connect("activate", sub {
-		my $bookmarks = new Filer::Bookmarks;
-		foreach (@{$self->get_selected_items}) {
-			if (-d $_) {
-				$bookmarks->set_bookmark($_);
+		$item = new Gtk2::MenuItem("Set Bookmark");
+		$item->signal_connect("activate", sub {
+			my $bookmarks = new Filer::Bookmarks;
+			foreach (@{$self->get_selected_items}) {
+				if (-d $_) {
+					$bookmarks->set_bookmark($_);
+				}
 			}
-		}
-	});
-	$bookmarks_menu->add($item);
-
-	$item = new Gtk2::MenuItem("Remove Bookmark");
-	$item->signal_connect("activate", sub {
-		my $bookmarks = new Filer::Bookmarks;
-		foreach (@{$self->get_selected_items}) {
-			if (-d $_) {
-				$bookmarks->remove_bookmark($_);
-			}
-		}
-	});
-	$bookmarks_menu->add($item);
-
-	$item = new Gtk2::SeparatorMenuItem;
-	$bookmarks_menu->add($item);
-
-	my $bookmarks = new Filer::Bookmarks;
-	foreach ($bookmarks->get_bookmarks) {
-		$item = new Gtk2::MenuItem($_);
-		$item->signal_connect("activate", sub {	$main::pane->[!$self->[SIDE]]->open_path($_[1]) }, $_);
+		});
 		$bookmarks_menu->add($item);
-	}
 
-	$popup_menu->show_all;
-	$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
+		$item = new Gtk2::MenuItem("Remove Bookmark");
+		$item->signal_connect("activate", sub {
+			my $bookmarks = new Filer::Bookmarks;
+			foreach (@{$self->get_selected_items}) {
+				if (-d $_) {
+					$bookmarks->remove_bookmark($_);
+				}
+			}
+		});
+		$bookmarks_menu->add($item);
+
+		$item = new Gtk2::SeparatorMenuItem;
+		$bookmarks_menu->add($item);
+
+		my $bookmarks = new Filer::Bookmarks;
+		foreach ($bookmarks->get_bookmarks) {
+			$item = new Gtk2::MenuItem($_);
+			$item->signal_connect("activate", sub {	$main::pane->[!$self->[SIDE]]->open_path($_[1]) }, $_);
+			$bookmarks_menu->add($item);
+		}
+
+		$popup_menu->show_all;
+		$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
+	} else {
+		$self->[TREESELECTION]->unselect_all;
+	}
 }
 
 sub selection_changed_cb {
@@ -228,20 +235,22 @@ sub treeview_event_cb {
 # 		return 1;
 # 	}
 
-	if (($e->type eq "key-press") and (($e->keyval == $Gtk2::Gdk::Keysyms{'Control_L'}) or ($e->keyval == $Gtk2::Gdk::Keysyms{'Control_R'}))) {
-		$self->[MOUSE_MOTION_DESELECT] = 1;
-		return 1;
+	if ($e->type eq "button-press" and $e->button == 1) {
+		$self->set_focus;
+		$self->_select_helper_button1($e->x,$e->y);
 	}
 
-	if (($e->type eq "key-release") and (($e->keyval == $Gtk2::Gdk::Keysyms{'Control_L'}) or ($e->keyval == $Gtk2::Gdk::Keysyms{'Control_R'}))) {
-		$self->[MOUSE_MOTION_DESELECT] = 0;
+	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Return'})
+	 or ($e->type eq "2button-press" and $e->button == 1)) {
+		$self->open_path($self->[FILEPATH]);
 		return 1;
 	}
 
 	if ($e->type eq "button-press" and $e->button == 2) {
-		$self->set_focus;
 		$self->[MOUSE_MOTION_SELECT] = 1;
-		$self->_select_helper($e->x,$e->y);
+		$self->set_focus;
+		$y_old = $e->y;
+		$self->_select_helper_button2($e->x,$e->y);
 		return 1;
 	}
 
@@ -250,12 +259,13 @@ sub treeview_event_cb {
 		return 1;
 	}
 
-	if ($e->type eq "motion-notify") {
-		$self->_select_helper($e->x,$e->y);
+	if (($e->type eq "motion-notify") and ($self->[MOUSE_MOTION_SELECT] == 1)) {
+		$self->_select_helper_motion($e->x,$y_old,$e->y);
 		return 0;
 	}
 
 	if ($e->type eq "button-press" and $e->button == 3) {
+		$self->set_focus;
 		$self->show_popup_menu($e);
 		return 1;
 	}
@@ -263,18 +273,35 @@ sub treeview_event_cb {
 	return 0;
 }
 
-sub _select_helper {
+sub _select_helper_button1 {
+	my ($self,$x,$y) = @_;
+	my ($p) = $self->[TREEVIEW]->get_path_at_pos($x,$y);
+	
+	if (! defined $p) {
+		$self->[TREESELECTION]->unselect_all;
+	}
+}
+
+sub _select_helper_button2 {
 	my ($self,$x,$y) = @_;
 	my ($p) = $self->[TREEVIEW]->get_path_at_pos($x,$y);
 
 	if (defined $p) {
-		if ($self->[MOUSE_MOTION_SELECT] == 1) {
-			if ($self->[MOUSE_MOTION_DESELECT] != 1) {
-				$self->[TREESELECTION]->select_path($p);
-			} else {
-				$self->[TREESELECTION]->unselect_path($p);
-			}
-		}
+		$self->[TREESELECTION]->unselect_all;
+		$self->[TREESELECTION]->select_path($p);
+	} else {
+		$self->[TREESELECTION]->unselect_all;
+	}
+}
+
+sub _select_helper_motion {
+	my ($self,$x,$y_old,$y_new) = @_;
+	my ($p_old) = $self->[TREEVIEW]->get_path_at_pos($x,$y_old);
+	my ($p_new) = $self->[TREEVIEW]->get_path_at_pos($x,$y_new);
+
+	if ((defined $p_old) and (defined $p_new)) {
+		$self->[TREESELECTION]->unselect_all;
+		$self->[TREESELECTION]->select_range($p_old,$p_new);
 	}
 }
 
