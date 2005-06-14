@@ -34,6 +34,8 @@ use constant MIMEICONS		=> 7;
 use constant MOUSE_MOTION_SELECT => 8;
 use constant MOUSE_MOTION_DESELECT => 9;
 
+our ($y_old); 
+
 sub new {
 	my ($class,$side) = @_;
 	my $self = bless [], $class;
