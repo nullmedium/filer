@@ -186,8 +186,6 @@ sub show_popup_menu {
 
 		$popup_menu->show_all;
 		$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
-	} else {
-		$self->[TREESELECTION]->unselect_all;
 	}
 }
 
