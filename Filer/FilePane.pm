@@ -168,12 +168,13 @@ sub get_location_bar {
 sub show_popup_menu {
 	my ($self,$e) = @_;
 
-	$self->[TREESELECTION]->unselect_all;
-
 	my ($p) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
 
 	if (defined $p) {
-		$self->[TREESELECTION]->select_path($p);
+		if (! $self->[TREESELECTION]->path_is_selected($p)) {
+			$self->[TREESELECTION]->unselect_all;
+			$self->[TREESELECTION]->select_path($p);
+		}
 
 		my $item;
 		my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
@@ -238,6 +239,8 @@ sub show_popup_menu {
 
 		$popup_menu->show_all;
 		$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
+	} else {
+		$self->[TREESELECTION]->unselect_all;
 	}
 }
 

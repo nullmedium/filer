@@ -34,8 +34,6 @@ use constant MIMEICONS		=> 7;
 use constant MOUSE_MOTION_SELECT => 8;
 use constant MOUSE_MOTION_DESELECT => 9;
 
-our ($y_old);
-
 sub new {
 	my ($class,$side) = @_;
 	my $self = bless [], $class;
@@ -112,12 +110,13 @@ sub get_type {
 sub show_popup_menu {
 	my ($self,$e) = @_;
 
-	$self->[TREESELECTION]->unselect_all;
-
 	my ($p) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
 
 	if (defined $p) {
-		$self->[TREESELECTION]->select_path($p);
+		if (! $self->[TREESELECTION]->path_is_selected($p)) {
+			$self->[TREESELECTION]->unselect_all;
+			$self->[TREESELECTION]->select_path($p);
+		}
 
 		my $item;
 		my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
@@ -129,18 +128,18 @@ sub show_popup_menu {
 		(
 		{ path => '/sep4',								        			item_type => '<Separator>'},
 		{ path => '/Copy',					callback => \&main::copy_cb,				item_type => '<Item>'},
-#		{ path => '/Paste',					callback => \&main::paste_cb,				item_type => '<Item>'},
-#		{ path => '/sep5',								        			item_type => '<Separator>'},
+	#	{ path => '/Paste',					callback => \&main::paste_cb,				item_type => '<Item>'},
+	#	{ path => '/sep5',								        			item_type => '<Separator>'},
 		{ path => '/Move',					callback => \&main::move_cb,				item_type => '<Item>'},
 		{ path => '/Rename',					callback => \&main::rename_cb,				item_type => '<Item>'},
 		{ path => '/MkDir',					callback => \&main::mkdir_cb,				item_type => '<Item>'},
 		{ path => '/Delete',					callback => \&main::delete_cb,		        	item_type => '<Item>'},
 		{ path => '/sep1',								        			item_type => '<Separator>'},
-#		{ path => '/Open Terminal',				callback => sub { $self->open_terminal },	        item_type => '<Item>'},
+		{ path => '/Bookmarks',												item_type => '<Item>'},
+		{ path => '/sep2',								        			item_type => '<Separator>'},
+	#	{ path => '/Open Terminal',				callback => sub { $self->open_terminal },	        item_type => '<Item>'},
 		{ path => '/Archive/Create tar.gz',			callback => sub { $self->create_tar_gz_archive },	item_type => '<Item>'},
 		{ path => '/Archive/Create tar.bz2',			callback => sub { $self->create_tar_bz2_archive },	item_type => '<Item>'},
-		{ path => '/sep2',								        			item_type => '<Separator>'},
-		{ path => '/Bookmarks',												item_type => '<Item>'},
 		{ path => '/sep3',								       				item_type => '<Separator>'},
 		{ path => '/Properties',				callback => sub { $self->set_properties },	        item_type => '<Item>'},
 		);
@@ -186,6 +185,8 @@ sub show_popup_menu {
 
 		$popup_menu->show_all;
 		$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
+	} else {
+		$self->[TREESELECTION]->unselect_all;
 	}
 }
 
@@ -212,36 +213,25 @@ sub treeview_grab_focus_cb {
 sub treeview_event_cb {
 	my ($w,$e,$self) = @_;
 
-	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Delete'})) {
-		&main::delete_cb;
+	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Return'})
+	or ($e->type eq "2button-press" and $e->button == 1))
+	 {
+		$main::pane->[!$self->[SIDE]]->open_path($self->[FILEPATH]);
+
+		my $path = $self->[TREEMODEL]->get_path($self->[FILEPATH_ITER]);
+
+		if ($self->[TREEVIEW]->row_expanded($path)) {
+			$self->[TREEVIEW]->collapse_row($path)
+		} else {
+			$self->[TREEVIEW]->expand_row($path,0);
+		}
+
 		return 1;
 	}
-
-# 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Return'})
-# 	or ($e->type eq "2button-press" and $e->button == 1))
-# 	 {
-# 		$main::pane->[!$self->[SIDE]]->open_path($self->[FILEPATH]);
-# 
-# 		my $path = $self->[TREEMODEL]->get_path($self->[FILEPATH_ITER]);
-# 
-# 		if ($self->[TREEVIEW]->row_expanded($path)) {
-# 			$self->[TREEVIEW]->collapse_row($path)
-# 		} else {
-# 			$self->[TREEVIEW]->expand_row($path,0);
-# 		}
-# 
-# 		return 1;
-# 	}
 
 	if ($e->type eq "button-press" and $e->button == 1) {
 		$self->set_focus;
 		$self->_select_helper_button1($e->x,$e->y);
-	}
-
-	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Return'})
-	 or ($e->type eq "2button-press" and $e->button == 1)) {
-		$self->open_path($self->[FILEPATH]);
-		return 1;
 	}
 
 	if ($e->type eq "button-press" and $e->button == 2) {
@@ -302,6 +292,8 @@ sub _select_helper_motion {
 		$self->[TREESELECTION]->select_range($p_old,$p_new);
 	}
 }
+
+
 
 sub treeview_row_expanded_cb {
 	my ($treeview,$iter,$path,$self) = @_;
