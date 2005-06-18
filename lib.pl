@@ -97,7 +97,6 @@ sub main_window {
 	{ path => '/_Options/Show Hidden Files',	accelerator => '<control>H',	callback => \&hidden_cb,	item_type => '<CheckItem>'},
 	{ path => '/_Options/sep',											item_type => '<Separator>'},
 	{ path => '/_Options/File Associations',					callback => \&file_ass_cb,	item_type => '<Item>'},
-#	{ path => '/_Help',												item_type => '<LastBranch>'},
 	{ path => '/_Help/About',							callback => \&about_cb,		item_type => '<Item>'},
 	);
 
@@ -287,15 +286,9 @@ sub window_event_cb {
 }
 
 sub quit_cb {
-	if ($config->get_option('Mode') == NORTON_COMMANDER_MODE) {
-		$config->set_option('PathLeft', $pane->[LEFT]->get_pwd);
-	}
-
+	$config->set_option('PathLeft', $pane->[LEFT]->get_pwd);
 	$config->set_option('PathRight', $pane->[RIGHT]->get_pwd);
-
-	my ($w,$h) = $widgets->{main_window}->get_size(); 
-
-	$config->set_option('WindowSize', "$w:$h");
+	$config->set_option('WindowSize', join ":", $widgets->{main_window}->get_size());
 
 	Gtk2->main_quit;
 }
@@ -350,7 +343,6 @@ sub ncmc_cb {
 	&switch_mode;
 	return 1;
 }
-
 
 sub explorer_cb {
 	# check if item is checked
@@ -577,7 +569,12 @@ sub copy_cb {
 			my ($files,$target) = @_;
 			my $copy = new Filer::Copy;
 
-			$copy->set_total(&files_count);
+			if (($active_pane->count_selected_items == 1) and (! -d $active_pane->get_selected_item)) {
+				$copy->set_total(1);
+			} else {
+				$copy->set_total(&files_count);
+			}
+
 			$copy->show;
 
 			foreach (@{$files}) {
@@ -632,8 +629,13 @@ sub move_cb {
 	my $f = sub {
 		my ($files,$target) = @_;
 		my $move = new Filer::Move;
-	
-		$move->set_total(&files_count);
+
+		if (($active_pane->count_selected_items == 1) and (! -d $active_pane->get_selected_item)) {
+			$move->set_total(1);
+		} else {
+			$move->set_total(&files_count);
+		}
+
 		$move->show;
 
 		foreach (@{$files}) {
@@ -717,7 +719,7 @@ sub rename_cb {
 			my $iter = $active_pane->get_selected_iter;
 
 			$model->set($iter, 1, $new_name);
-			$model->set($iter, ($active_pane->get_type eq "TREE") ? 2 : 9, $new_name);
+			$model->set($iter, ($active_pane->get_type eq "TREE") ? 2 : 9, $active_pane->get_pwd . "/$new_name");
 			$active_pane->set_selected_item($new_name);
 		} else {
 			Filer::Dialog->msgbox_error("Rename failed: $!");
@@ -731,11 +733,21 @@ sub delete_cb {
 	return if (($active_pane->count_selected_items == 0) or (not defined $active_pane->get_selected_item));
 
 	if ($config->get_option("ConfirmDelete") == 1) {
-		return if (Filer::Dialog->yesno_dialog(sprintf("Delete %s selected files?", $active_pane->count_selected_items)) eq 'no');
+		if ($active_pane->count_selected_items == 1) {
+			return if (Filer::Dialog->yesno_dialog(sprintf("Delete %s?", basename($active_pane->get_selected_item))) eq 'no');
+		} else {
+			return if (Filer::Dialog->yesno_dialog(sprintf("Delete %s selected files?", $active_pane->count_selected_items)) eq 'no');
+		}
 	}
 
 	my $delete = Filer::Delete->new;
-	$delete->set_total(&files_count);
+
+	if (($active_pane->count_selected_items == 1) and (! -d $active_pane->get_selected_item)) {
+		$delete->set_total(1);
+	} else {
+		$delete->set_total(&files_count);
+	}
+
 	$delete->show;
 
 	foreach (@{$active_pane->get_selected_items}) {
@@ -780,7 +792,7 @@ sub mkdir_cb {
 	$dialog->show_all;
 
 	if ($dialog->run eq 'ok') {
-		my $dir = $label->get_text . $entry->get_text;
+		my $dir = $active_pane->get_pwd . "/" . $entry->get_text;
 
 		if (mkdir($dir)) {
 			$active_pane->refresh;
@@ -801,9 +813,11 @@ sub link_cb {
 	$dialog->set_title("Link");
 	$dialog->set_size_request(450,150);
 	$dialog->set_default_response('ok');
+
 	$link_label->set_markup("<b>Link: </b>");
 	$link_entry->set_text($inactive_pane->get_pwd . "/" . basename($active_pane->get_selected_item));
 	$link_entry->set_activates_default(1);
+
 	$target_label->set_markup("<b>linked object: </b>");
 	$target_entry->set_text($active_pane->get_selected_item);
 	$target_entry->set_activates_default(1);
@@ -836,9 +850,11 @@ sub symlink_cb {
 	$dialog->set_title("Symlink");
 	$dialog->set_size_request(450,150);
 	$dialog->set_default_response('ok');
+
 	$symlink_label->set_markup("<b>Symlink: </b>");
 	$symlink_entry->set_text($inactive_pane->get_pwd . "/" . basename($active_pane->get_selected_item));
 	$symlink_entry->set_activates_default(1);
+
 	$target_label->set_markup("<b>linked object: </b>");
 	$target_entry->set_text($active_pane->get_selected_item);
 	$target_entry->set_activates_default(1);
@@ -864,9 +880,6 @@ sub symlink_cb {
 }
 
 sub files_count {
-	my $c = 0;
-	my $dirwalk = new File::DirWalk;
-
 	my $dialog = new Filer::ProgressDialog;
 	$dialog->dialog->set_title("Please wait ...");
 	$dialog->label1->set_markup("<b>Please wait ...</b>");
@@ -881,6 +894,8 @@ sub files_count {
 		return 1;
 	});
 
+	my $c = 0;
+	my $dirwalk = new File::DirWalk;
 	$dirwalk->onFile(sub {
 		++$c;
 		while (Gtk2->events_pending) { Gtk2->main_iteration }
@@ -898,50 +913,50 @@ sub files_count {
 	return $c;
 }
 
-sub files_count_paste {
-	my $c = 0;
-	my $dirwalk = new File::DirWalk;
-
-	my $dialog = new Filer::ProgressDialog;
-	$dialog->dialog->set_title("Please wait ...");
-	$dialog->label1->set_markup("<b>Please wait ...</b>");
-
-	my $progressbar = $dialog->add_progressbar;
-
-	$dialog->show;
-
-	my $id = Glib::Timeout->add(50, sub {
-		$progressbar->pulse;
-		while (Gtk2->events_pending) { Gtk2->main_iteration }
-		return 1;
-	});
-
-	$dirwalk->onFile(sub {
-		++$c;
-		while (Gtk2->events_pending) { Gtk2->main_iteration }
-		return File::DirWalk::SUCCESS;
-	});
-
-	my @files = ();
-	my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
-		
-	$clipboard->request_text(sub { 
-		my ($c,$t) = @_;
-		@files = split /\n/, $t;
-	});
-
-	foreach (@files) {
-		if (-e $_) {
-			$dirwalk->walk($_);
-		}
-	}
-
-	Glib::Source->remove($id);
-
-	$dialog->destroy;
-
-	return $c;
-}
+# sub files_count_paste {
+# 	my $c = 0;
+# 	my $dirwalk = new File::DirWalk;
+# 
+# 	my $dialog = new Filer::ProgressDialog;
+# 	$dialog->dialog->set_title("Please wait ...");
+# 	$dialog->label1->set_markup("<b>Please wait ...</b>");
+# 
+# 	my $progressbar = $dialog->add_progressbar;
+# 
+# 	$dialog->show;
+# 
+# 	my $id = Glib::Timeout->add(50, sub {
+# 		$progressbar->pulse;
+# 		while (Gtk2->events_pending) { Gtk2->main_iteration }
+# 		return 1;
+# 	});
+# 
+# 	$dirwalk->onFile(sub {
+# 		++$c;
+# 		while (Gtk2->events_pending) { Gtk2->main_iteration }
+# 		return File::DirWalk::SUCCESS;
+# 	});
+# 
+# 	my @files = ();
+# 	my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
+# 		
+# 	$clipboard->request_text(sub { 
+# 		my ($c,$t) = @_;
+# 		@files = split /\n/, $t;
+# 	});
+# 
+# 	foreach (@files) {
+# 		if (-e $_) {
+# 			$dirwalk->walk($_);
+# 		}
+# 	}
+# 
+# 	Glib::Source->remove($id);
+# 
+# 	$dialog->destroy;
+# 
+# 	return $c;
+# }
 
 sub intelligent_scale {
 	my ($pixbuf,$scale) = @_;

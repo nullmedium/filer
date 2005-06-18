@@ -77,11 +77,6 @@ sub new {
 		}
 	});
 
-#	$self->[PATH_ENTRY]->drag_source_set(['button1_mask', 'button3_mask'], ['copy', 'move'], &Filer::DND::target_table);
-#	$self->[PATH_ENTRY]->drag_dest_set('all', ['copy', 'move'], &Filer::DND::target_table);
-#	$self->[PATH_ENTRY]->signal_connect("drag_data_get", \&Filer::DND::filepane_path_entry_drag_data_get_cb, $self);
-#	$self->[PATH_ENTRY]->signal_connect("drag_data_received", \&Filer::DND::filepane_path_entry_drag_data_received_cb, $self);
-
 	$self->[HBOX]->pack_start($self->[PATH_ENTRY], 1, 1, 0);
 
 	$button = new Gtk2::Button("Go");
@@ -98,18 +93,16 @@ sub new {
 	$self->[TREEVIEW] = new Gtk2::TreeView;
 	$self->[TREEVIEW]->set_rules_hint(1);
  	$self->[TREEVIEW]->signal_connect("grab-focus", \&treeview_grab_focus_cb, $self);
-
-# 	$self->[TREEVIEW]->signal_connect("key-press-event", \&treeview_event_cb, $self);
-# 	$self->[TREEVIEW]->signal_connect("button-press-event", \&treeview_event_cb, $self);
 	$self->[TREEVIEW]->signal_connect("event", \&treeview_event_cb, $self);
 
 	$self->[TREEMODEL] = new Gtk2::ListStore('Glib::Object','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String');
 	$self->[TREEVIEW]->set_model($self->[TREEMODEL]);
 
 	# Drag and Drop
-	$self->[TREEVIEW]->drag_source_set(['button1_mask'], ['move','copy'], &Filer::DND::target_table);
 	$self->[TREEVIEW]->drag_dest_set('all', ['move','copy'], &Filer::DND::target_table);
+	$self->[TREEVIEW]->drag_source_set(['button1_mask','shift-mask'], ['move','copy'], &Filer::DND::target_table);
 
+	$self->[TREEVIEW]->signal_connect("drag_begin", \&Filer::DND::filepane_treeview_drag_begin_cb, $self);
 	$self->[TREEVIEW]->signal_connect("drag_data_get", \&Filer::DND::filepane_treeview_drag_data_get_cb, $self);
 	$self->[TREEVIEW]->signal_connect("drag_data_received", \&Filer::DND::filepane_treeview_drag_data_received_cb, $self);
 
@@ -669,9 +662,11 @@ sub open_path {
 sub set_mime_icon {
 	my ($self) = @_;
 	my $mime = Filer::Mime->new;
-	my $type = File::MimeInfo::Magic::mimetype($self->[SELECTED_ITEM]);
+	my $type;
 
-	if (-l $self->[SELECTED_ITEM]) {
+	if (! -l $self->[SELECTED_ITEM]) {
+		$type = File::MimeInfo::Magic::mimetype($self->[SELECTED_ITEM]);
+	} else {
 		$type = "inode/symlink";
 	}
 

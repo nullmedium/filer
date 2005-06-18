@@ -293,8 +293,6 @@ sub _select_helper_motion {
 	}
 }
 
-
-
 sub treeview_row_expanded_cb {
 	my ($treeview,$iter,$path,$self) = @_;
 	my $dir = $self->[TREEMODEL]->get($iter, 2);
@@ -318,9 +316,7 @@ sub treeview_row_collapsed_cb {
 
 sub init_icons {
 	my ($self) = @_;
-	my $mime = new Filer::Mime;
-
-	$self->[MIMEICONS] = $mime->get_icons;
+	$self->[MIMEICONS] = (new Filer::Mime)->get_icons;
 }
 
 sub get_vbox {

@@ -18,6 +18,7 @@ package Filer::DND;
 
 use strict;
 use warnings;
+use File::Basename;
 
 use constant TARGET_URI_LIST => 0;
 
@@ -25,31 +26,13 @@ sub target_table {
 	return ({'target' => "text/uri-list", 'flags' => [], 'info' => TARGET_URI_LIST});
 }
 
-#sub filepane_path_entry_drag_data_get_cb {
-#	my ($widget,$context,$data,$info,$time,$self) = @_;
-#
-#	if ($info == TARGET_URI_LIST) {
-#		my $d = $widget->get_text . "\r\n";
-#		$data->set($data->target, 8, $d);
-#	}
-#}
+sub filepane_treeview_drag_begin_cb {
+	my ($widget, $context) = @_;
 
-#sub filepane_path_entry_drag_data_received_cb {
-#	my ($widget,$context,$x,$y,$data,$info,$time,$self) = @_;
-#
-#	if (($data->length >= 0) && ($data->format == 8)) {
-#		# get first item from uri-list and remove file:// prefix
-#
-#		my @d = split /\r\n/, $data->data;
-#		$d[0] =~ s/file:\/\///g;
-#
-#		$self->open_file($d[0]);
-#		$context->finish (1, 0, $time);
-#		return;
-#	}
-#
-# 	$context->finish (0, 0, $time);
-#}
+	print $context, "\n";
+
+	return 1;
+}
 
 sub filepane_treeview_drag_data_get_cb {
 	my ($widget,$context,$data,$info,$time,$self) = @_;
@@ -85,19 +68,32 @@ sub filepane_treeview_drag_data_received_cb {
 
 			if ($action eq "copy") {
 				if ($main::config->get_option("ConfirmCopy") == 1) {
-					return if (Filer::Dialog->yesno_dialog("Copy selected files to $path?") eq 'no');
+					if ($main::active_pane->count_selected_items == 1) {
+						return if (Filer::Dialog->yesno_dialog(sprintf("Copy %s to $path?", basename($main::active_pane->get_selected_item))) eq 'no');
+					} else {
+						return if (Filer::Dialog->yesno_dialog(sprintf("Copy %s files to $path?", $main::active_pane->count_selected_items)) eq 'no');
+					}	
 				}
 
 				$do = Filer::Copy->new;
 			} elsif ($action eq "move") {
 				if ($main::config->get_option("ConfirmMove") == 1) {
-					return if (Filer::Dialog->yesno_dialog("Move selected files to $path?") eq 'no');
+					if ($main::active_pane->count_selected_items == 1) {
+						return if (Filer::Dialog->yesno_dialog(sprintf("Move %s to $path?", basename($main::active_pane->get_selected_item))) eq 'no');
+					} else {
+						return if (Filer::Dialog->yesno_dialog(sprintf("Move %s files to $path?", $main::active_pane->count_selected_items)) eq 'no');
+					}
 				}
 
 				$do = Filer::Move->new;
 			}
 
-			$do->set_total(&main::files_count);
+			if (($main::active_pane->count_selected_items == 1) and (! -d $main::active_pane->get_selected_item)) {
+				$do->set_total(1);
+			} else {
+				$do->set_total(&files_count);
+			}
+
 			$do->show;
 
 			for (split /\r\n/, $data->data) {
