@@ -97,7 +97,7 @@ sub main_window {
 	{ path => '/_Options/Show Hidden Files',	accelerator => '<control>H',	callback => \&hidden_cb,	item_type => '<CheckItem>'},
 	{ path => '/_Options/sep',											item_type => '<Separator>'},
 	{ path => '/_Options/File Associations',					callback => \&file_ass_cb,	item_type => '<Item>'},
-	{ path => '/_Help',												item_type => '<LastBranch>'},
+#	{ path => '/_Help',												item_type => '<LastBranch>'},
 	{ path => '/_Help/About',							callback => \&about_cb,		item_type => '<Item>'},
 	);
 
@@ -691,6 +691,7 @@ sub rename_cb {
 	$dialog->set_size_request(450,150);
 	$dialog->set_position('center');
 	$dialog->set_modal(1);
+	$dialog->set_default_response('ok');
 
 	$hbox = new Gtk2::HBox(0,0);
 	$dialog->vbox->pack_start($hbox,0,0,5);
@@ -701,25 +702,12 @@ sub rename_cb {
 
 	$entry = new Gtk2::Entry;
 	$entry->set_text(File::Basename::basename($active_pane->get_selected_item));
+	$entry->set_activates_default(1);
 	$hbox->pack_start($entry, 1,1,0);
 
 	$dialog->show_all;
 
 	if ($dialog->run eq 'ok') {
-#		my $old_name = $active_pane->get_selected_item;
-#		my $new_name = File::Basename::dirname($old_name) . "/" . $entry->get_text;
-
-#		if (rename($old_name, $new_name)) {
-#			my $trashdir = (new File::BaseDir)->xdg_data_home . "/Trash";
-#			my $trashdir_files = "$trashdir/files";
-#			my $trashdir_info = "$trashdir/info";
-#			my $file_basename = basename($old_name);
-
-#			# file is renamed inside the trash -> rename its .trashinfo file too
-#			if (dirname($old_name) eq $trashdir_files) {
-#				rename("$trashdir_info/$file_basename.trashinfo", "$trashdir_info/" . basename($new_name)   .".trashinfo");
-#			}
-
 		my $old_name = $active_pane->get_selected_item;
 		my $new_name = $entry->get_text;
 
@@ -775,6 +763,7 @@ sub mkdir_cb {
 	$dialog->set_size_request(450,150);
 	$dialog->set_position('center');
 	$dialog->set_modal(1);
+	$dialog->set_default_response('ok');
 
 	$hbox = new Gtk2::HBox(0,0);
 	$dialog->vbox->pack_start($hbox, 0,0,5);
@@ -785,6 +774,7 @@ sub mkdir_cb {
 
 	$entry = new Gtk2::Entry;
 	$entry->set_text("New Folder");
+	$entry->set_activates_default(1);
 	$hbox->pack_start($entry, 1,1,0);
 
 	$dialog->show_all;
@@ -810,10 +800,13 @@ sub link_cb {
 	
 	$dialog->set_title("Link");
 	$dialog->set_size_request(450,150);
+	$dialog->set_default_response('ok');
 	$link_label->set_markup("<b>Link: </b>");
 	$link_entry->set_text($inactive_pane->get_pwd . "/" . basename($active_pane->get_selected_item));
+	$link_entry->set_activates_default(1);
 	$target_label->set_markup("<b>linked object: </b>");
 	$target_entry->set_text($active_pane->get_selected_item);
+	$target_entry->set_activates_default(1);
 
 	$dialog->show_all;
 
@@ -842,10 +835,13 @@ sub symlink_cb {
 
 	$dialog->set_title("Symlink");
 	$dialog->set_size_request(450,150);
+	$dialog->set_default_response('ok');
 	$symlink_label->set_markup("<b>Symlink: </b>");
 	$symlink_entry->set_text($inactive_pane->get_pwd . "/" . basename($active_pane->get_selected_item));
+	$symlink_entry->set_activates_default(1);
 	$target_label->set_markup("<b>linked object: </b>");
 	$target_entry->set_text($active_pane->get_selected_item);
+	$target_entry->set_activates_default(1);
 
 	$dialog->show_all;
 

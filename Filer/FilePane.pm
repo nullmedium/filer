@@ -107,8 +107,9 @@ sub new {
 	$self->[TREEVIEW]->set_model($self->[TREEMODEL]);
 
 	# Drag and Drop
-	$self->[TREEVIEW]->drag_source_set(['button1_mask'], ['copy', 'move'], &Filer::DND::target_table);
-	$self->[TREEVIEW]->drag_dest_set('all', ['copy', 'move'], &Filer::DND::target_table);
+	$self->[TREEVIEW]->drag_source_set(['button1_mask'], ['move','copy'], &Filer::DND::target_table);
+	$self->[TREEVIEW]->drag_dest_set('all', ['move','copy'], &Filer::DND::target_table);
+
 	$self->[TREEVIEW]->signal_connect("drag_data_get", \&Filer::DND::filepane_treeview_drag_data_get_cb, $self);
 	$self->[TREEVIEW]->signal_connect("drag_data_received", \&Filer::DND::filepane_treeview_drag_data_received_cb, $self);
 
@@ -134,7 +135,7 @@ sub new {
 	$self->[TREEVIEW]->append_column($col);
 
 	$i = 2;
-	foreach (qw(Type Size Date Owner Group Mode Link Path)) {
+	foreach (qw(Size Type Date Owner Group Mode Link Path)) {
 		$cell = new Gtk2::CellRendererText;
 		$col = Gtk2::TreeViewColumn->new_with_attributes($_, $cell, text => $i++);
 		$col->set_resizable(1);
@@ -650,7 +651,7 @@ sub open_path {
 
 #		$type = File::MimeInfo::describe($type);
 
-		$self->[TREEMODEL]->set($self->[TREEMODEL]->append, 0, $mypixbuf, 1, $file, 2, $type, 3, $size, 4, $ctime, 5, $uid, 6, $gid, 7, $mode, 8, $target, 9, $abspath);
+		$self->[TREEMODEL]->set($self->[TREEMODEL]->append, 0, $mypixbuf, 1, $file, 2, $size, 3, $type, 4, $ctime, 5, $uid, 6, $gid, 7, $mode, 8, $target, 9, $abspath);
 	}
 
 # 	my $t1 = [gettimeofday];

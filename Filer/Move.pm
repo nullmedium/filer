@@ -134,7 +134,7 @@ sub move {
 
 	 		$self->{progress_label}->set_text("$file\n$dest");
 			$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
-			$self->{progressbar_total}->set_text("$self->{progress_count} of $self->{progress_total} files moved ...");
+			$self->{progressbar_total}->set_text("Moving file $self->{progress_count} of $self->{progress_total} ...");
 			while (Gtk2->events_pending) { Gtk2->main_iteration; }
 
 			if ($file ne $dest) {

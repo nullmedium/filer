@@ -32,7 +32,6 @@ use constant FILEPATH_ITER	=> 6;
 use constant MIMEICONS		=> 7;
 
 use constant MOUSE_MOTION_SELECT => 8;
-use constant MOUSE_MOTION_DESELECT => 9;
 
 our ($y_old); 
 
@@ -69,8 +68,8 @@ sub new {
 	$self->[TREEVIEW]->set_model($self->[TREEMODEL]);
 
 	# Drag and Drop
-	$self->[TREEVIEW]->drag_source_set(['button1_mask', 'button3_mask'], ['copy', 'move'], &Filer::DND::target_table);
-	$self->[TREEVIEW]->drag_dest_set('all', ['copy', 'move'], &Filer::DND::target_table);
+	$self->[TREEVIEW]->drag_source_set(['button1_mask'], ['move', 'copy'], &Filer::DND::target_table);
+	$self->[TREEVIEW]->drag_dest_set('all', ['move', 'copy'], &Filer::DND::target_table);
 	$self->[TREEVIEW]->signal_connect("drag_data_get", \&Filer::DND::filepane_treeview_drag_data_get_cb, $self);
 	$self->[TREEVIEW]->signal_connect("drag_data_received", \&Filer::DND::filepane_treeview_drag_data_received_cb, $self);
 
@@ -99,7 +98,6 @@ sub new {
 	$self->open_path("/");
 
 	$self->[MOUSE_MOTION_SELECT] = 0;
-	$self->[MOUSE_MOTION_DESELECT] = 0;
 
 	return $self;
 }
