@@ -659,23 +659,6 @@ sub open_path {
 	$self->[FOLDER_STATUS] = "$dirs_count ($dirs_count_total) directories and $files_count ($files_count_total) files: $total_size";
 }
 
-sub set_mime_icon {
-	my ($self) = @_;
-	my $mime = Filer::Mime->new;
-	my $type;
-
-	if (! -l $self->[SELECTED_ITEM]) {
-		$type = File::MimeInfo::Magic::mimetype($self->[SELECTED_ITEM]);
-	} else {
-		$type = "inode/symlink";
-	}
-
-	$mime->set_icon_dialog($type);
-
-	$main::pane->[LEFT]->refresh;
-	$main::pane->[RIGHT]->refresh
-}
-
 sub set_properties {
 	my ($self) = @_;
 	Filer::Properties->set_properties_dialog($self->[SELECTED_ITEM]);
