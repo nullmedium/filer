@@ -608,9 +608,7 @@ sub open_path {
 # 	my $t0 = [gettimeofday];
 
 	foreach my $file (@dirs,@files) {
-		if ($file =~ /^\.+\w+/ and $show_hidden == 0) {
-			next;
-		}
+		next if ($file =~ /^\.+\w+/ and $show_hidden == 0);
 
 		my @stat = lstat("$filepath/$file");
 		my $type = File::MimeInfo::mimetype("$filepath/$file");
@@ -628,9 +626,6 @@ sub open_path {
 		my $target = readlink("$filepath/$file");
 
 		if (-l "$filepath/$file") {
-# 			my $dir_up = Cwd::abs_path("$abspath/..");
-# 			$self->[OVERRIDES]->{$dir_up} = $filepath;
-
 			$type = "inode/symlink";
 		}
 
