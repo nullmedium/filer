@@ -227,7 +227,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$properties_mode,4);
 	});
-	$checkbutton->set_active(S_ISUID & $stat[2]) if ($multiple == 0);
+	$checkbutton->set_active(S_ISUID & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 0, 1, 1, 2, [ "fill" ], [], 0, 0);
 
 	$checkbutton = new Gtk2::CheckButton("Set GID");
@@ -235,7 +235,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$properties_mode,2);
 	});
-	$checkbutton->set_active(S_ISGID & $stat[2]) if ($multiple == 0);
+	$checkbutton->set_active(S_ISGID & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 0, 1, 2, 3, [ "fill" ], [], 0, 0);
 
 	$checkbutton = new Gtk2::CheckButton("Sticky Bit");
@@ -243,7 +243,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$properties_mode,1);
 	});
-	$checkbutton->set_active(S_ISVTX & $stat[2]) if ($multiple == 0);
+	$checkbutton->set_active(S_ISVTX & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 0, 1, 3, 4, [ "fill" ], [], 0, 0);
 
 	# Owner
@@ -253,7 +253,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$owner_mode,4);
 	});
-	$checkbutton->set_active(S_IRUSR & $stat[2]) if ($multiple == 0);
+	$checkbutton->set_active(S_IRUSR & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 1, 2, 1, 2, [ "fill" ], [], 0, 0);
 
 	$checkbutton = new Gtk2::CheckButton("Write");
@@ -261,7 +261,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$owner_mode,2);
 	});
-	$checkbutton->set_active(S_IWUSR & $stat[2]) if ($multiple == 0);
+	$checkbutton->set_active(S_IWUSR & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 1, 2, 2, 3, [ "fill" ], [], 0, 0);
 
 	$checkbutton = new Gtk2::CheckButton("Execute");
@@ -269,7 +269,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$owner_mode,1);
 	});
-	$checkbutton->set_active(S_IXUSR & $stat[2]) if ($multiple == 0);
+	$checkbutton->set_active(S_IXUSR & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 1, 2, 3, 4, [ "fill" ], [], 0, 0);
 
 	# Group
@@ -279,7 +279,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$group_mode,4);
 	});
-	$checkbutton->set_active(S_IRGRP & $stat[2]) if ($multiple == 0);
+	$checkbutton->set_active(S_IRGRP & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 2, 3, 1, 2, [ "fill" ], [], 0, 0);
 
 	$checkbutton = new Gtk2::CheckButton("Write");
@@ -287,7 +287,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$group_mode,2);
 	});
-	$checkbutton->set_active(S_IWGRP & $stat[2]) if ($multiple == 0);
+	$checkbutton->set_active(S_IWGRP & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 2, 3, 2, 3, [ "fill" ], [], 0, 0);
 
 	$checkbutton = new Gtk2::CheckButton("Execute");
@@ -295,7 +295,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$group_mode,1);
 	});
-	$checkbutton->set_active(S_IXGRP & $stat[2]) if ($multiple == 0);
+	$checkbutton->set_active(S_IXGRP & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 2, 3, 3, 4, [ "fill" ], [], 0, 0);
 
 	# Other
@@ -305,7 +305,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$other_mode,4);
 	});
-	$checkbutton->set_active(S_IROTH & $stat[2]) if ($multiple == 0);
+	$checkbutton->set_active(S_IROTH & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 3, 4, 1, 2, [ "fill" ], [], 0, 0);
 
 	$checkbutton = new Gtk2::CheckButton("Write");
@@ -313,7 +313,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$other_mode,2);
 	});
-	$checkbutton->set_active(S_IWOTH & $stat[2]) if ($multiple == 0);
+	$checkbutton->set_active(S_IWOTH & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 3, 4, 2, 3, [ "fill" ], [], 0, 0);
 
 	$checkbutton = new Gtk2::CheckButton("Execute");
@@ -321,7 +321,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		&{$mode_clicked}($w,\$other_mode,1);
 	});
-	$checkbutton->set_active(S_IXOTH & $stat[2]) if ($multiple == 0);
+	$checkbutton->set_active(S_IXOTH & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 3, 4, 3, 4, [ "fill" ], [], 0, 0);
 
 	$expander = new Gtk2::Expander("<b>Owner and Group</b>");
