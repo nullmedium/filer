@@ -208,16 +208,14 @@ sub show_popup_menu {
 			$item = $item_factory->get_item('/Open');
 			$item->set_submenu($commands_menu);
 
-			if (-e $self->[SELECTED_ITEM]) {
-				foreach ($mime->get_commands($type)) {
-					$item = new Gtk2::MenuItem(File::Basename::basename($_));
-					$item->signal_connect("activate", sub {
-						my $command = $_[1];
-						my $item = quotemeta($self->[SELECTED_ITEM]);
-						system("$command $item & exit");
-					}, $_);
-					$commands_menu->add($item);
-				}
+			foreach ($mime->get_commands($type)) {
+				$item = new Gtk2::MenuItem(File::Basename::basename($_));
+				$item->signal_connect("activate", sub {
+					my $command = $_[1];
+					my $item = quotemeta($self->[SELECTED_ITEM]);
+					system("$command $item & exit");
+				}, $_);
+				$commands_menu->add($item);
 			}
 
 			$item = new Gtk2::MenuItem('Other ...');

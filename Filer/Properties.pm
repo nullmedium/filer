@@ -83,12 +83,7 @@ sub set_properties_dialog {
 
 	my $mode_clicked = sub {
 		my ($w,$mode_ref,$x) = @_;
-			
-		if ($w->get_active) {
-			${$mode_ref} += $x;
-		} else {
-			${$mode_ref} -= $x;
-		}
+		${$mode_ref} += ($w->get_active) ? $x : -$x;
 	};
 
 	$dialog = new Gtk2::Dialog("Set File Properties", undef, 'modal', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
