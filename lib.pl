@@ -569,12 +569,7 @@ sub copy_cb {
 			my ($files,$target) = @_;
 			my $copy = new Filer::Copy;
 
-			if (($active_pane->count_selected_items == 1) and (! -d $active_pane->get_selected_item)) {
-				$copy->set_total(1);
-			} else {
-				$copy->set_total(&files_count);
-			}
-
+			$copy->set_total(&files_count);
 			$copy->show;
 
 			foreach (@{$files}) {
@@ -630,12 +625,7 @@ sub move_cb {
 		my ($files,$target) = @_;
 		my $move = new Filer::Move;
 
-		if (($active_pane->count_selected_items == 1) and (! -d $active_pane->get_selected_item)) {
-			$move->set_total(1);
-		} else {
-			$move->set_total(&files_count);
-		}
-
+		$move->set_total(&files_count);
 		$move->show;
 
 		foreach (@{$files}) {
@@ -741,12 +731,7 @@ sub delete_cb {
 	}
 
 	my $delete = Filer::Delete->new;
-
-	if (($active_pane->count_selected_items == 1) and (! -d $active_pane->get_selected_item)) {
-		$delete->set_total(1);
-	} else {
-		$delete->set_total(&files_count);
-	}
+	$delete->set_total(&files_count);
 
 	$delete->show;
 
@@ -880,35 +865,44 @@ sub symlink_cb {
 }
 
 sub files_count {
-	my $dialog = new Filer::ProgressDialog;
-	$dialog->dialog->set_title("Please wait ...");
-	$dialog->label1->set_markup("<b>Please wait ...</b>");
-
-	my $progressbar = $dialog->add_progressbar;
-
-	$dialog->show;
-
-	my $id = Glib::Timeout->add(50, sub {
-		$progressbar->pulse;
-		while (Gtk2->events_pending) { Gtk2->main_iteration }
-		return 1;
-	});
-
 	my $c = 0;
-	my $dirwalk = new File::DirWalk;
-	$dirwalk->onFile(sub {
-		++$c;
-		while (Gtk2->events_pending) { Gtk2->main_iteration }
-		return File::DirWalk::SUCCESS;
-	});
 
-	foreach (@{$active_pane->get_selected_items}) {
-		$dirwalk->walk($_);
+	if (($active_pane->count_selected_items == 1) and (! -d $active_pane->get_selected_item)) {
+		$c = 1;
+	} else {
+		my $dialog = new Filer::ProgressDialog;
+		$dialog->dialog->set_title("Please wait ...");
+		$dialog->label1->set_markup("<b>Please wait ...</b>");
+
+		my $progressbar = $dialog->add_progressbar;
+
+		$dialog->show;
+
+		my $id = Glib::Timeout->add(50, sub {
+			$progressbar->pulse;
+			while (Gtk2->events_pending) { Gtk2->main_iteration }
+			return 1;
+		});
+
+		my $dirwalk = new File::DirWalk;
+		$dirwalk->onFile(sub {
+			++$c;
+			while (Gtk2->events_pending) { Gtk2->main_iteration }
+			return File::DirWalk::SUCCESS;
+		});
+
+		foreach (@{$active_pane->get_selected_items}) {
+			if (-d $_) {
+				$dirwalk->walk($_);
+			} else {
+				++$c;
+			}
+		}
+
+		Glib::Source->remove($id);
+
+		$dialog->destroy;
 	}
-
-	Glib::Source->remove($id);
-
-	$dialog->destroy;
 
 	return $c;
 }

@@ -322,9 +322,6 @@ sub _select_helper_motion {
 	}
 }
 
-
-# internal and external functions and methods.
-
 sub init_icons {
 	my ($self) = @_;
 	my $mime = new Filer::Mime;
@@ -373,12 +370,26 @@ sub get_selected_iter {
 
 sub get_selected_iters {
 	my ($self) = @_;
+
 	return [ map { $self->[TREEMODEL]->get_iter($_) } $self->[TREESELECTION]->get_selected_rows ];
 }
 
 sub get_selected_items {
 	my ($self) = @_;
+
 	return [ map { $self->[TREEMODEL]->get($_,9) } @{$self->get_selected_iters} ];
+
+#	my @iters = map { $self->[TREEMODEL]->get_iter($_) } $self->[TREESELECTION]->get_selected_rows;
+#	my @items = map { $self->[TREEMODEL]->get($_,9) } @iters;
+
+#	return [ map { $self->[TREEMODEL]->get($self->[TREEMODEL]->get_iter($_),9) } $self->[TREESELECTION]->get_selected_rows ];
+
+#	return [ map { $self->get_path_by_treepath($_) } $self->[TREESELECTION]->get_selected_rows ];
+}
+
+sub get_iter_by_treepath {
+	my ($self,$p) = @_;
+	return $self->[TREEMODEL]->get_iter($p);
 }
 
 sub get_path_by_treepath {

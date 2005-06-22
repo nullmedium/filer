@@ -88,12 +88,7 @@ sub filepane_treeview_drag_data_received_cb {
 				$do = Filer::Move->new;
 			}
 
-			if (($main::active_pane->count_selected_items == 1) and (! -d $main::active_pane->get_selected_item)) {
-				$do->set_total(1);
-			} else {
-				$do->set_total(&main::files_count);
-			}
-
+			$do->set_total(&main::files_count);
 			$do->show;
 
 			for (split /\r\n/, $data->data) {
