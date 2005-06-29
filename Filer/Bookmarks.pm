@@ -25,7 +25,8 @@ sub new {
 	$self->{cfg_home} = (new File::BaseDir)->xdg_config_home . "/filer";
 
 	if (! -e "$self->{cfg_home}/bookmarks") {
-		$self->store([]);
+		my $bookmarks = {};
+		$self->store($bookmarks);
 	}
 
 	return $self;
@@ -43,32 +44,27 @@ sub get {
 
 sub get_bookmarks {
 	my ($self) = @_;
-	return sort @{$self->get};
+	return sort keys %{$self->get};
 }
 
 sub set_bookmark {
 	my ($self,$path) = @_;
-	my @bookmarks = $self->get_bookmarks;
-
 	return if (!$path); 
 
-	push @bookmarks, $path;
+	my $bookmarks = $self->get;
+	$bookmarks->{$path} = 1;
 
-	$self->store(\@bookmarks);
+	$self->store($bookmarks);
 }
 
 sub remove_bookmark {
 	my ($self,$path) = @_;
-	my @bookmarks = $self->get_bookmarks;
-	my @b = ();
+	return if (!$path); 
 
-	foreach (@bookmarks) {
-		if ($_ ne $path) {
-			push @b, $_;
-		}
-	}
+	my $bookmarks = $self->get;
+	delete $bookmarks->{$path};	
 
-	$self->store(\@b);
+	$self->store($bookmarks);
 }
 
 1;

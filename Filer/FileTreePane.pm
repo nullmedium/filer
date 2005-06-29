@@ -126,7 +126,7 @@ sub show_popup_menu {
 
 		my @menu_items =
 		(
-		{ path => '/sep4',								        			item_type => '<Separator>'},
+	#	{ path => '/sep4',								        			item_type => '<Separator>'},
 		{ path => '/Copy',					callback => \&main::copy_cb,				item_type => '<Item>'},
 	#	{ path => '/Paste',					callback => \&main::paste_cb,				item_type => '<Item>'},
 	#	{ path => '/sep5',								        			item_type => '<Separator>'},

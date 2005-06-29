@@ -159,7 +159,7 @@ sub main_window {
 	$button->signal_connect("clicked", \&copy_cb);
 	$hbox->pack_start($button, 1, 1, 0);
 
-	$widgets->{move_button} = new Gtk2::Button("Move/Rename");
+	$widgets->{move_button} = new Gtk2::Button("Move");
 	$widgets->{move_button}->signal_connect("clicked", \&move_cb);
 	$hbox->pack_start($widgets->{move_button}, 1, 1, 0);
 
@@ -230,9 +230,18 @@ sub get_bookmarks_menu {
 	$menuitem->signal_connect("activate", sub {
 		my $bookmarks = new Filer::Bookmarks;
 
-		foreach (@{$active_pane->get_selected_items}) {
-			$bookmarks->set_bookmark($_);
-		}
+		if ($active_pane->count_selected_items > 0) {
+		
+			foreach (@{$active_pane->get_selected_items}) {
+				if (-d $_) {
+					$bookmarks->set_bookmark($_);
+				} else {
+					$bookmarks->set_bookmark($active_pane->get_pwd);
+				}
+			}
+		} else {
+			$bookmarks->set_bookmark($active_pane->get_pwd);		
+		}		
 
 		my $menu = $widgets->{item_factory}->get_item("/Bookmarks");
 		$menu->set_submenu(&get_bookmarks_menu());
@@ -244,8 +253,17 @@ sub get_bookmarks_menu {
 	$menuitem->signal_connect("activate", sub {
 		my $bookmarks = new Filer::Bookmarks;
 
-		foreach (@{$active_pane->get_selected_items}) {
-			$bookmarks->remove_bookmark($_);
+		if ($active_pane->count_selected_items > 0) {
+		
+			foreach (@{$active_pane->get_selected_items}) {
+				if (-d $_) {
+					$bookmarks->remove_bookmark($_);
+				} else {
+					$bookmarks->remove_bookmark($active_pane->get_pwd);
+				}
+			}
+		} else {
+			$bookmarks->remove_bookmark($active_pane->get_pwd);		
 		}
 
 		my $menu = $widgets->{item_factory}->get_item("/Bookmarks");
@@ -724,7 +742,11 @@ sub delete_cb {
 
 	if ($config->get_option("ConfirmDelete") == 1) {
 		if ($active_pane->count_selected_items == 1) {
-			return if (Filer::Dialog->yesno_dialog(sprintf("Delete %s?", basename($active_pane->get_selected_item))) eq 'no');
+			if (-f $active_pane->get_selected_item) {
+				return if (Filer::Dialog->yesno_dialog(sprintf("Delete file \"%s\"?", basename($active_pane->get_selected_item))) eq 'no');
+			} elsif (-d $active_pane->get_selected_item) {
+				return if (Filer::Dialog->yesno_dialog(sprintf("Delete directory \"%s\"?", basename($active_pane->get_selected_item))) eq 'no');
+			}		
 		} else {
 			return if (Filer::Dialog->yesno_dialog(sprintf("Delete %s selected files?", $active_pane->count_selected_items)) eq 'no');
 		}

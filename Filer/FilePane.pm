@@ -176,20 +176,20 @@ sub show_popup_menu {
 
 		my @menu_items = (
 		{ path => '/Open',										item_type => '<Item>'},
-		{ path => '/sep2',								      		item_type => '<Separator>'},
+		{ path => '/sep1',								      		item_type => '<Separator>'},
 		{ path => '/Copy',			callback => \&main::copy_cb,				item_type => '<Item>'},
 #		{ path => '/Paste',			callback => \&main::paste_cb,				item_type => '<Item>'},
 		{ path => '/Move',			callback => \&main::move_cb,				item_type => '<Item>'},
 		{ path => '/Rename',			callback => \&main::rename_cb,				item_type => '<Item>'},
 		{ path => '/MkDir',			callback => \&main::mkdir_cb,				item_type => '<Item>'},
 		{ path => '/Delete',			callback => \&main::delete_cb,				item_type => '<Item>'},
-		{ path => '/sep3',								      		item_type => '<Separator>'},
+		{ path => '/sep2',								      		item_type => '<Separator>'},
+		{ path => '/Open Terminal',		callback => \&main::open_terminal_cb, item_type => '<Item>'},
 		{ path => '/Archive/Create tar.gz',	callback => sub { $self->create_tar_gz_archive },	item_type => '<Item>'},
 		{ path => '/Archive/Create tar.bz2',	callback => sub { $self->create_tar_bz2_archive },	item_type => '<Item>'},
 		{ path => '/Archive/Extract',		callback => sub { $self->extract_archive },		item_type => '<Item>'},
-		{ path => '/sep4',										item_type => '<Separator>'},
 		{ path => '/Bookmarks',								 		item_type => '<Item>'},
-		{ path => '/sep5',										item_type => '<Separator>'},
+		{ path => '/sep3',										item_type => '<Separator>'},
 		{ path => '/Properties',		callback => sub { $self->set_properties },		item_type => '<Item>'},
 		);
 
@@ -229,6 +229,28 @@ sub show_popup_menu {
 
 		$popup_menu->show_all;
 		$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
+		
+	} else {
+
+		my $item;
+		my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
+		my $popup_menu = $item_factory->get_widget('<main>');
+
+		my @menu_items = (
+		{ path => '/MkDir',			callback => \&main::mkdir_cb,				item_type => '<Item>'},
+		{ path => '/sep1',								      		item_type => '<Separator>'},
+		{ path => '/Open Terminal',		callback => \&main::open_terminal_cb, item_type => '<Item>'},
+		{ path => '/Bookmarks',								 		item_type => '<Item>'},
+		);
+
+		$item_factory->create_items(undef, @menu_items);
+
+		$item = $item_factory->get_item('/Bookmarks');
+		$item->set_submenu(&main::get_bookmarks_menu);
+
+		$popup_menu->show_all;
+		$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
+
 	}
 }
 
