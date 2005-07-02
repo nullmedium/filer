@@ -32,7 +32,7 @@ use warnings;
 use lib "$libpath";
 require "lib.pl";
 
-$VERSION = '0.0.11-svn';
+$VERSION = '0.0.12';
 
 use constant LEFT => 0;
 use constant RIGHT => 1;
