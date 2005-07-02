@@ -1,3 +1,97 @@
+2005-06-29 14:35  perldude
+
+	* trunk/Filer/Bookmarks.pm, trunk/Filer/FilePane.pm,
+	  trunk/Filer/FileTreePane.pm, trunk/lib.pl: - set only directories
+	  as bookmark(s) (baze). - make Bookmarks.pm store a unique list (no
+	  dupes).
+
+2005-06-22 09:04  perldude
+
+	* trunk/Filer/DND.pm, trunk/Filer/FilePane.pm, trunk/lib.pl: - make
+	  function files_count() in lib.pl a smarter. - TODO:
+	  profile/cleanup File(Tree)Pane.pm API.
+
+2005-06-20 21:25  perldude
+
+	* trunk/Filer/Properties.pm: - tweak(s).
+
+2005-06-20 21:23  perldude
+
+	* trunk/Filer/FilePane.pm, trunk/Filer/Properties.pm: - remove
+	  useless check in FilePane.pm. - more compact statement in
+	  Properties.pm $mode_clicked function.
+
+2005-06-19 14:47  perldude
+
+	* trunk/Filer/DND.pm, trunk/Filer/FilePane.pm: - small tweaks in
+	  FilePane.pm. - fix DND.pm.
+
+2005-06-18 19:43  perldude
+
+	* trunk/Filer/FilePane.pm: - remove obsolete method.
+
+2005-06-18 19:36  perldude
+
+	* trunk/Filer/DND.pm, trunk/Filer/FilePane.pm,
+	  trunk/Filer/FileTreePane.pm, trunk/lib.pl: - several tweaks and
+	  cleanups.
+
+2005-06-18 14:14  perldude
+
+	* trunk/Filer/Copy.pm, trunk/Filer/FilePane.pm,
+	  trunk/Filer/FileTreePane.pm, trunk/Filer/Move.pm, trunk/lib.pl: -
+	  set default action 'ok' for pressing Enter within the entry of the
+	  rename, mkdir, link and symlink dialoges. - move Help menu to the
+	  left (baze). - switch Size and Type column (baze). - change dialog
+	  texts in Copy and Move progress dialogs (baze).
+
+2005-06-14 21:14  perldude
+
+	* trunk/Filer/DND.pm, trunk/Filer/FilePane.pm: - some more changes.
+
+2005-06-14 20:59  perldude
+
+	* trunk/Filer/FileTreePane.pm: - oops
+
+2005-06-14 20:58  perldude
+
+	* trunk/Filer/FilePane.pm, trunk/Filer/FileTreePane.pm: - revert
+	  changes
+
+2005-06-14 20:19  perldude
+
+	* trunk/Filer/FilePane.pm, trunk/Filer/FileTreePane.pm: - forgot
+	  something.
+
+2005-06-14 20:18  perldude
+
+	* trunk/Filer/DND.pm, trunk/Filer/FilePane.pm,
+	  trunk/Filer/FileTreePane.pm: - DND tweak (baze) - selection tweaks
+	  for FilePane and FileTreePane
+
+2005-06-14 18:12  perldude
+
+	* trunk/AUTHORS, trunk/Filer/DND.pm, trunk/Filer/FilePane.pm,
+	  trunk/lib.pl: - added: refresh of the inactive pane after mkdir
+	  (baze) - fixed: crash if trying to create symlink or link with no
+	  item selected (baze) - fixed: drag and drop is now only possible,
+	  if the source dir is not the same as the dest dir (baze) - update
+	  AUTHORS file
+
+2005-06-13 11:49  perldude
+
+	* trunk/Filer/Bookmarks.pm, trunk/Filer/Config.pm,
+	  trunk/Filer/Delete.pm, trunk/Filer/FilePane.pm,
+	  trunk/Filer/Mime.pm, trunk/Filer/Move.pm, trunk/lib.pl: - improved
+	  Trash management. - access trash folder via trash:/ alias. - use
+	  File::BaseDir OOP interface. - more context-menu and mouse
+	  selection changes (contributed by Bjoern Martensen
+	  <bjoern.martensen@gmail.com>).
+
+2005-06-12 16:32  perldude
+
+	* trunk/ChangeLog: update ChangeLog
+
 2005-06-12 16:28  perldude
 
 	* trunk/Filer/Archive.pm, trunk/Filer/FilePane.pm, trunk/lib.pl: set
