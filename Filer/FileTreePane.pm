@@ -370,7 +370,7 @@ sub get_path_by_treepath {
 
 sub count_selected_items {
 	my ($self) = @_;
-	return $self->[TREEVIEW]->get_selection->count_selected_rows;
+	return $self->[TREESELECTION]->count_selected_rows;
 }
 
 sub refresh {
@@ -403,7 +403,12 @@ sub remove_selected {
 
 sub open_path {
 	my ($self,$filepath) = @_;
+
+# 	my $iter = $self->[TREEMODEL]->append(undef);
+# 	$self->[TREEMODEL]->set($iter, 0, $self->[MIMEICONS]->{'inode/directory'}, 1, "/", 2, "/");
+#	$self->DirRead($filepath,$iter);
 	$self->DirRead($filepath,undef);
+
 	$self->[FILEPATH] = $filepath;
 }
 
@@ -453,19 +458,19 @@ sub set_properties {
 sub create_tar_gz_archive {
 	my ($self) = @_;
 
-	my $archive = Filer::Archive->new($self->[FILEPATH]);
+	my $archive = new Filer::Archive("$self->[FILEPATH]/..", $self->get_selected_items);
 	$archive->create_tar_gz_archive;
 
-	$main::inactive_pane->open_path($self->[FILEPATH]. "/..");
+	$main::inactive_pane->open_path("$self->[FILEPATH]/..");
 }
 
 sub create_tar_bz2_archive {
 	my ($self) = @_;
 
-	my $archive = Filer::Archive->new($self->[FILEPATH]);
+	my $archive = new Filer::Archive("$self->[FILEPATH]/..", $self->get_selected_items);
 	$archive->create_tar_bz2_archive;
 
-	$main::inactive_pane->open_path($self->[FILEPATH]. "/..");
+	$main::inactive_pane->open_path("$self->[FILEPATH]/..");
 }
 
 1;

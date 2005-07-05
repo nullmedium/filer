@@ -431,8 +431,19 @@ sub file_ass_cb {
 }
 
 sub refresh_cb {
-	$pane->[LEFT]->refresh;
-	$pane->[RIGHT]->refresh;
+	if ($pane->[LEFT]->get_pwd eq $pane->[RIGHT]->get_pwd) {
+		if ($pane->[LEFT]->get_type eq $pane->[RIGHT]->get_type) { 
+			$pane->[LEFT]->refresh;
+			$pane->[RIGHT]->set_model($pane->[LEFT]->get_model);
+		} else {
+			$pane->[LEFT]->refresh;
+			$pane->[RIGHT]->refresh;
+		}
+	} else {
+		$pane->[LEFT]->refresh;
+		$pane->[RIGHT]->refresh;
+	}
+
 	return 1;
 }
 
@@ -603,7 +614,17 @@ sub copy_cb {
 			}
 
 			$copy->destroy;
-			$inactive_pane->refresh;
+
+			if ($active_pane->get_pwd eq $inactive_pane->get_pwd) {
+				if ($active_pane->get_type eq $inactive_pane->get_type) { 
+					$active_pane->refresh;
+					$inactive_pane->set_model($active_pane->get_model);
+				} else {
+					$inactive_pane->refresh;
+				}
+			} elsif ($active_pane->get_pwd ne $inactive_pane->get_pwd) {
+				$inactive_pane->refresh;
+			}
 		};
 
 		if ($active_pane->count_selected_items == 1) {
@@ -659,8 +680,11 @@ sub move_cb {
 		}
 
 		$move->destroy;
-		$active_pane->refresh;
-		$inactive_pane->refresh;
+
+		if ($active_pane->get_pwd ne $inactive_pane->get_pwd) {
+			$active_pane->refresh;
+			$inactive_pane->refresh;
+		}
 	};
 
 	if ($active_pane->count_selected_items == 1) {
@@ -735,6 +759,14 @@ sub rename_cb {
 	}
 
 	$dialog->destroy;
+	
+	if ($active_pane->get_pwd eq $inactive_pane->get_pwd) {
+		if ($active_pane->get_type eq $inactive_pane->get_type) { 
+			$inactive_pane->set_model($active_pane->get_model);
+		} else {
+			$inactive_pane->refresh;
+		}
+	}
 }
 
 sub delete_cb {
@@ -772,7 +804,14 @@ sub delete_cb {
 	$delete->destroy;
 
 	$active_pane->remove_selected;
-	$main::inactive_pane->refresh;
+	
+	if ($active_pane->get_pwd eq $inactive_pane->get_pwd) {
+		if ($active_pane->get_type eq $inactive_pane->get_type) { 
+			$inactive_pane->set_model($active_pane->get_model);
+		} else {
+			$inactive_pane->refresh;
+		}
+	}
 }
 
 sub mkdir_cb {
@@ -809,7 +848,12 @@ sub mkdir_cb {
 	}
 
 	$dialog->destroy;
-	$main::inactive_pane->refresh;
+	
+	if ($active_pane->get_type eq $inactive_pane->get_type) {
+		if ($active_pane->get_pwd eq $inactive_pane->get_pwd) {
+			$inactive_pane->set_model($active_pane->get_model);
+		}
+	}
 }
 
 sub link_cb {
@@ -840,7 +884,13 @@ sub link_cb {
 		}
 
 		if (link($target, $link)) {
-			$inactive_pane->refresh;
+			if ($active_pane->get_pwd eq $inactive_pane->get_pwd) {
+				if ($active_pane->get_type eq $inactive_pane->get_type) { 
+					$inactive_pane->set_model($active_pane->get_model);
+				} else {
+					$inactive_pane->refresh;
+				}
+			}
 		} else {
 			Filer::Dialog->msgbox_error("Couldn't create link! $!");
 		}
@@ -877,7 +927,15 @@ sub symlink_cb {
 		}
 
 		if (symlink($target, $symlink)) {
-			$inactive_pane->refresh;
+		
+			if ($active_pane->get_pwd eq $inactive_pane->get_pwd) {
+				if ($active_pane->get_type eq $inactive_pane->get_type) { 
+					$inactive_pane->set_model($active_pane->get_model);
+				} else {
+					$inactive_pane->refresh;
+				}
+			}
+			
 		} else {
 			Filer::Dialog->msgbox_error("Couldn't create symlink! $!");
 		}

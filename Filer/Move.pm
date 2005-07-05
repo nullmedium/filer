@@ -72,7 +72,13 @@ sub move {
 	my $file_basename = basename($source);
 
 	if (dirname($dest) ne '.') {
-		$r = rename($source,Cwd::abs_path("$dest/" . basename($source)));
+		my $my_dest = Cwd::abs_path("$dest/" . basename($source));
+		
+		if (-e $my_dest) {
+			return File::DirWalk::SUCCESS if (Filer::Dialog->yesno_dialog("Replace existing file at \"$my_dest\"?") eq 'no');
+		}
+
+		$r = rename($source,$my_dest);
 		
 		# it's 'renamed' out of the trash. so remove its .trashinfo file
 		if (dirname($source) eq $trashdir_files) {

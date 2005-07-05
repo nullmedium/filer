@@ -29,8 +29,6 @@ sub target_table {
 sub filepane_treeview_drag_begin_cb {
 	my ($widget, $context) = @_;
 
-	print $context, "\n";
-
 	return 1;
 }
 
@@ -111,9 +109,17 @@ sub filepane_treeview_drag_data_received_cb {
 
 			if ($action eq "move") {
 				$main::active_pane->remove_selected;
-			}
 
-			$main::inactive_pane->refresh;
+				if ($main::active_pane->get_pwd eq $main::inactive_pane->get_pwd) {
+					if ($main::active_pane->get_type eq $main::inactive_pane->get_type) { 
+						$main::inactive_pane->set_model($main::active_pane->get_model);
+					} else {
+						$main::inactive_pane->refresh;
+					}
+				}
+			} else {
+				$main::inactive_pane->refresh;
+			}
 
 			$context->finish (1, 0, $time);
 			return;

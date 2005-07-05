@@ -19,6 +19,20 @@ package Filer::Config;
 use strict;
 use warnings;
 
+our ($default_config);
+
+$default_config = {
+	PathLeft		=> $ENV{HOME},
+	PathRight		=> $ENV{HOME},
+	ShowHiddenFiles 	=> 1,
+	Mode			=> 0,
+	ConfirmCopy		=> 1,
+	ConfirmMove		=> 1,
+	ConfirmDelete		=> 1,
+	MoveToTrash		=> 1,
+	WindowSize		=> "800:600",
+};
+
 sub new {
 	my ($class,$side) = @_;
 	my $self = bless {}, $class;
@@ -39,19 +53,7 @@ sub new {
 	}
 
 	if (! -e "$self->{cfg_home}/config") {
-		my $cfg = {
-			PathLeft		=> $ENV{HOME},
-			PathRight		=> $ENV{HOME},
-			ShowHiddenFiles 	=> 1,
-			Mode			=> 0,
-			ConfirmCopy		=> 1,
-			ConfirmMove		=> 1,
-			ConfirmDelete		=> 1,
-			MoveToTrash		=> 1,
-			WindowSize		=> "800:600",
-		};
-
-		$self->store($cfg);
+		$self->store($default_config);
 	}
 
 	return $self;
@@ -78,8 +80,12 @@ sub set_option {
 sub get_option {
 	my ($self,$option) = @_;
 	my $config = $self->get;
+	
+	if (defined $config->{$option}) {
+		return $config->{$option};
+	}
 
-	return $config->{$option};
+	return $default_config->{$option};
 }
 
 1;

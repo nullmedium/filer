@@ -41,6 +41,10 @@ sub new {
 sub filecopy {
 	my ($self,$source,$dest) = @_;
 
+	if (-e $dest) {
+		return File::DirWalk::SUCCESS if (Filer::Dialog->yesno_dialog("Overwrite existing file at \"$dest\"?") eq 'no');
+	}
+
 	my $mode = (stat $source)[2] || return File::DirWalk::FAILED;
 	my $size = -s $source;
 	my $buf;

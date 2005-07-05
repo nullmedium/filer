@@ -118,10 +118,12 @@ sub new {
 	$col->set_title("Name");
 
 	$cell = Gtk2::CellRendererPixbuf->new;
+#	$cell->set_fixed_size(-1, 22);
 	$col->pack_start($cell, 0);
 	$col->add_attribute($cell, pixbuf => 0);
 
 	$cell = Gtk2::CellRendererText->new;
+#	$cell->set_fixed_size(-1, 22);
 	$col->pack_start($cell, 1);
 	$col->add_attribute($cell, text => 1);
 
@@ -130,6 +132,7 @@ sub new {
 	$i = 2;
 	foreach (qw(Size Type Date Owner Group Mode Link Path)) {
 		$cell = new Gtk2::CellRendererText;
+#		$cell->set_fixed_size(-1, 22);
 		$col = Gtk2::TreeViewColumn->new_with_attributes($_, $cell, text => $i++);
 		$col->set_resizable(1);
 		$self->[TREEVIEW]->append_column($col);
@@ -166,6 +169,10 @@ sub show_popup_menu {
 		if (! $self->[TREESELECTION]->path_is_selected($p)) {
 			$self->[TREESELECTION]->unselect_all;
 			$self->[TREESELECTION]->select_path($p);
+		}
+
+		if (! defined $self->[SELECTED_ITEM]) {
+			return;
 		}
 
 		my $item;
@@ -222,9 +229,9 @@ sub show_popup_menu {
 			$item->signal_connect("activate", sub { $self->open_file_with });
 			$commands_menu->add($item);
 		} else {
-			$item_factory->delete_item('/sep2');
-			$item_factory->delete_item('/Rename');
 			$item_factory->delete_item('/Open');
+			$item_factory->delete_item('/sep1');
+			$item_factory->delete_item('/Rename');
 		}
 
 		$popup_menu->show_all;
@@ -360,10 +367,45 @@ sub get_treeview {
 	return $self->[TREEVIEW];
 }
 
+sub get_model {
+	my ($self) = @_;
+	return $self->[TREEMODEL];
+}
+
+sub set_model {
+	my ($self,$model) = @_;
+
+	$self->[TREEMODEL]->clear;
+
+	$model->foreach(sub {
+		my ($model,$path,$iter,$data) = @_;
+
+		my $mypixbuf = $model->get($iter,0);
+		my $file = $model->get($iter,1);
+		my $size = $model->get($iter,2);
+		my $type = $model->get($iter,3);
+		my $ctime = $model->get($iter,4);
+		my $uid = $model->get($iter,5);
+		my $gid = $model->get($iter,6);
+		my $mode = $model->get($iter,7);
+		my $target = $model->get($iter,8);
+		my $abspath =  $model->get($iter,9);
+
+		$self->[TREEMODEL]->set($self->[TREEMODEL]->append, 0, $mypixbuf, 1, $file, 2, $size, 3, $type, 4, $ctime, 5, $uid, 6, $gid, 7, $mode, 8, $target, 9, $abspath);
+	});
+	
+#	$self->[FOLDER_STATUS] = $main::inactive_pane->get_folder_status;
+}
+
 sub set_focus {
 	my ($self) = @_;
 	$self->[TREEVIEW]->grab_focus;
 }
+
+# sub get_folder_status {
+# 	my ($self) = @_;
+# 	return $self->[FOLDER_STATUS];
+# }
 
 sub get_pwd {
 	my ($self) = @_;
@@ -704,16 +746,32 @@ sub get_temp_archive_dir {
 
 sub create_tar_gz_archive {
 	my ($self) = @_;
-	my $archive = Filer::Archive->new($self->[FILEPATH], $self->get_selected_items);
+	my $archive = new Filer::Archive($self->[FILEPATH], $self->get_selected_items);
 	$archive->create_tar_gz_archive;
 	$self->refresh;
+
+	if ($main::active_pane->get_pwd eq $main::inactive_pane->get_pwd) {
+		if ($main::active_pane->get_type eq $main::inactive_pane->get_type) { 
+			$main::inactive_pane->set_model($main::active_pane->get_model);
+		} else {
+			$main::inactive_pane->refresh;
+		}
+	}
 }
 
 sub create_tar_bz2_archive {
 	my ($self) = @_;
-	my $archive = Filer::Archive->new($self->[FILEPATH], $self->get_selected_items);
+	my $archive = new Filer::Archive($self->[FILEPATH], $self->get_selected_items);
 	$archive->create_tar_bz2_archive;
 	$self->refresh;
+
+	if ($main::active_pane->get_pwd eq $main::inactive_pane->get_pwd) {
+		if ($main::active_pane->get_type eq $main::inactive_pane->get_type) { 
+			$main::inactive_pane->set_model($main::active_pane->get_model);
+		} else {
+			$main::inactive_pane->refresh;
+		}
+	}
 }
 
 sub extract_archive {
@@ -721,6 +779,10 @@ sub extract_archive {
 	my $archive = Filer::Archive->new($self->[FILEPATH], $self->get_selected_items);
 	$archive->extract_archive;
 	$self->refresh;
+	
+	if ($main::active_pane->get_pwd eq $main::inactive_pane->get_pwd) {
+		$main::inactive_pane->refresh;
+	}
 }
 
 sub calculate_size {

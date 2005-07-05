@@ -36,6 +36,9 @@ sub new {
 	$self->{path} = quotemeta($filepath);
 	$self->{files} = $files;
 
+	print $self->{path}, "\n";
+	print $self->{files}, "\n";
+
 	return $self;
 }
 
@@ -61,7 +64,12 @@ sub create_archive {
 	my $archive_file = quotemeta(sprintf("%s.%s", $self->{files}->[0], $supported_archives{$type}{extension}));
 	
 	# create a space delimited list of files and escape it properly to make shell happy
-	my $f = join " ", map { File::Basename::basename(quotemeta($_)) } @{$self->{files}};
+	my $f = join " ", map { "./" . File::Basename::basename(quotemeta($_)) } @{$self->{files}};
+
+	print "$path\n";
+	print "$archive_command\n";
+	print "$archive_file\n";
+	print "$f\n";
 
 	system("cd $path && $archive_command $archive_file $f");
 }
