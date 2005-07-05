@@ -357,15 +357,20 @@ sub open_terminal_cb {
 
 sub ncmc_cb {
 	# check if item is checked
-	$config->set_option('Mode', NORTON_COMMANDER_MODE) if ($_[2]->get_active);
-	&switch_mode;
+	if ($_[2]->get_active) {
+		$config->set_option('Mode', NORTON_COMMANDER_MODE);
+		&switch_mode;
+	}
+
 	return 1;
 }
 
 sub explorer_cb {
 	# check if item is checked
-	$config->set_option('Mode', EXPLORER_MODE) if ($_[2]->get_active);
-	&switch_mode;
+	if ($_[2]->get_active) {
+		$config->set_option('Mode', EXPLORER_MODE);
+		&switch_mode;
+	}
 	return 1;
 }
 
@@ -375,9 +380,14 @@ sub switch_mode {
 	if ($opt == EXPLORER_MODE) {
 		$widgets->{list2}->get_location_bar->reparent($widgets->{location_bar});
 
+#		$widgets->{location_bar}->hide;
+	
 		$widgets->{sync_button}->set("visible", 0);
 		$widgets->{tree}->get_vbox->set("visible", 1);
 		$widgets->{list1}->get_vbox->set("visible", 0);
+
+		$widgets->{list1}->get_navigation_box->hide;
+		$widgets->{list2}->get_navigation_box->show;
 
 		$pane->[LEFT] = $widgets->{tree};
 
@@ -393,6 +403,9 @@ sub switch_mode {
 		$widgets->{tree}->get_vbox->set("visible", 0);
 		$widgets->{list1}->get_vbox->set("visible", 1);
 
+		$widgets->{list1}->get_navigation_box->hide;
+		$widgets->{list2}->get_navigation_box->hide;
+
 		$pane->[LEFT] = $widgets->{list1};
 
 #		$widgets->{item_factory}->get_item("/Edit/Copy")->set_accel_path("F5");
@@ -400,6 +413,9 @@ sub switch_mode {
 #		$widgets->{item_factory}->get_item("/Edit/Move")->set("visible", 1);
 #		$widgets->{move_button}->set("visible", 1);
 	}
+
+	$widgets->{list1}->refresh;
+	$widgets->{list2}->refresh;
 }
 
 sub hidden_cb {

@@ -95,7 +95,9 @@ sub new {
 
 	$self->init_icons;
 
-	$self->open_path("/");
+#	$self->open_path("/");
+
+	$self->CreateRootNodes();
 
 	$self->[MOUSE_MOTION_SELECT] = 0;
 
@@ -401,15 +403,19 @@ sub remove_selected {
 	delete $self->[FILEPATH_ITER];
 }
 
-sub open_path {
-	my ($self,$filepath) = @_;
+sub CreateRootNodes {
+	my ($self) = @_;
+	my $iter; 
 
-# 	my $iter = $self->[TREEMODEL]->append(undef);
-# 	$self->[TREEMODEL]->set($iter, 0, $self->[MIMEICONS]->{'inode/directory'}, 1, "/", 2, "/");
-#	$self->DirRead($filepath,$iter);
-	$self->DirRead($filepath,undef);
+	$iter = $self->[TREEMODEL]->append(undef);
+	$self->[TREEMODEL]->set($iter, 0, $self->[MIMEICONS]->{'inode/directory'}, 1, "Filesystem", 2, "/");
+	$self->[TREEMODEL]->append($iter);
+#	$self->[TREEVIEW]->expand_row($self->[TREEMODEL]->get_path($iter), 0);
 
-	$self->[FILEPATH] = $filepath;
+	$iter = $self->[TREEMODEL]->append(undef);
+	$self->[TREEMODEL]->set($iter, 0, $self->[MIMEICONS]->{'inode/directory'}, 1, "Home", 2, "$ENV{HOME}");
+	$self->[TREEMODEL]->append($iter);
+#	$self->[TREEVIEW]->expand_row($self->[TREEMODEL]->get_path($iter), 0);
 }
 
 sub DirRead {
@@ -420,15 +426,7 @@ sub DirRead {
 	my @dir_contents = sort readdir(DIR);
 	closedir(DIR);
 
-	my @dirs = grep { -d "$dir/$_" and (($show_hidden == 0 and $_ !~ /^\.+\w+/) or ($show_hidden == 1)) } @dir_contents;
-
-#	splice @dirs, 0, 1; # no .
-	@dirs = @dirs[1 .. $#dirs];
-
-	if ($dir ne "/") {
-#		splice @dirs, 0, 1; # no ..
-		@dirs = @dirs[1 .. $#dirs];
-	}
+	my @dirs = grep { -d "$dir/$_" and (($show_hidden == 0 and $_ !~ /^\.+\w+/) or ($show_hidden == 1)) } @dir_contents[2 .. $#dir_contents];
 
 	foreach my $file (@dirs) {
 		my $iter = $self->[TREEMODEL]->append($parent_iter);
@@ -440,7 +438,7 @@ sub DirRead {
 			2, Cwd::abs_path("$dir/$file")
 		);
 
-		if (-r "$dir/$file") {
+		if (-R "$dir/$file") {
 			$self->[TREEMODEL]->append($iter);
 		}
 	}

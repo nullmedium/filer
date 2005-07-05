@@ -40,6 +40,9 @@ use constant HBOX		=> 14;
 
 use constant MOUSE_MOTION_SELECT => 15;
 
+use constant NAVIGATION_BOX => 16;
+use constant NAVIGATION_BUTTONS => 17;
+
 our ($y_old);
 
 Memoize::memoize("calculate_size");
@@ -66,7 +69,11 @@ sub new {
 
 	$button = new Gtk2::Button("Up");
 	$button->signal_connect("clicked", sub {
-		$self->open_path(Cwd::abs_path($self->[FILEPATH] . "/.."));
+		if ($main::config->get_option("Mode") == &main::EXPLORER_MODE) {
+			$self->open_path_helper(Cwd::abs_path("$self->[FILEPATH]/.."));
+		} else {
+			$self->open_path(Cwd::abs_path("$self->[FILEPATH]/.."));
+		}
 	});
 	$self->[HBOX]->pack_start($button, 0, 1, 0);
 
@@ -84,6 +91,9 @@ sub new {
 		$self->open_file($self->[PATH_ENTRY]->get_text)
 	});
 	$self->[HBOX]->pack_start($button, 0, 1, 0);
+
+	$self->[NAVIGATION_BOX] = new Gtk2::HBox(0,0);
+	$self->[VBOX]->pack_start($self->[NAVIGATION_BOX], 0, 1, 0);
 
 	$scrolled_window = new Gtk2::ScrolledWindow;
 	$scrolled_window->set_policy('automatic','automatic');
@@ -158,6 +168,11 @@ sub get_location_bar_parent {
 sub get_location_bar {
 	my ($self) = @_;
 	return $self->[HBOX];
+}
+
+sub get_navigation_box {
+	my ($self) = @_;
+	return $self->[NAVIGATION_BOX];
 }
 
 sub show_popup_menu {
@@ -288,7 +303,13 @@ sub treeview_event_cb {
 	$main::widgets->{statusbar}->push(1,$self->[FOLDER_STATUS]);
 
 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'BackSpace'})) {
-		$self->open_path(Cwd::abs_path("$self->[FILEPATH]/.."));
+
+		if ($main::config->get_option("Mode") == &main::EXPLORER_MODE) {
+			$self->open_path_helper(Cwd::abs_path("$self->[FILEPATH]/.."));
+		} else {
+			$self->open_path(Cwd::abs_path("$self->[FILEPATH]/.."));
+		}
+	
 		return 1;
 	}
 
@@ -409,7 +430,12 @@ sub set_focus {
 
 sub get_pwd {
 	my ($self) = @_;
-	return Cwd::abs_path($self->[FILEPATH]);
+	
+	if (defined $self->[FILEPATH]) {
+		return Cwd::abs_path($self->[FILEPATH]);
+	} else {
+		return undef;
+	}
 }
 
 sub get_path {
@@ -480,6 +506,75 @@ sub remove_selected {
 	}
 }
 
+sub update_navigation_buttons {
+	my ($self,$filepath) = @_;
+
+	foreach (reverse sort keys %{$self->[NAVIGATION_BUTTONS]}) {
+		last if ($_ eq $filepath);
+
+		if ($_ !~ /^$filepath/) {
+			$self->[NAVIGATION_BUTTONS]->{$_}->destroy;
+			delete $self->[NAVIGATION_BUTTONS]->{$_};
+		}
+	}
+
+	my $path = "/";
+	my $button = undef; 
+
+	foreach (File::Spec->splitdir($filepath)) {
+		$path = Cwd::abs_path("$path/$_");
+
+		if (not defined $self->[NAVIGATION_BUTTONS]->{$path}) {
+
+			$button = new Gtk2::RadioButton($self->[NAVIGATION_BUTTONS]->{"/"}, "");
+			$button->set(draw_indicator => 0); # i'm evil
+
+			my @w = $button->get_children;
+
+			if ($path eq $filepath) {
+				$button->set(active => 1);					
+
+				if ($path eq "/") {
+					$w[0]->set_markup("<b>/</b>");
+				} else {
+					$w[0]->set_markup(sprintf("<b>%s</b>", File::Basename::basename($path)));
+				}
+			} else {
+				if ($path eq "/") {
+					$w[0]->set_text("/");
+				} else {
+					$w[0]->set_text(File::Basename::basename($path));
+				}
+			}
+
+			$button->signal_connect(toggled => sub {
+				my ($widget, $data) = @_;
+				my @w = $widget->get_children;
+
+				if ($widget->get_active) {
+					if ($data eq "/") {
+						$w[0]->set_markup("<b>/</b>");
+					} else {
+						$w[0]->set_markup(sprintf("<b>%s</b>", File::Basename::basename($data)));
+					}
+
+					$self->open_path($data);
+				} else {
+					if ($data eq "/") {
+						$w[0]->set_text("/");
+					} else {
+						$w[0]->set_text(File::Basename::basename($data));
+					}
+				}
+			}, $path);
+
+			$self->[NAVIGATION_BOX]->pack_start($button,0,0,0);
+			$self->[NAVIGATION_BUTTONS]->{$path} = $button;
+			$self->[NAVIGATION_BUTTONS]->{$path}->show;
+		}
+	}
+}
+
 sub open_file {
 	my ($self,$filepath) = @_;
 
@@ -491,8 +586,8 @@ sub open_file {
 	return 0 if ((not defined $filepath) or (not -R $filepath));
 
 	if (-d $filepath) {
-		if (defined $self->[OVERRIDES]->{$filepath}) {
-			$self->open_path($self->[OVERRIDES]->{$filepath});
+		if ($main::config->get_option("Mode") == &main::EXPLORER_MODE) {
+			$self->open_path_helper($filepath);
 		} else {
 			$self->open_path($filepath);
 		}
@@ -644,6 +739,23 @@ sub open_terminal {
 	}
 }
 
+sub open_path_helper {
+	my ($self,$filepath) = @_;
+
+	if (defined $self->[NAVIGATION_BUTTONS]->{$filepath}) {
+		$self->[NAVIGATION_BUTTONS]->{$filepath}->set(active => 1);
+		my @w = $self->[NAVIGATION_BUTTONS]->{$filepath}->get_children();
+
+		if ($filepath eq "/") {
+			$w[0]->set_markup("<b>/</b>");
+		} else {
+			$w[0]->set_markup(sprintf("<b>%s</b>", File::Basename::basename($filepath)));
+		}
+	} else {
+		$self->open_path($filepath);
+	}
+}
+
 sub open_path {
 	my ($self,$filepath) = @_;
 
@@ -651,17 +763,31 @@ sub open_path {
 		$filepath = $ENV{HOME};
 	}
 
+	my $opt = $main::config->get_option("Mode");
+	
+	if ($opt == 0) {
+		if (defined $self->[OVERRIDES]->{$filepath}) {
+			$filepath = $self->[OVERRIDES]->{$filepath};
+		}
+	}
+
 	opendir (DIR, $filepath) or return Filer::Dialog->msgbox_error("$filepath: $!");
 	my @dir_contents = sort readdir(DIR);
 	closedir(DIR);
 
-	@dir_contents = @dir_contents[(($filepath eq "/") ? 2 : 1) .. $#dir_contents];
+	if ($opt == 1) {
+		@dir_contents = @dir_contents[2 .. $#dir_contents];
+	} else {
+		@dir_contents = @dir_contents[(($filepath eq "/") ? 2 : 1) .. $#dir_contents];
+	}
 
 	delete $self->[SELECTED_ITEM];
 	delete $self->[SELECTED_ITER];
 
 	$self->[FILEPATH] = $filepath;
 	$self->[TREEMODEL]->clear;
+
+	$self->update_navigation_buttons($filepath);
 
 	my $show_hidden = $main::config->get_option('ShowHiddenFiles');
 	my @dirs = grep { -d "$filepath/$_" } @dir_contents;
@@ -781,7 +907,11 @@ sub extract_archive {
 	$self->refresh;
 	
 	if ($main::active_pane->get_pwd eq $main::inactive_pane->get_pwd) {
-		$main::inactive_pane->refresh;
+		if ($main::active_pane->get_type eq $main::inactive_pane->get_type) { 
+			$main::inactive_pane->set_model($main::active_pane->get_model);
+		} else {
+			$main::inactive_pane->refresh;
+		}
 	}
 }
 
