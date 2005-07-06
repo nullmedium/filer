@@ -112,7 +112,7 @@ sub new {
 	$self->[TREEVIEW]->drag_dest_set('all', ['move','copy'], &Filer::DND::target_table);
 	$self->[TREEVIEW]->drag_source_set(['button1_mask','shift-mask'], ['move','copy'], &Filer::DND::target_table);
 
-	$self->[TREEVIEW]->signal_connect("drag_begin", \&Filer::DND::filepane_treeview_drag_begin_cb, $self);
+#	$self->[TREEVIEW]->signal_connect("drag_begin", \&Filer::DND::filepane_treeview_drag_begin_cb, $self);
 	$self->[TREEVIEW]->signal_connect("drag_data_get", \&Filer::DND::filepane_treeview_drag_data_get_cb, $self);
 	$self->[TREEVIEW]->signal_connect("drag_data_received", \&Filer::DND::filepane_treeview_drag_data_received_cb, $self);
 
@@ -128,28 +128,25 @@ sub new {
 	$col->set_title("Name");
 
 	$cell = Gtk2::CellRendererPixbuf->new;
-#	$cell->set_fixed_size(-1, 22);
 	$col->pack_start($cell, 0);
 	$col->add_attribute($cell, pixbuf => 0);
 
 	$cell = Gtk2::CellRendererText->new;
-#	$cell->set_fixed_size(-1, 22);
 	$col->pack_start($cell, 1);
 	$col->add_attribute($cell, text => 1);
 
 	$self->[TREEVIEW]->append_column($col);
 
 	$i = 2;
-	foreach (qw(Size Type Date Owner Group Mode Link Path)) {
+	foreach (qw(Size Type Date Owner Group Mode Link)) {
 		$cell = new Gtk2::CellRendererText;
-#		$cell->set_fixed_size(-1, 22);
 		$col = Gtk2::TreeViewColumn->new_with_attributes($_, $cell, text => $i++);
 		$col->set_resizable(1);
 		$self->[TREEVIEW]->append_column($col);
 	}
 
 	$self->init_icons;
-	
+
 	$self->[MOUSE_MOTION_SELECT] = 0;
 
 	return $self;
@@ -178,6 +175,10 @@ sub get_navigation_box {
 sub show_popup_menu {
 	my ($self,$e) = @_;
 
+	my $item;
+	my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
+	my $popup_menu = $item_factory->get_widget('<main>');
+
 	my ($p) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
 
 	if (defined $p) {
@@ -190,9 +191,6 @@ sub show_popup_menu {
 			return;
 		}
 
-		my $item;
-		my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
-		my $popup_menu = $item_factory->get_widget('<main>');
 		my $mime = new Filer::Mime;
 		my $type = File::MimeInfo::Magic::mimetype($self->[SELECTED_ITEM]);
 
@@ -200,18 +198,20 @@ sub show_popup_menu {
 		{ path => '/Open',										item_type => '<Item>'},
 		{ path => '/sep1',								      		item_type => '<Separator>'},
 		{ path => '/Copy',			callback => \&main::copy_cb,				item_type => '<Item>'},
-#		{ path => '/Paste',			callback => \&main::paste_cb,				item_type => '<Item>'},
-		{ path => '/Move',			callback => \&main::move_cb,				item_type => '<Item>'},
+		{ path => '/Cut',			callback => \&main::cut_cb,				item_type => '<Item>'},
+		{ path => '/Paste',			callback => \&main::paste_cb,				item_type => '<Item>'},
+		{ path => '/sep2',								      		item_type => '<Separator>'},
+#		{ path => '/Move',			callback => \&main::move_cb,				item_type => '<Item>'},
 		{ path => '/Rename',			callback => \&main::rename_cb,				item_type => '<Item>'},
 		{ path => '/MkDir',			callback => \&main::mkdir_cb,				item_type => '<Item>'},
 		{ path => '/Delete',			callback => \&main::delete_cb,				item_type => '<Item>'},
-		{ path => '/sep2',								      		item_type => '<Separator>'},
+		{ path => '/sep3',								      		item_type => '<Separator>'},
 		{ path => '/Open Terminal',		callback => \&main::open_terminal_cb, item_type => '<Item>'},
 		{ path => '/Archive/Create tar.gz',	callback => sub { $self->create_tar_gz_archive },	item_type => '<Item>'},
 		{ path => '/Archive/Create tar.bz2',	callback => sub { $self->create_tar_bz2_archive },	item_type => '<Item>'},
 		{ path => '/Archive/Extract',		callback => sub { $self->extract_archive },		item_type => '<Item>'},
 		{ path => '/Bookmarks',								 		item_type => '<Item>'},
-		{ path => '/sep3',										item_type => '<Separator>'},
+		{ path => '/sep4',										item_type => '<Separator>'},
 		{ path => '/Properties',		callback => sub { $self->set_properties },		item_type => '<Item>'},
 		);
 
@@ -249,18 +249,14 @@ sub show_popup_menu {
 			$item_factory->delete_item('/Rename');
 		}
 
-		$popup_menu->show_all;
-		$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
-		
 	} else {
-
-		my $item;
-		my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
-		my $popup_menu = $item_factory->get_widget('<main>');
-
 		my @menu_items = (
-		{ path => '/MkDir',			callback => \&main::mkdir_cb,				item_type => '<Item>'},
+		{ path => '/Copy',			callback => \&main::copy_cb,				item_type => '<Item>'},
+		{ path => '/Cut',			callback => \&main::cut_cb,				item_type => '<Item>'},
+		{ path => '/Paste',			callback => \&main::paste_cb,				item_type => '<Item>'},
 		{ path => '/sep1',								      		item_type => '<Separator>'},
+		{ path => '/MkDir',			callback => \&main::mkdir_cb,				item_type => '<Item>'},
+		{ path => '/sep2',								      		item_type => '<Separator>'},
 		{ path => '/Open Terminal',		callback => \&main::open_terminal_cb, item_type => '<Item>'},
 		{ path => '/Bookmarks',								 		item_type => '<Item>'},
 		);
@@ -269,11 +265,10 @@ sub show_popup_menu {
 
 		$item = $item_factory->get_item('/Bookmarks');
 		$item->set_submenu(&main::get_bookmarks_menu);
-
-		$popup_menu->show_all;
-		$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
-
 	}
+
+	$popup_menu->show_all;
+	$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
 }
 
 sub selection_changed_cb {
@@ -309,7 +304,7 @@ sub treeview_event_cb {
 		} else {
 			$self->open_path(Cwd::abs_path("$self->[FILEPATH]/.."));
 		}
-	
+
 		return 1;
 	}
 
@@ -414,8 +409,6 @@ sub set_model {
 
 		$self->[TREEMODEL]->set($self->[TREEMODEL]->append, 0, $mypixbuf, 1, $file, 2, $size, 3, $type, 4, $ctime, 5, $uid, 6, $gid, 7, $mode, 8, $target, 9, $abspath);
 	});
-	
-#	$self->[FOLDER_STATUS] = $main::inactive_pane->get_folder_status;
 }
 
 sub set_focus {
@@ -423,14 +416,9 @@ sub set_focus {
 	$self->[TREEVIEW]->grab_focus;
 }
 
-# sub get_folder_status {
-# 	my ($self) = @_;
-# 	return $self->[FOLDER_STATUS];
-# }
-
 sub get_pwd {
 	my ($self) = @_;
-	
+
 	if (defined $self->[FILEPATH]) {
 		return Cwd::abs_path($self->[FILEPATH]);
 	} else {
@@ -468,13 +456,6 @@ sub get_selected_items {
 	my ($self) = @_;
 
 	return [ map { $self->[TREEMODEL]->get($_,9) } @{$self->get_selected_iters} ];
-
-#	my @iters = map { $self->[TREEMODEL]->get_iter($_) } $self->[TREESELECTION]->get_selected_rows;
-#	my @items = map { $self->[TREEMODEL]->get($_,9) } @iters;
-
-#	return [ map { $self->[TREEMODEL]->get($self->[TREEMODEL]->get_iter($_),9) } $self->[TREESELECTION]->get_selected_rows ];
-
-#	return [ map { $self->get_path_by_treepath($_) } $self->[TREESELECTION]->get_selected_rows ];
 }
 
 sub get_iter_by_treepath {
@@ -519,7 +500,7 @@ sub update_navigation_buttons {
 	}
 
 	my $path = "/";
-	my $button = undef; 
+	my $button = undef;
 
 	foreach (File::Spec->splitdir($filepath)) {
 		$path = Cwd::abs_path("$path/$_");
@@ -532,7 +513,7 @@ sub update_navigation_buttons {
 			my @w = $button->get_children;
 
 			if ($path eq $filepath) {
-				$button->set(active => 1);					
+				$button->set(active => 1);
 
 				if ($path eq "/") {
 					$w[0]->set_markup("<b>/</b>");
@@ -764,7 +745,7 @@ sub open_path {
 	}
 
 	my $opt = $main::config->get_option("Mode");
-	
+
 	if ($opt == 0) {
 		if (defined $self->[OVERRIDES]->{$filepath}) {
 			$filepath = $self->[OVERRIDES]->{$filepath};
@@ -802,9 +783,12 @@ sub open_path {
 		$files_count = $files_count_total - scalar(grep { $_ =~ /^\.+\w+/ } @files);
 	}
 
-# 	use Time::HiRes qw( gettimeofday tv_interval );
+# 	my ($t0,$t1,$elapsed);
 #
-# 	my $t0 = [gettimeofday];
+# 	if ($ENV{FILER_DEBUG}) {
+# 	 	use Time::HiRes qw( gettimeofday tv_interval );
+# 	 	$t0 = [gettimeofday];
+# 	}
 
 	foreach my $file (@dirs,@files) {
 		next if ($file =~ /^\.+\w+/ and $show_hidden == 0);
@@ -836,14 +820,16 @@ sub open_path {
 			$self->init_icons();
 		}
 
-#		$type = File::MimeInfo::describe($type);
+		$type = File::MimeInfo::describe($type);
 
 		$self->[TREEMODEL]->set($self->[TREEMODEL]->append, 0, $mypixbuf, 1, $file, 2, $size, 3, $type, 4, $ctime, 5, $uid, 6, $gid, 7, $mode, 8, $target, 9, $abspath);
 	}
 
-# 	my $t1 = [gettimeofday];
-# 	my $elapsed = tv_interval ( $t0, $t1 );
-# 	print "time to load: $elapsed\n";
+# 	if ($ENV{FILER_DEBUG}) {
+# 		$t1 = [gettimeofday];
+# 		$elapsed = tv_interval($t0,$t1);
+# 		print "time to load: $elapsed\n";
+# 	}
 
 	$total_size = &calculate_size($total_size);
 
@@ -857,6 +843,35 @@ sub set_properties {
 	my ($self) = @_;
 	Filer::Properties->set_properties_dialog($self->[SELECTED_ITEM]);
 	$self->refresh;
+
+	&main::refresh_inactive_pane;
+}
+
+sub create_tar_gz_archive {
+	my ($self) = @_;
+	my $archive = new Filer::Archive($self->[FILEPATH], $self->get_selected_items);
+	$archive->create_tar_gz_archive;
+	$self->refresh;
+
+	&main::refresh_inactive_pane;
+}
+
+sub create_tar_bz2_archive {
+	my ($self) = @_;
+	my $archive = new Filer::Archive($self->[FILEPATH], $self->get_selected_items);
+	$archive->create_tar_bz2_archive;
+	$self->refresh;
+
+	&main::refresh_inactive_pane;
+}
+
+sub extract_archive {
+	my ($self) = @_;
+	my $archive = Filer::Archive->new($self->[FILEPATH], $self->get_selected_items);
+	$archive->extract_archive;
+	$self->refresh;
+
+	&main::refresh_inactive_pane;
 }
 
 sub get_temp_archive_dir {
@@ -868,51 +883,6 @@ sub get_temp_archive_dir {
 	$self->[OVERRIDES]->{$dir_up} = $self->[FILEPATH];
 
 	return $dir;
-}
-
-sub create_tar_gz_archive {
-	my ($self) = @_;
-	my $archive = new Filer::Archive($self->[FILEPATH], $self->get_selected_items);
-	$archive->create_tar_gz_archive;
-	$self->refresh;
-
-	if ($main::active_pane->get_pwd eq $main::inactive_pane->get_pwd) {
-		if ($main::active_pane->get_type eq $main::inactive_pane->get_type) { 
-			$main::inactive_pane->set_model($main::active_pane->get_model);
-		} else {
-			$main::inactive_pane->refresh;
-		}
-	}
-}
-
-sub create_tar_bz2_archive {
-	my ($self) = @_;
-	my $archive = new Filer::Archive($self->[FILEPATH], $self->get_selected_items);
-	$archive->create_tar_bz2_archive;
-	$self->refresh;
-
-	if ($main::active_pane->get_pwd eq $main::inactive_pane->get_pwd) {
-		if ($main::active_pane->get_type eq $main::inactive_pane->get_type) { 
-			$main::inactive_pane->set_model($main::active_pane->get_model);
-		} else {
-			$main::inactive_pane->refresh;
-		}
-	}
-}
-
-sub extract_archive {
-	my ($self) = @_;
-	my $archive = Filer::Archive->new($self->[FILEPATH], $self->get_selected_items);
-	$archive->extract_archive;
-	$self->refresh;
-	
-	if ($main::active_pane->get_pwd eq $main::inactive_pane->get_pwd) {
-		if ($main::active_pane->get_type eq $main::inactive_pane->get_type) { 
-			$main::inactive_pane->set_model($main::active_pane->get_model);
-		} else {
-			$main::inactive_pane->refresh;
-		}
-	}
 }
 
 sub calculate_size {

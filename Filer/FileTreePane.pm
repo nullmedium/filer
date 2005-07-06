@@ -33,7 +33,7 @@ use constant MIMEICONS		=> 7;
 
 use constant MOUSE_MOTION_SELECT => 8;
 
-our ($y_old); 
+our ($y_old);
 
 sub new {
 	my ($class,$side) = @_;
@@ -58,8 +58,6 @@ sub new {
 	$self->[TREEVIEW]->set_rules_hint(1);
 	$self->[TREEVIEW]->set_headers_visible(0);
 	$self->[TREEVIEW]->signal_connect("grab-focus", \&treeview_grab_focus_cb, $self);
-# 	$self->[TREEVIEW]->signal_connect("key-press-event", \&treeview_event_cb, $self);
-# 	$self->[TREEVIEW]->signal_connect("button-press-event", \&treeview_event_cb, $self);
 	$self->[TREEVIEW]->signal_connect("event", \&treeview_event_cb, $self);
 	$self->[TREEVIEW]->signal_connect("row-expanded", \&treeview_row_expanded_cb, $self);
 	$self->[TREEVIEW]->signal_connect("row-collapsed", \&treeview_row_collapsed_cb, $self);
@@ -93,10 +91,11 @@ sub new {
 
 	$self->[TREEVIEW]->append_column($col);
 
+# 	$cell = new Gtk2::CellRendererText;
+# 	$col = Gtk2::TreeViewColumn->new_with_attributes("Path", $cell, text => 2);
+# 	$self->[TREEVIEW]->append_column($col);
+
 	$self->init_icons;
-
-#	$self->open_path("/");
-
 	$self->CreateRootNodes();
 
 	$self->[MOUSE_MOTION_SELECT] = 0;
@@ -127,11 +126,12 @@ sub show_popup_menu {
 		my $commands_menu = new Gtk2::Menu;
 
 		my @menu_items =
-		(
+			(
 	#	{ path => '/sep4',								        			item_type => '<Separator>'},
 		{ path => '/Copy',					callback => \&main::copy_cb,				item_type => '<Item>'},
-	#	{ path => '/Paste',					callback => \&main::paste_cb,				item_type => '<Item>'},
-	#	{ path => '/sep5',								        			item_type => '<Separator>'},
+		{ path => '/Cut',					callback => \&main::cut_cb,				item_type => '<Item>'},
+		{ path => '/Paste',					callback => \&main::paste_cb,				item_type => '<Item>'},
+		{ path => '/sep5',								        			item_type => '<Separator>'},
 		{ path => '/Move',					callback => \&main::move_cb,				item_type => '<Item>'},
 		{ path => '/Rename',					callback => \&main::rename_cb,				item_type => '<Item>'},
 		{ path => '/MkDir',					callback => \&main::mkdir_cb,				item_type => '<Item>'},
@@ -198,8 +198,6 @@ sub selection_changed_cb {
 	$self->[FILEPATH] = $self->get_selected_items->[0];
 	$self->[FILEPATH_ITER] = $self->get_selected_iters->[0];
 
-#	$main::pane->[!$self->[SIDE]]->open_path($self->[FILEPATH]);
-
 	return 1;
 }
 
@@ -218,7 +216,7 @@ sub treeview_event_cb {
 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Return'})
 	or ($e->type eq "2button-press" and $e->button == 1))
 	 {
-		$main::pane->[!$self->[SIDE]]->open_path($self->[FILEPATH]);
+		$main::inactive_pane->open_path_helper($self->[FILEPATH]);
 
 		my $path = $self->[TREEMODEL]->get_path($self->[FILEPATH_ITER]);
 
@@ -266,7 +264,7 @@ sub treeview_event_cb {
 sub _select_helper_button1 {
 	my ($self,$x,$y) = @_;
 	my ($p) = $self->[TREEVIEW]->get_path_at_pos($x,$y);
-	
+
 	if (! defined $p) {
 		$self->[TREESELECTION]->unselect_all;
 	}
@@ -405,7 +403,7 @@ sub remove_selected {
 
 sub CreateRootNodes {
 	my ($self) = @_;
-	my $iter; 
+	my $iter;
 
 	$iter = $self->[TREEMODEL]->append(undef);
 	$self->[TREEMODEL]->set($iter, 0, $self->[MIMEICONS]->{'inode/directory'}, 1, "Filesystem", 2, "/");
@@ -449,7 +447,6 @@ sub DirRead {
 
 sub set_properties {
 	my ($self) = @_;
-
 	Filer::Properties->set_properties_dialog($self->[FILEPATH]);
 }
 
@@ -459,7 +456,7 @@ sub create_tar_gz_archive {
 	my $archive = new Filer::Archive("$self->[FILEPATH]/..", $self->get_selected_items);
 	$archive->create_tar_gz_archive;
 
-	$main::inactive_pane->open_path("$self->[FILEPATH]/..");
+	&main::refresh_inactive_pane;
 }
 
 sub create_tar_bz2_archive {
@@ -468,7 +465,7 @@ sub create_tar_bz2_archive {
 	my $archive = new Filer::Archive("$self->[FILEPATH]/..", $self->get_selected_items);
 	$archive->create_tar_bz2_archive;
 
-	$main::inactive_pane->open_path("$self->[FILEPATH]/..");
+	&main::refresh_inactive_pane;
 }
 
 1;

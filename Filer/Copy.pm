@@ -62,18 +62,18 @@ sub destroy {
 
 sub copy {
 	my ($self,$source,$dest) = @_;
-	my $copy_inside_same_directory = 0;
+#	my $copy_inside_same_directory = 0;
 
 	my $dirwalk = new File::DirWalk;
 
-	if (dirname($dest) eq ".") {
-		$dest = dirname($source) . "/" . $dest;
-		$copy_inside_same_directory = 1;
-
-		if (-d $source) {
-			mkdir($dest);
-		}
-	}
+# 	if (dirname($dest) eq ".") {
+# 		$dest = dirname($source) . "/" . $dest;
+# 		$copy_inside_same_directory = 1;
+#
+# 		if (-d $source) {
+# 			mkdir($dest);
+# 		}
+# 	}
 
 	$dirwalk->onBeginWalk(sub {
 		if ($self->{progress} == 0) {
@@ -95,14 +95,28 @@ sub copy {
 	$dirwalk->onDirEnter(sub {
 		my ($dir) = @_;
 
-		if ($copy_inside_same_directory == 1) {
-			$copy_inside_same_directory = 0;
-		} else {
+# 		if ($copy_inside_same_directory == 1) {
+# 			$copy_inside_same_directory = 0;
+# 		} else {
 			$dest = Cwd::abs_path("$dest/" . basename($dir));
-		}
+#		}
 
 		if (! -e $dest) {
 			mkdir($dest) || return File::DirWalk::FAILED;
+		} else {
+			if (dirname($dir) eq dirname($dest)) {
+				my $i = 1;
+				while (1) {
+					if (-e "$dest-$i") {
+						$i++;
+					} else {
+						$dest = "$dest-$i";
+						last;
+					}
+				}
+
+				mkdir($dest) || return File::DirWalk::FAILED;
+			}
 		}
 
 		return File::DirWalk::SUCCESS;
@@ -117,11 +131,11 @@ sub copy {
 		my ($file) = @_;
 		my $my_dest = $dest;
 
-		if ($copy_inside_same_directory == 1) {
-			$copy_inside_same_directory = 0;
-		} else {
+# 		if ($copy_inside_same_directory == 1) {
+# 			$copy_inside_same_directory = 0;
+# 		} else {
 			$my_dest = Cwd::abs_path("$dest/" . basename($file));
-		}
+#		}
 
  		$self->{progress_label}->set_text("$file\n$my_dest");
 		$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});

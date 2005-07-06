@@ -14,7 +14,7 @@
 #     along with this program; if not, write to the Free Software
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-our ($VERSION,$libpath,$widgets,$pane,$active_pane,$inactive_pane,$config,$stat_cache);
+our ($VERSION,$libpath,$widgets,$pane,$active_pane,$inactive_pane,$config,$CLIPBOARD_ACTION);
 
 use strict;
 use warnings;
@@ -60,6 +60,9 @@ use constant RIGHT => 1;
 use constant SELECT => 0;
 use constant UNSELECT => 1;
 
+use constant COPY => 0;
+use constant CUT => 1;
+
 sub main_window {
 	my ($window,$hbox,$button,$accel_group,$toolbar);
 
@@ -70,10 +73,13 @@ sub main_window {
 	{ path => '/_File/Open With',							callback => \&open_with_cb,	item_type => '<Item>'},
 	{ path => '/_File/sep', 									 		item_type => '<Separator>'},
 	{ path => '/_File/Quit',			accelerator => 'F10',		callback => \&quit_cb, 	 	item_type => '<Item>'},
-	{ path => '/_Edit/_Copy',			accelerator => 'F5',		callback => \&copy_cb, 	 	item_type => '<Item>'},
-#	{ path => '/_Edit/_Paste',			accelerator => '<control>V',	callback => \&paste_cb,	 	item_type => '<Item>'},
+
+	{ path => '/_Edit/_Copy',			accelerator => '<control>C',	callback => \&copy_cb, 	 	item_type => '<Item>'},
+	{ path => '/_Edit/_Cut',			accelerator => '<control>X',	callback => \&cut_cb, 	 	item_type => '<Item>'},
+	{ path => '/_Edit/_Paste',			accelerator => '<control>V',	callback => \&paste_cb,	 	item_type => '<Item>'},
+
 	{ path => '/_Edit/_Rename',							callback => \&rename_cb, 	item_type => '<Item>'},
-	{ path => '/_Edit/_Move',			accelerator => 'F6',		callback => \&move_cb, 	 	item_type => '<Item>'},
+#	{ path => '/_Edit/_Move',			accelerator => 'F6',		callback => \&move_cb, 	 	item_type => '<Item>'},
 	{ path => '/_Edit/M_kDir',			accelerator => 'F7',		callback => \&mkdir_cb,	 	item_type => '<Item>'},
 	{ path => '/_Edit/_Delete',			accelerator => 'F8',		callback => \&delete_cb,	item_type => '<Item>'},
 	{ path => '/_Edit/sep', 											item_type => '<Separator>'},
@@ -104,7 +110,7 @@ sub main_window {
 	$widgets->{main_window}->set_title("Filer $VERSION");
 
 	my $size = $config->get_option("WindowSize");
-	my ($w,$h) = split /:/, $size;		
+	my ($w,$h) = split /:/, $size;
 
 	$widgets->{main_window}->resize($w,$h);
 
@@ -148,32 +154,40 @@ sub main_window {
 	$widgets->{hbox}->pack_start($widgets->{list2}->get_vbox,1,1,0);
 	$widgets->{vbox}->pack_start($widgets->{hpaned},1,1,0);
 
-	$hbox = new Gtk2::HBox(1,0);
-	$widgets->{vbox}->pack_start($hbox, 0, 0, 0);
-
-	$button = new Gtk2::Button("Refresh");
-	$button->signal_connect("clicked", \&refresh_cb);
-	$hbox->pack_start($button, 1, 1, 0);
-
-	$button = new Gtk2::Button("Copy");
-	$button->signal_connect("clicked", \&copy_cb);
-	$hbox->pack_start($button, 1, 1, 0);
-
-	$widgets->{move_button} = new Gtk2::Button("Move");
-	$widgets->{move_button}->signal_connect("clicked", \&move_cb);
-	$hbox->pack_start($widgets->{move_button}, 1, 1, 0);
-
-	$button = new Gtk2::Button("Rename");
-	$button->signal_connect("clicked", \&rename_cb);
-	$hbox->pack_start($button, 1, 1, 0);
-
-	$button = new Gtk2::Button("MkDir");
-	$button->signal_connect("clicked", \&mkdir_cb);
-	$hbox->pack_start($button, 1, 1, 0);
-
-	$button = new Gtk2::Button("Delete");
-	$button->signal_connect("clicked", \&delete_cb);
-	$hbox->pack_start($button, 1, 1, 0);
+# 	$hbox = new Gtk2::HBox(1,0);
+# 	$widgets->{vbox}->pack_start($hbox, 0, 0, 0);
+#
+# 	$button = new Gtk2::Button("Refresh");
+# 	$button->signal_connect("clicked", \&refresh_cb);
+# 	$hbox->pack_start($button, 1, 1, 0);
+#
+# 	$button = new Gtk2::Button("Copy");
+# 	$button->signal_connect("clicked", \&copy_cb);
+# 	$hbox->pack_start($button, 1, 1, 0);
+#
+# 	$button = new Gtk2::Button("Cut");
+# 	$button->signal_connect("clicked", \&cut_cb);
+# 	$hbox->pack_start($button, 1, 1, 0);
+#
+# 	$button = new Gtk2::Button("Paste");
+# 	$button->signal_connect("clicked", \&paste_cb);
+# 	$hbox->pack_start($button, 1, 1, 0);
+#
+# 	$widgets->{move_button} = new Gtk2::Button("Move");
+# 	$widgets->{move_button}->signal_connect("clicked", \&move_cb);
+# 	$hbox->pack_start($widgets->{move_button}, 1, 1, 0);
+#
+# 	$button = new Gtk2::Button("Rename");
+# 	$button->signal_connect("clicked", \&rename_cb);
+# 	$hbox->pack_start($button, 1, 1, 0);
+#
+# 	$button = new Gtk2::Button("MkDir");
+# 	$button->signal_connect("clicked", \&mkdir_cb);
+# 	$hbox->pack_start($button, 1, 1, 0);
+#
+# 	$button = new Gtk2::Button("Delete");
+# 	$button->signal_connect("clicked", \&delete_cb);
+# 	$hbox->pack_start($button, 1, 1, 0);
 
 	$widgets->{statusbar} = new Gtk2::Statusbar;
 	$widgets->{vbox}->pack_start($widgets->{statusbar}, 0, 0, 0);
@@ -190,11 +204,13 @@ sub main_window {
 		$i1->set_active(1);
 		$i2->set_active(0);
 
+#		$widgets->{item_factory}->get_item("/Edit/Cut")->set("visible", 0);
 #		$widgets->{item_factory}->get_item("/Edit/Paste")->set("visible", 0);
 	} elsif ($config->get_option('Mode') == EXPLORER_MODE) {
 		$i1->set_active(0);
 		$i2->set_active(1);
 
+#		$widgets->{item_factory}->get_item("/Edit/Cut")->set("visible", 1);
 #		$widgets->{item_factory}->get_item("/Edit/Paste")->set("visible", 1);
 	}
 
@@ -231,7 +247,7 @@ sub get_bookmarks_menu {
 		my $bookmarks = new Filer::Bookmarks;
 
 		if ($active_pane->count_selected_items > 0) {
-		
+
 			foreach (@{$active_pane->get_selected_items}) {
 				if (-d $_) {
 					$bookmarks->set_bookmark($_);
@@ -240,8 +256,8 @@ sub get_bookmarks_menu {
 				}
 			}
 		} else {
-			$bookmarks->set_bookmark($active_pane->get_pwd);		
-		}		
+			$bookmarks->set_bookmark($active_pane->get_pwd);
+		}
 
 		my $menu = $widgets->{item_factory}->get_item("/Bookmarks");
 		$menu->set_submenu(&get_bookmarks_menu());
@@ -254,7 +270,7 @@ sub get_bookmarks_menu {
 		my $bookmarks = new Filer::Bookmarks;
 
 		if ($active_pane->count_selected_items > 0) {
-		
+
 			foreach (@{$active_pane->get_selected_items}) {
 				if (-d $_) {
 					$bookmarks->remove_bookmark($_);
@@ -263,7 +279,7 @@ sub get_bookmarks_menu {
 				}
 			}
 		} else {
-			$bookmarks->remove_bookmark($active_pane->get_pwd);		
+			$bookmarks->remove_bookmark($active_pane->get_pwd);
 		}
 
 		my $menu = $widgets->{item_factory}->get_item("/Bookmarks");
@@ -381,7 +397,7 @@ sub switch_mode {
 		$widgets->{list2}->get_location_bar->reparent($widgets->{location_bar});
 
 #		$widgets->{location_bar}->hide;
-	
+
 		$widgets->{sync_button}->set("visible", 0);
 		$widgets->{tree}->get_vbox->set("visible", 1);
 		$widgets->{list1}->get_vbox->set("visible", 0);
@@ -391,7 +407,6 @@ sub switch_mode {
 
 		$pane->[LEFT] = $widgets->{tree};
 
-#		$widgets->{item_factory}->get_item("/Edit/Copy")->set_accel_path("<control>C");
 #		$widgets->{item_factory}->get_item("/Edit/Paste")->set("visible", 1);
 #		$widgets->{item_factory}->get_item("/Edit/Move")->set("visible", 0);
 #		$widgets->{move_button}->set("visible", 0);
@@ -408,7 +423,6 @@ sub switch_mode {
 
 		$pane->[LEFT] = $widgets->{list1};
 
-#		$widgets->{item_factory}->get_item("/Edit/Copy")->set_accel_path("F5");
 #		$widgets->{item_factory}->get_item("/Edit/Paste")->set("visible", 0);
 #		$widgets->{item_factory}->get_item("/Edit/Move")->set("visible", 1);
 #		$widgets->{move_button}->set("visible", 1);
@@ -448,7 +462,7 @@ sub file_ass_cb {
 
 sub refresh_cb {
 	if ($pane->[LEFT]->get_pwd eq $pane->[RIGHT]->get_pwd) {
-		if ($pane->[LEFT]->get_type eq $pane->[RIGHT]->get_type) { 
+		if ($pane->[LEFT]->get_type eq $pane->[RIGHT]->get_type) {
 			$pane->[LEFT]->refresh;
 			$pane->[RIGHT]->set_model($pane->[LEFT]->get_model);
 		} else {
@@ -561,65 +575,26 @@ sub search_cb {
 	new Filer::Search;
 }
 
-# sub paste_cb {
-# 	my $f = sub {
-# 		my ($files,$target) = @_;
-# 		my $copy = new Filer::Copy;
-# 
-# 		$copy->set_total(&files_count_paste);
-# 		$copy->show;
-# 
-# 		foreach (@{$files}) {
-# 			return if (! -e $_);
-# 
-# 			my $r = $copy->copy($_, $target);
-# 
-# 			if ($r == File::DirWalk::FAILED) {
-# 				Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed: $!");
-# 				last;
-# 			} elsif ($r == File::DirWalk::ABORTED) {
-# 				Filer::Dialog->msgbox_info("Copying of $_ to " . $inactive_pane->get_pwd . " aborted!");
-# 				last;
-# 			}
-# 		}
-# 
-# 		$copy->destroy;
-# 		$inactive_pane->refresh;
-# 	};
-# 	
-# 	my @files = ();
-# 	my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
-# 
-# 	$clipboard->request_text(sub { 
-# 		my ($c,$t) = @_;
-# 		@files = split /\n/, $t;
-# 	});
-# 
-# 	&{$f}(\@files, $active_pane->get_pwd);
-# 	$active_pane->refresh;
-# }
+sub paste_cb {
+	my $f = sub {
+		my ($files,$target) = @_;
+		my $do;
 
-sub copy_cb {
-	return if (($active_pane->count_selected_items == 0) or (not defined $active_pane->get_selected_item));
+		if ($CLIPBOARD_ACTION == COPY) {
+			$do = new Filer::Copy;
+		} else {
+			$do = new Filer::Move;
+		}
 
-# 	if ($config->get_option("Mode") == EXPLORER_MODE) {
-# 
-# 		my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
-# 		my $contents = join "\n", @{$active_pane->get_selected_items};
-# 
-# 		$clipboard->set_text($contents);
-# 
-# 	} else {
-		my $f = sub {
-			my ($files,$target) = @_;
-			my $copy = new Filer::Copy;
+		$do->set_total(&files_count_paste);
+		$do->show;
 
-			$copy->set_total(&files_count);
-			$copy->show;
+		foreach (@{$files}) {
+			return if (! -e $_);
 
-			foreach (@{$files}) {
-				my $r = $copy->copy($_, $target);
+			my $r = $do->action($_, $target);
 
+			if ($CLIPBOARD_ACTION == COPY) {
 				if ($r == File::DirWalk::FAILED) {
 					Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed: $!");
 					last;
@@ -627,110 +602,175 @@ sub copy_cb {
 					Filer::Dialog->msgbox_info("Copying of $_ to " . $inactive_pane->get_pwd . " aborted!");
 					last;
 				}
-			}
-
-			$copy->destroy;
-
-			if ($active_pane->get_pwd eq $inactive_pane->get_pwd) {
-				if ($active_pane->get_type eq $inactive_pane->get_type) { 
-					$active_pane->refresh;
-					$inactive_pane->set_model($active_pane->get_model);
-				} else {
-					$inactive_pane->refresh;
-				}
-			} elsif ($active_pane->get_pwd ne $inactive_pane->get_pwd) {
-				$inactive_pane->refresh;
-			}
-		};
-
-		if ($active_pane->count_selected_items == 1) {
-			if ($config->get_option("ConfirmCopy") == 1) {
-				my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
-
-				$dialog->set_title("Copy");
-				$source_label->set_markup("<b>Copy: </b>");
-				$source_entry->set_text($active_pane->get_selected_item);
-				$dest_label->set_markup("<b>to: </b>");
-				$dest_entry->set_text($inactive_pane->get_pwd);
-
-				$dialog->show_all;
-
-				if ($dialog->run eq 'ok') {
-					&{$f}([$source_entry->get_text], $dest_entry->get_text);
-				}
-
-				$dialog->destroy;
 			} else {
-				&{$f}([$active_pane->get_selected_item], $inactive_pane->get_pwd);
-			}
-		} else {
-			if ($config->get_option("ConfirmCopy") == 1) {
-				return if (Filer::Dialog->yesno_dialog(sprintf("Copy %s selected files to %s?", $active_pane->count_selected_items, $inactive_pane->get_pwd)) eq 'no');
-			}
-
-			&{$f}($active_pane->get_selected_items, $inactive_pane->get_pwd);
-		}
-#	}
-}
-
-sub move_cb {
-	return if (($active_pane->count_selected_items == 0) or (not defined $active_pane->get_selected_item));
-
-	my $f = sub {
-		my ($files,$target) = @_;
-		my $move = new Filer::Move;
-
-		$move->set_total(&files_count);
-		$move->show;
-
-		foreach (@{$files}) {
-			my $r = $move->move($_, $target);
-
-			if ($r == File::DirWalk::FAILED) {
-				Filer::Dialog->msgbox_error("Moving of $_ to " . $inactive_pane->get_pwd . " failed: $!");
-				last;
-			} elsif ($r == File::DirWalk::ABORTED) {
-				Filer::Dialog->msgbox_info("Moving of $_ to " . $inactive_pane->get_pwd . " aborted!");
-				last;
+				if ($r == File::DirWalk::FAILED) {
+					Filer::Dialog->msgbox_error("Moving of $_ to " . $inactive_pane->get_pwd . " failed: $!");
+					last;
+				} elsif ($r == File::DirWalk::ABORTED) {
+					Filer::Dialog->msgbox_info("Moving of $_ to " . $inactive_pane->get_pwd . " aborted!");
+					last;
+				}
 			}
 		}
 
-		$move->destroy;
-
-		if ($active_pane->get_pwd ne $inactive_pane->get_pwd) {
-			$active_pane->refresh;
-			$inactive_pane->refresh;
-		}
+		$do->destroy;
 	};
 
-	if ($active_pane->count_selected_items == 1) {
-		if ($config->get_option("ConfirmMove") == 1) {
-			my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
+	my @files = ();
+	my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
 
-			$dialog->set_title("Move");
-			$source_label->set_markup("<b>Move: </b>");
-			$source_entry->set_text($active_pane->get_selected_item);
-			$dest_label->set_markup("<b>to: </b>");
-			$dest_entry->set_text($inactive_pane->get_pwd);
+	# request Clipboard contents
+	$clipboard->request_text(sub {
+		my ($c,$t) = @_;
+		@files = split /\n/, $t;
+	});
 
-			$dialog->show_all;
+	# copy or cut files
+	&{$f}(\@files, $active_pane->get_pwd);
 
-			if ($dialog->run eq 'ok') {
-				&{$f}([$source_entry->get_text], $dest_entry->get_text);
-			}
+	# refresh panes.
+	$active_pane->refresh;
+	&refresh_inactive_pane;
 
-			$dialog->destroy;
-		} else {
-			&{$f}([$active_pane->get_selected_item], $inactive_pane->get_pwd);
-		}
-	} else {
-		if ($config->get_option("ConfirmMove") == 1) {
-			return if (Filer::Dialog->yesno_dialog(sprintf("Move %s selected files to %s?", $active_pane->count_selected_items, $inactive_pane->get_pwd)) eq 'no');
-		}
-
-		&{$f}($active_pane->get_selected_items, $inactive_pane->get_pwd);
+	# reset clipboard
+	if ($CLIPBOARD_ACTION == CUT) {
+		$clipboard->set_text("");
 	}
+
+	# reset Cut property
+	$CLIPBOARD_ACTION = COPY; # reset Cut
 }
+
+sub cut_cb {
+	my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
+	my $contents = join "\n", @{$active_pane->get_selected_items};
+
+	$clipboard->set_text($contents);
+
+	$CLIPBOARD_ACTION = CUT; # Cut (Move) files on Paste
+}
+
+sub copy_cb {
+	return if (($active_pane->count_selected_items == 0) or (not defined $active_pane->get_selected_item));
+
+#	if ($config->get_option("Mode") == EXPLORER_MODE) {
+		my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
+		my $contents = join "\n", @{$active_pane->get_selected_items};
+
+		$clipboard->set_text($contents);
+
+		$CLIPBOARD_ACTION = COPY;
+# 	} else {
+# 		my $f = sub {
+# 			my ($files,$target) = @_;
+# 			my $copy = new Filer::Copy;
+#
+# 			$copy->set_total(&files_count);
+# 			$copy->show;
+#
+# 			foreach (@{$files}) {
+# 				my $r = $copy->copy($_, $target);
+#
+# 				if ($r == File::DirWalk::FAILED) {
+# 					Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed: $!");
+# 					last;
+# 				} elsif ($r == File::DirWalk::ABORTED) {
+# 					Filer::Dialog->msgbox_info("Copying of $_ to " . $inactive_pane->get_pwd . " aborted!");
+# 					last;
+# 				}
+# 			}
+#
+# 			$copy->destroy;
+#
+# 			&refresh_inactive_pane;
+# 		};
+#
+# 		if ($active_pane->count_selected_items == 1) {
+# 			if ($config->get_option("ConfirmCopy") == 1) {
+# 				my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
+#
+# 				$dialog->set_title("Copy");
+# 				$source_label->set_markup("<b>Copy: </b>");
+# 				$source_entry->set_text($active_pane->get_selected_item);
+# 				$dest_label->set_markup("<b>to: </b>");
+# 				$dest_entry->set_text($inactive_pane->get_pwd);
+#
+# 				$dialog->show_all;
+#
+# 				if ($dialog->run eq 'ok') {
+# 					&{$f}([$source_entry->get_text], $dest_entry->get_text);
+# 				}
+#
+# 				$dialog->destroy;
+# 			} else {
+# 				&{$f}([$active_pane->get_selected_item], $inactive_pane->get_pwd);
+# 			}
+# 		} else {
+# 			if ($config->get_option("ConfirmCopy") == 1) {
+# 				return if (Filer::Dialog->yesno_dialog(sprintf("Copy %s selected files to %s?", $active_pane->count_selected_items, $inactive_pane->get_pwd)) eq 'no');
+# 			}
+#
+# 			&{$f}($active_pane->get_selected_items, $inactive_pane->get_pwd);
+# 		}
+# 	}
+}
+
+# sub move_cb {
+# 	return if (($active_pane->count_selected_items == 0) or (not defined $active_pane->get_selected_item));
+#
+# 	my $f = sub {
+# 		my ($files,$target) = @_;
+# 		my $move = new Filer::Move;
+#
+# 		$move->set_total(&files_count);
+# 		$move->show;
+#
+# 		foreach (@{$files}) {
+# 			my $r = $move->move($_, $target);
+#
+# 			if ($r == File::DirWalk::FAILED) {
+# 				Filer::Dialog->msgbox_error("Moving of $_ to " . $inactive_pane->get_pwd . " failed: $!");
+# 				last;
+# 			} elsif ($r == File::DirWalk::ABORTED) {
+# 				Filer::Dialog->msgbox_info("Moving of $_ to " . $inactive_pane->get_pwd . " aborted!");
+# 				last;
+# 			}
+# 		}
+#
+# 		$move->destroy;
+#
+# 		$active_pane->remove_selected;
+# 		&refresh_inactive_pane;
+# 	};
+#
+# 	if ($active_pane->count_selected_items == 1) {
+# 		if ($config->get_option("ConfirmMove") == 1) {
+# 			my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
+#
+# 			$dialog->set_title("Move");
+# 			$source_label->set_markup("<b>Move: </b>");
+# 			$source_entry->set_text($active_pane->get_selected_item);
+# 			$dest_label->set_markup("<b>to: </b>");
+# 			$dest_entry->set_text($inactive_pane->get_pwd);
+#
+# 			$dialog->show_all;
+#
+# 			if ($dialog->run eq 'ok') {
+# 				&{$f}([$source_entry->get_text], $dest_entry->get_text);
+# 			}
+#
+# 			$dialog->destroy;
+# 		} else {
+# 			&{$f}([$active_pane->get_selected_item], $inactive_pane->get_pwd);
+# 		}
+# 	} else {
+# 		if ($config->get_option("ConfirmMove") == 1) {
+# 			return if (Filer::Dialog->yesno_dialog(sprintf("Move %s selected files to %s?", $active_pane->count_selected_items, $inactive_pane->get_pwd)) eq 'no');
+# 		}
+#
+# 		&{$f}($active_pane->get_selected_items, $inactive_pane->get_pwd);
+# 	}
+# }
 
 sub rename_cb {
 	my ($dialog,$hbox,$label,$entry);
@@ -767,22 +807,23 @@ sub rename_cb {
 			my $iter = $active_pane->get_selected_iter;
 
 			$model->set($iter, 1, $new_name);
-			$model->set($iter, ($active_pane->get_type eq "TREE") ? 2 : 9, $active_pane->get_pwd . "/$new_name");
+
+			if ($active_pane->get_type eq "TREE") {
+				my $p = dirname($active_pane->get_pwd);
+				$model->set($iter, 2, "$p/$new_name");
+			} else {
+				$model->set($iter, 9, $active_pane->get_pwd . "/$new_name");
+			}
+
 			$active_pane->set_selected_item($new_name);
+
+			&refresh_inactive_pane;
 		} else {
 			Filer::Dialog->msgbox_error("Rename failed: $!");
 		}
 	}
 
 	$dialog->destroy;
-	
-	if ($active_pane->get_pwd eq $inactive_pane->get_pwd) {
-		if ($active_pane->get_type eq $inactive_pane->get_type) { 
-			$inactive_pane->set_model($active_pane->get_model);
-		} else {
-			$inactive_pane->refresh;
-		}
-	}
 }
 
 sub delete_cb {
@@ -794,7 +835,7 @@ sub delete_cb {
 				return if (Filer::Dialog->yesno_dialog(sprintf("Delete file \"%s\"?", basename($active_pane->get_selected_item))) eq 'no');
 			} elsif (-d $active_pane->get_selected_item) {
 				return if (Filer::Dialog->yesno_dialog(sprintf("Delete directory \"%s\"?", basename($active_pane->get_selected_item))) eq 'no');
-			}		
+			}
 		} else {
 			return if (Filer::Dialog->yesno_dialog(sprintf("Delete %s selected files?", $active_pane->count_selected_items)) eq 'no');
 		}
@@ -820,14 +861,7 @@ sub delete_cb {
 	$delete->destroy;
 
 	$active_pane->remove_selected;
-	
-	if ($active_pane->get_pwd eq $inactive_pane->get_pwd) {
-		if ($active_pane->get_type eq $inactive_pane->get_type) { 
-			$inactive_pane->set_model($active_pane->get_model);
-		} else {
-			$inactive_pane->refresh;
-		}
-	}
+	&refresh_inactive_pane;
 }
 
 sub mkdir_cb {
@@ -858,25 +892,20 @@ sub mkdir_cb {
 
 		if (mkdir($dir)) {
 			$active_pane->refresh;
+			&refresh_inactive_pane;
 		} else {
 			Filer::Dialog->msgbox_error("Make directory $dir failed: $!");
 		}
 	}
 
 	$dialog->destroy;
-	
-	if ($active_pane->get_type eq $inactive_pane->get_type) {
-		if ($active_pane->get_pwd eq $inactive_pane->get_pwd) {
-			$inactive_pane->set_model($active_pane->get_model);
-		}
-	}
 }
 
 sub link_cb {
 	my ($dialog,$link_label,$target_label,$link_entry,$target_entry) = Filer::Dialog->source_target_dialog;
 
 	return if (! defined $active_pane->get_selected_item);
-	
+
 	$dialog->set_title("Link");
 	$dialog->set_size_request(450,150);
 	$dialog->set_default_response('ok');
@@ -900,13 +929,7 @@ sub link_cb {
 		}
 
 		if (link($target, $link)) {
-			if ($active_pane->get_pwd eq $inactive_pane->get_pwd) {
-				if ($active_pane->get_type eq $inactive_pane->get_type) { 
-					$inactive_pane->set_model($active_pane->get_model);
-				} else {
-					$inactive_pane->refresh;
-				}
-			}
+			&refresh_inactive_pane;
 		} else {
 			Filer::Dialog->msgbox_error("Couldn't create link! $!");
 		}
@@ -943,21 +966,25 @@ sub symlink_cb {
 		}
 
 		if (symlink($target, $symlink)) {
-		
-			if ($active_pane->get_pwd eq $inactive_pane->get_pwd) {
-				if ($active_pane->get_type eq $inactive_pane->get_type) { 
-					$inactive_pane->set_model($active_pane->get_model);
-				} else {
-					$inactive_pane->refresh;
-				}
-			}
-			
+			&refresh_inactive_pane;
 		} else {
 			Filer::Dialog->msgbox_error("Couldn't create symlink! $!");
 		}
 	}
 
 	$dialog->destroy;
+}
+
+sub refresh_inactive_pane {
+	if ($active_pane->get_pwd eq $inactive_pane->get_pwd) {
+		if ($active_pane->get_type eq $inactive_pane->get_type) {
+			$inactive_pane->set_model($active_pane->get_model);
+		} else {
+			$inactive_pane->refresh;
+		}
+	} else {
+		$inactive_pane->refresh;
+	}
 }
 
 sub files_count {
@@ -1003,50 +1030,50 @@ sub files_count {
 	return $c;
 }
 
-# sub files_count_paste {
-# 	my $c = 0;
-# 	my $dirwalk = new File::DirWalk;
-# 
-# 	my $dialog = new Filer::ProgressDialog;
-# 	$dialog->dialog->set_title("Please wait ...");
-# 	$dialog->label1->set_markup("<b>Please wait ...</b>");
-# 
-# 	my $progressbar = $dialog->add_progressbar;
-# 
-# 	$dialog->show;
-# 
-# 	my $id = Glib::Timeout->add(50, sub {
-# 		$progressbar->pulse;
-# 		while (Gtk2->events_pending) { Gtk2->main_iteration }
-# 		return 1;
-# 	});
-# 
-# 	$dirwalk->onFile(sub {
-# 		++$c;
-# 		while (Gtk2->events_pending) { Gtk2->main_iteration }
-# 		return File::DirWalk::SUCCESS;
-# 	});
-# 
-# 	my @files = ();
-# 	my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
-# 		
-# 	$clipboard->request_text(sub { 
-# 		my ($c,$t) = @_;
-# 		@files = split /\n/, $t;
-# 	});
-# 
-# 	foreach (@files) {
-# 		if (-e $_) {
-# 			$dirwalk->walk($_);
-# 		}
-# 	}
-# 
-# 	Glib::Source->remove($id);
-# 
-# 	$dialog->destroy;
-# 
-# 	return $c;
-# }
+sub files_count_paste {
+	my $c = 0;
+	my $dirwalk = new File::DirWalk;
+
+	my $dialog = new Filer::ProgressDialog;
+	$dialog->dialog->set_title("Please wait ...");
+	$dialog->label1->set_markup("<b>Please wait ...</b>");
+
+	my $progressbar = $dialog->add_progressbar;
+
+	$dialog->show;
+
+	my $id = Glib::Timeout->add(50, sub {
+		$progressbar->pulse;
+		while (Gtk2->events_pending) { Gtk2->main_iteration }
+		return 1;
+	});
+
+	$dirwalk->onFile(sub {
+		++$c;
+		while (Gtk2->events_pending) { Gtk2->main_iteration }
+		return File::DirWalk::SUCCESS;
+	});
+
+	my @files = ();
+	my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
+
+	$clipboard->request_text(sub {
+		my ($c,$t) = @_;
+		@files = split /\n/, $t;
+	});
+
+	foreach (@files) {
+		if (-e $_) {
+			$dirwalk->walk($_);
+		}
+	}
+
+	Glib::Source->remove($id);
+
+	$dialog->destroy;
+
+	return $c;
+}
 
 sub intelligent_scale {
 	my ($pixbuf,$scale) = @_;

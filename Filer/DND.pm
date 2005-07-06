@@ -56,7 +56,7 @@ sub filepane_treeview_drag_data_received_cb {
 			$path = $self->get_path_by_treepath($p);
 		} else {
 			$path = $self->get_pwd;
-		}		
+		}
 
  		if (! -d $path) {
 			$path = $self->get_pwd;
@@ -70,7 +70,7 @@ sub filepane_treeview_drag_data_received_cb {
 						return if (Filer::Dialog->yesno_dialog(sprintf("Copy %s to $path?", basename($main::active_pane->get_selected_item))) eq 'no');
 					} else {
 						return if (Filer::Dialog->yesno_dialog(sprintf("Copy %s files to $path?", $main::active_pane->count_selected_items)) eq 'no');
-					}	
+					}
 				}
 
 				$do = Filer::Copy->new;
@@ -109,17 +109,9 @@ sub filepane_treeview_drag_data_received_cb {
 
 			if ($action eq "move") {
 				$main::active_pane->remove_selected;
-
-				if ($main::active_pane->get_pwd eq $main::inactive_pane->get_pwd) {
-					if ($main::active_pane->get_type eq $main::inactive_pane->get_type) { 
-						$main::inactive_pane->set_model($main::active_pane->get_model);
-					} else {
-						$main::inactive_pane->refresh;
-					}
-				}
-			} else {
-				$main::inactive_pane->refresh;
 			}
+
+			&main::refresh_inactive_pane;
 
 			$context->finish (1, 0, $time);
 			return;

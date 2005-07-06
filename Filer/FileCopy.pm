@@ -41,6 +41,18 @@ sub new {
 sub filecopy {
 	my ($self,$source,$dest) = @_;
 
+	if (File::Basename::dirname($source) eq File::Basename::dirname($dest)) {
+		my $i = 1;
+		while (1) {
+			if (-e "$dest-$i") {
+				$i++;
+			} else {
+				$dest = "$dest-$i";
+				last;
+			}
+		}
+	}
+
 	if (-e $dest) {
 		return File::DirWalk::SUCCESS if (Filer::Dialog->yesno_dialog("Overwrite existing file at \"$dest\"?") eq 'no');
 	}
