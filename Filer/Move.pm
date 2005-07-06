@@ -41,6 +41,9 @@ sub new {
 		$self->{progress_dialog}->destroy;
 	});
 
+	$main::SKIP_ALL = 0;
+	$main::OVERWRITE_ALL = 0;
+
 	return $self;
 }
 
@@ -75,7 +78,22 @@ sub move {
 		my $my_dest = Cwd::abs_path("$dest/" . basename($source));
 		
 		if (-e $my_dest) {
-			return File::DirWalk::SUCCESS if (Filer::Dialog->yesno_dialog("Replace existing file at \"$my_dest\"?") eq 'no');
+			if ($main::SKIP_ALL) {
+				return File::DirWalk::SUCCESS;
+			}
+
+			if (!$main::OVERWRITE_ALL) {
+				my $r = Filer::Dialog->ask_overwrite_dialog("Replace", "Replace: <b>$my_dest</b>\nwith: <b>$source</b>");
+
+				if ($r eq 'no') {
+					return File::DirWalk::SUCCESS;
+				} elsif ($r == 1) {
+					$main::OVERWRITE_ALL = 1;
+				} elsif ($r == 2) {
+					$main::SKIP_ALL = 1;
+					return File::DirWalk::SUCCESS;
+				}
+			}
 		}
 
 		$r = rename($source,$my_dest);

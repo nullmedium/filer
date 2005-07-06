@@ -64,6 +64,32 @@ sub yesno_dialog {
 	return $r;
 }
 
+sub ask_overwrite_dialog {
+	my ($class,$title,$question) = @_;
+	my ($dialog,$label,$button);
+
+	$dialog = new Gtk2::Dialog($title, undef, 'modal');
+	$dialog->set_position('center');
+	$dialog->set_modal(1);
+
+	$label = new Gtk2::Label;
+	$label->set_use_markup(1);
+	$label->set_markup($question);
+	$label->set_alignment(0.0,0.0);
+	$dialog->vbox->pack_start($label, 1,1,5);
+
+	$dialog->add_button("No", 'no');
+	$dialog->add_button("Yes", 'yes');
+	$dialog->add_button("All", 1);
+	$dialog->add_button("None", 2);
+
+	$dialog->show_all;
+	my $r = $dialog->run;
+	$dialog->destroy;
+
+	return $r;
+}
+
 # sub input_dialog {
 # 	my ($str) = pop;
 # 	my ($dialog,$label);

@@ -41,6 +41,9 @@ sub new {
 		$self->destroy;
 	});
 
+	$main::SKIP_ALL = 0;
+	$main::OVERWRITE_ALL = 0;
+
 	return $self;
 }
 

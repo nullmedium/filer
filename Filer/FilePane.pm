@@ -263,8 +263,28 @@ sub show_popup_menu {
 
 		$item_factory->create_items(undef, @menu_items);
 
+		$item_factory->get_item('/Copy')->set_sensitive(0);
+		$item_factory->get_item('/Cut')->set_sensitive(0);
+
 		$item = $item_factory->get_item('/Bookmarks');
 		$item->set_submenu(&main::get_bookmarks_menu);
+	}
+
+	my $clipboard = Gtk2::Clipboard->get_for_display($self->[TREEVIEW]->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
+	my $hide_paste = 1;
+
+	$clipboard->request_text(sub {
+		my ($c,$t) = @_;
+
+		foreach (split /\n/, $t) { 
+			if (-e $_) {
+				$hide_paste = 0;
+			}
+		}
+	});
+	
+	if ($hide_paste) {
+		$item_factory->get_item('/Paste')->set_sensitive(0);
 	}
 
 	$popup_menu->show_all;
@@ -489,6 +509,8 @@ sub remove_selected {
 
 sub update_navigation_buttons {
 	my ($self,$filepath) = @_;
+	my $path = "/";
+	my $button = undef;
 
 	foreach (reverse sort keys %{$self->[NAVIGATION_BUTTONS]}) {
 		last if ($_ eq $filepath);
@@ -498,9 +520,6 @@ sub update_navigation_buttons {
 			delete $self->[NAVIGATION_BUTTONS]->{$_};
 		}
 	}
-
-	my $path = "/";
-	my $button = undef;
 
 	foreach (File::Spec->splitdir($filepath)) {
 		$path = Cwd::abs_path("$path/$_");

@@ -185,6 +185,24 @@ sub show_popup_menu {
 			$bookmarks_menu->add($item);
 		}
 
+
+		my $clipboard = Gtk2::Clipboard->get_for_display($self->[TREEVIEW]->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
+		my $hide_paste = 1;
+
+		$clipboard->request_text(sub {
+			my ($c,$t) = @_;
+
+			foreach (split /\n/, $t) { 
+				if (-e $_) {
+					$hide_paste = 0;
+				}
+			}
+		});
+
+		if ($hide_paste) {
+			$item_factory->get_item('/Paste')->set_sensitive(0);
+		}
+
 		$popup_menu->show_all;
 		$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
 	} else {

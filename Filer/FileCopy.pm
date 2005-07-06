@@ -40,7 +40,8 @@ sub new {
 
 sub filecopy {
 	my ($self,$source,$dest) = @_;
-
+	my $return_overwrite_all = 0;
+	
 	if (File::Basename::dirname($source) eq File::Basename::dirname($dest)) {
 		my $i = 1;
 		while (1) {
@@ -54,13 +55,29 @@ sub filecopy {
 	}
 
 	if (-e $dest) {
-		return File::DirWalk::SUCCESS if (Filer::Dialog->yesno_dialog("Overwrite existing file at \"$dest\"?") eq 'no');
+		if ($main::SKIP_ALL) {
+			return File::DirWalk::SUCCESS;
+		}
+		
+		if (!$main::OVERWRITE_ALL) {
+			my $r = Filer::Dialog->ask_overwrite_dialog("Overwrite", "Overwrite: <b>$dest</b>\nwith: <b>$source</b>");
+
+			if ($r eq 'no') {
+				return File::DirWalk::SUCCESS;
+			} elsif ($r == 1) {
+				$return_overwrite_all = 1;
+			} elsif ($r == 2) {
+				$main::SKIP_ALL = 1;
+				return File::DirWalk::SUCCESS;
+			}
+		}
 	}
 
-	my $mode = (stat $source)[2] || return File::DirWalk::FAILED;
-	my $size = -s $source;
+	my @stat = stat $source;
+	my $mode = $stat[2] || return File::DirWalk::FAILED;
+	my $size = $stat[7];
 	my $buf;
-	my $buf_size = (stat $source)[11] || return File::DirWalk::FAILED; # use filesystem blocksize
+	my $buf_size = $stat[11] || return File::DirWalk::FAILED; # use filesystem blocksize
 	my $written = 0;
 	my $written_avg = 0;
 
@@ -95,6 +112,11 @@ sub filecopy {
 	close(DEST);
 
 	chmod $mode, $dest;
+
+	if ($return_overwrite_all) {
+		$main::OVERWRITE_ALL = 1;
+		return File::DirWalk::SUCCESS;
+	}
 
 	return 1;
 }
