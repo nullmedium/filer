@@ -64,9 +64,9 @@ sub filecopy {
 
 			if ($r eq 'no') {
 				return File::DirWalk::SUCCESS;
-			} elsif ($r == 1) {
+			} elsif ($r eq 1) {
 				$return_overwrite_all = 1;
-			} elsif ($r == 2) {
+			} elsif ($r eq 2) {
 				$main::SKIP_ALL = 1;
 				return File::DirWalk::SUCCESS;
 			}
