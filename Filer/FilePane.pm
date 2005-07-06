@@ -275,7 +275,8 @@ sub show_popup_menu {
 
 	$clipboard->request_text(sub {
 		my ($c,$t) = @_;
-
+		return if (!$t);
+	
 		foreach (split /\n/, $t) { 
 			if (-e $_) {
 				$hide_paste = 0;

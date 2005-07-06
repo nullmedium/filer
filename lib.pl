@@ -134,6 +134,7 @@ sub main_window {
 
 	$widgets->{home_button} = $toolbar->append_item('Home', 'Home', undef, undef, \&go_home_cb);
 	$widgets->{sync_button} = $toolbar->append_item('Synchronize', 'Synchronize', undef, undef, \&synchronize_cb);
+	$widgets->{refresh_button} = $toolbar->append_item('Refresh', 'Refresh', undef, undef, \&refresh_cb);
 
 	$widgets->{vbox}->pack_start($toolbar, 0, 0, 0);
 

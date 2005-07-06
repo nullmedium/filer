@@ -126,7 +126,7 @@ sub show_popup_menu {
 		my $commands_menu = new Gtk2::Menu;
 
 		my @menu_items =
-			(
+		(
 	#	{ path => '/sep4',								        			item_type => '<Separator>'},
 		{ path => '/Copy',					callback => \&main::copy_cb,				item_type => '<Item>'},
 		{ path => '/Cut',					callback => \&main::cut_cb,				item_type => '<Item>'},
@@ -191,6 +191,7 @@ sub show_popup_menu {
 
 		$clipboard->request_text(sub {
 			my ($c,$t) = @_;
+			return if (!$t);
 
 			foreach (split /\n/, $t) { 
 				if (-e $_) {

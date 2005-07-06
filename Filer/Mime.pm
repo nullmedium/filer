@@ -280,6 +280,7 @@ sub file_association_dialog {
 
 		$commands_model->foreach(sub {
 			push @commands, $_[0]->get($_[2], 0);
+			return 0;
 		});
 
 		$mime->set_commands($type,\@commands);
