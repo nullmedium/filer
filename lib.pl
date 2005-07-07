@@ -500,7 +500,7 @@ sub select_dialog {
 	my ($type) = @_;
 	my ($dialog,$hbox,$label,$entry);
 
-	$dialog = new Gtk2::Dialog("", undef, 'modal', 'gtk-ok' => 'ok');
+	$dialog = new Gtk2::Dialog("", undef, 'modal', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
 	$dialog->set_default_response('ok');
 	$dialog->set_has_separator(1);
 	$dialog->set_position('center');
