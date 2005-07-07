@@ -69,15 +69,15 @@ sub move {
 
 	return File::DirWalk::FAILED if ($source eq $dest);
 
-	my $trashdir = (new File::BaseDir)->xdg_data_home . "/Trash";
-	my $trashdir_files = "$trashdir/files";
-	my $trashdir_info = "$trashdir/info";
-	my $file_basename = basename($source);
+# 	my $trashdir = (new File::BaseDir)->xdg_data_home . "/Trash";
+# 	my $trashdir_files = "$trashdir/files";
+# 	my $trashdir_info = "$trashdir/info";
+# 	my $file_basename = basename($source);
 
 	if (dirname($dest) ne '.') {
 		my $my_dest = Cwd::abs_path("$dest/" . basename($source));
 		
-		if (-e $my_dest) {
+		if ((-e $my_dest) and (! -d $my_dest)) {
 			if ($main::SKIP_ALL) {
 				return File::DirWalk::SUCCESS;
 			}
@@ -98,18 +98,18 @@ sub move {
 
 		$r = rename($source,$my_dest);
 		
-		# it's 'renamed' out of the trash. so remove its .trashinfo file
-		if (dirname($source) eq $trashdir_files) {
-			unlink("$trashdir_info/$file_basename.trashinfo")
-		}
+# 		# it's 'renamed' out of the trash. so remove its .trashinfo file
+# 		if (dirname($source) eq $trashdir_files) {
+# 			unlink("$trashdir_info/$file_basename.trashinfo")
+# 		}
 
 	} else {
 		$r = rename($source,Cwd::abs_path(dirname($source) . "/$dest"));
 
-		# the file is renamed inside the trash -> rename its .trashinfo file too
-		if (dirname($source) eq $trashdir_files) {
-			rename("$trashdir_info/$file_basename.trashinfo", "$trashdir_info/" . basename($dest) . ".trashinfo");
-		}
+# 		# the file is renamed inside the trash -> rename its .trashinfo file too
+# 		if (dirname($source) eq $trashdir_files) {
+# 			rename("$trashdir_info/$file_basename.trashinfo", "$trashdir_info/" . basename($dest) . ".trashinfo");
+# 		}
 	}
 
 	if (!$r) {

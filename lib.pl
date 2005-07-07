@@ -49,6 +49,7 @@ use Filer::FileCopy;
 use Filer::Copy;
 use Filer::Move;
 use Filer::Delete;
+# use Filer::Trash;
 use Filer::Search;
 
 use constant NORTON_COMMANDER_MODE => 0;
@@ -116,7 +117,7 @@ sub main_window {
 
 	$widgets->{main_window}->signal_connect("event", \&window_event_cb);
 	$widgets->{main_window}->signal_connect("delete-event", \&quit_cb);
-	$widgets->{main_window}->set_icon(Gtk2::Gdk::Pixbuf->new_from_file(Filer::Mime->new->get_icon('inode/directory')));
+	$widgets->{main_window}->set_icon(Gtk2::Gdk::Pixbuf->new_from_file((new Filer::Mime)->get_icon('inode/directory')));
 
 	$widgets->{vbox} = new Gtk2::VBox(0,0);
 	$widgets->{main_window}->add($widgets->{vbox});
@@ -130,11 +131,20 @@ sub main_window {
 
 	$toolbar = new Gtk2::Toolbar;
 	$toolbar->set_style('GTK_TOOLBAR_BOTH_HORIZ');
-	$toolbar->append_item('Open Terminal', 'Open Terminal', undef, undef, \&open_terminal_cb);
 
-	$widgets->{home_button} = $toolbar->append_item('Home', 'Home', undef, undef, \&go_home_cb);
+	$widgets->{home_button} = $toolbar->append_item('Home', 'Home', undef, Gtk2::Image->new_from_stock('gtk-home', 'GTK_ICON_SIZE_SMALL_TOOLBAR'), \&go_home_cb);
+	$widgets->{refresh_button} = $toolbar->append_item('Refresh', 'Refresh', undef, Gtk2::Image->new_from_stock('gtk-refresh', 'GTK_ICON_SIZE_SMALL_TOOLBAR'), \&refresh_cb);
 	$widgets->{sync_button} = $toolbar->append_item('Synchronize', 'Synchronize', undef, undef, \&synchronize_cb);
-	$widgets->{refresh_button} = $toolbar->append_item('Refresh', 'Refresh', undef, undef, \&refresh_cb);
+
+#	$toolbar->insert(new Gtk2::SeparatorToolItem, 4);
+
+	$toolbar->append_item('Copy', 'Copy', undef, Gtk2::Image->new_from_stock('gtk-copy', 'GTK_ICON_SIZE_SMALL_TOOLBAR'), \&copy_cb);
+	$toolbar->append_item('Cut', 'Cut', undef, Gtk2::Image->new_from_stock('gtk-cut', 'GTK_ICON_SIZE_SMALL_TOOLBAR'), \&cut_cb);
+	$toolbar->append_item('Paste', 'Paste', undef, Gtk2::Image->new_from_stock('gtk-paste', 'GTK_ICON_SIZE_SMALL_TOOLBAR'), \&paste_cb);
+
+	$toolbar->append_item('Delete', 'Delete', undef, Gtk2::Image->new_from_stock('gtk-delete', 'GTK_ICON_SIZE_SMALL_TOOLBAR'), \&delete_cb);
+
+	$toolbar->append_item('Open Terminal', 'Open Terminal', undef, undef, \&open_terminal_cb);
 
 	$widgets->{vbox}->pack_start($toolbar, 0, 0, 0);
 
@@ -248,7 +258,6 @@ sub get_bookmarks_menu {
 		my $bookmarks = new Filer::Bookmarks;
 
 		if ($active_pane->count_selected_items > 0) {
-
 			foreach (@{$active_pane->get_selected_items}) {
 				if (-d $_) {
 					$bookmarks->set_bookmark($_);
@@ -256,8 +265,6 @@ sub get_bookmarks_menu {
 					$bookmarks->set_bookmark($active_pane->get_pwd);
 				}
 			}
-		} else {
-			$bookmarks->set_bookmark($active_pane->get_pwd);
 		}
 
 		my $menu = $widgets->{item_factory}->get_item("/Bookmarks");
@@ -271,7 +278,6 @@ sub get_bookmarks_menu {
 		my $bookmarks = new Filer::Bookmarks;
 
 		if ($active_pane->count_selected_items > 0) {
-
 			foreach (@{$active_pane->get_selected_items}) {
 				if (-d $_) {
 					$bookmarks->remove_bookmark($_);
@@ -279,8 +285,6 @@ sub get_bookmarks_menu {
 					$bookmarks->remove_bookmark($active_pane->get_pwd);
 				}
 			}
-		} else {
-			$bookmarks->remove_bookmark($active_pane->get_pwd);
 		}
 
 		my $menu = $widgets->{item_factory}->get_item("/Bookmarks");
@@ -298,7 +302,7 @@ sub get_bookmarks_menu {
 		$menuitem = new Gtk2::MenuItem($_);
 		$menuitem->signal_connect("activate", sub {
 			my $p = ($config->get_option("Mode") == NORTON_COMMANDER_MODE) ? $active_pane : $pane->[RIGHT];
-			$p->open_path($_[1]);
+			$p->open_path_helper($_[1]);
 		},$_);
 		$menuitem->show;
 		$menu->add($menuitem);
@@ -397,7 +401,7 @@ sub switch_mode {
 	if ($opt == EXPLORER_MODE) {
 		$widgets->{list2}->get_location_bar->reparent($widgets->{location_bar});
 
-#		$widgets->{location_bar}->hide;
+		$widgets->{location_bar}->hide;
 
 		$widgets->{sync_button}->set("visible", 0);
 		$widgets->{tree}->get_vbox->set("visible", 1);
@@ -407,10 +411,6 @@ sub switch_mode {
 		$widgets->{list2}->get_navigation_box->show;
 
 		$pane->[LEFT] = $widgets->{tree};
-
-#		$widgets->{item_factory}->get_item("/Edit/Paste")->set("visible", 1);
-#		$widgets->{item_factory}->get_item("/Edit/Move")->set("visible", 0);
-#		$widgets->{move_button}->set("visible", 0);
 
 	} elsif ($opt == NORTON_COMMANDER_MODE) {
 		$widgets->{list2}->get_location_bar->reparent($widgets->{list2}->get_location_bar_parent);
@@ -423,10 +423,6 @@ sub switch_mode {
 		$widgets->{list2}->get_navigation_box->hide;
 
 		$pane->[LEFT] = $widgets->{list1};
-
-#		$widgets->{item_factory}->get_item("/Edit/Paste")->set("visible", 0);
-#		$widgets->{item_factory}->get_item("/Edit/Move")->set("visible", 1);
-#		$widgets->{move_button}->set("visible", 1);
 	}
 
 	$widgets->{list1}->refresh;
@@ -844,7 +840,6 @@ sub delete_cb {
 
 	my $delete = Filer::Delete->new;
 	$delete->set_total(&files_count);
-
 	$delete->show;
 
 	foreach (@{$active_pane->get_selected_items}) {
@@ -852,9 +847,11 @@ sub delete_cb {
 
 		if ($r == File::DirWalk::FAILED) {
 			Filer::Dialog->msgbox_info(($config->get_option("MoveToTrash") != 1) ? "Deleting of $_ failed: $!" : "Moving of $_ to Trash failed: $!");
+#			Filer::Dialog->msgbox_info("Deleting of $_ failed: $!");
 			last;
 		} elsif ($r == File::DirWalk::ABORTED) {
 			Filer::Dialog->msgbox_info(($config->get_option("MoveToTrash") != 1) ? "Deleting of $_ aborted!" : "Moving of $_ to Trash aborted!");
+#			Filer::Dialog->msgbox_info("Deleting of $_ aborted!");
 			last;
 		}
 	}

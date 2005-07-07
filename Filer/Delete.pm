@@ -98,41 +98,36 @@ sub destroy {
 
 sub delete {
 	my ($self,$source) = @_;
-
-	my $trashdir = (new File::BaseDir)->xdg_data_home . "/Trash";
-	my $trashdir_files = "$trashdir/files";
-	my $trashdir_info = "$trashdir/info";
-	my $file_basename = basename($source);
-
-	# check if object is to be deleted from inside the trash.
-	if (dirname($_) eq $trashdir_files) {
-		# unlink its .trashinfo entry
-		unlink("$trashdir_info/$file_basename.trashinfo") || return File::DirWalk::FAILED;												
-
-		# remove files/dirs. 
+# 	my $trash = Filer::Trash->new;
+# 
+# 	# check if object is to be deleted from inside the trash.
+# 	if (dirname($source) eq $trash->trash_path) {
+# 		
+# 		if ($self->{dirwalk}->walk($source) == File::DirWalk::SUCCESS) {
+# 			$trash->delete_trashinfo($source) || return File::DirWalk::FAILED;				
+# 		} else {
+# 			return File::DirWalk::FAILED;
+# 		}
+# 	}
+# 
+# 	# move file to trash
+# 	if ($main::config->get_option("MoveToTrash") == 1) {
+# 		my $r = $trash->move_to_trash($source);
+# 
+# 		if ($r == File::DirWalk::FAILED) {
+# 			Filer::Dialog->msgbox_info("Moving of $_ to Trash failed: $!");
+# 			return File::DirWalk::FAILED;
+# 
+# 		} elsif ($r == File::DirWalk::ABORTED) {
+# 
+# 			Filer::Dialog->msgbox_info("Moving of $_ to Trash aborted!");
+# 			return File::DirWalk::ABORTED;
+# 		}
+# 
+# 		return File::DirWalk::SUCCESS;
+# 	} else {
 		return $self->{dirwalk}->walk($source);
-	}
-
-	# move file to trash
-	if ($main::config->get_option("MoveToTrash") == 1) {
-		my $r = rename($_, "$trashdir_files/$file_basename");
-
-		if ($r == File::DirWalk::FAILED) {
-			Filer::Dialog->msgbox_info("Moving of $_ to Trash failed: $!");
-			last;
-		} elsif ($r == File::DirWalk::ABORTED) {
-			Filer::Dialog->msgbox_info("Moving of $_ to Trash aborted!");
-			last;
-		}
-
-		open(TRASHINFO, ">$trashdir_info/$file_basename.trashinfo")  || return File::DirWalk::FAILED;
-		print TRASHINFO "[Trash Info]\nPath=$_\nDeletionDate=" . `date +%Y-%m-%d-T%H:%M:%S`;
-		close(TRASHINFO);
-
-		return File::DirWalk::SUCCESS;
-	} else {
-		return $self->{dirwalk}->walk($source);
-	}
+#	}
 }
 
 1;

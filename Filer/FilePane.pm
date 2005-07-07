@@ -251,14 +251,14 @@ sub show_popup_menu {
 
 	} else {
 		my @menu_items = (
-		{ path => '/Copy',			callback => \&main::copy_cb,				item_type => '<Item>'},
-		{ path => '/Cut',			callback => \&main::cut_cb,				item_type => '<Item>'},
-		{ path => '/Paste',			callback => \&main::paste_cb,				item_type => '<Item>'},
-		{ path => '/sep1',								      		item_type => '<Separator>'},
-		{ path => '/MkDir',			callback => \&main::mkdir_cb,				item_type => '<Item>'},
-		{ path => '/sep2',								      		item_type => '<Separator>'},
-		{ path => '/Open Terminal',		callback => \&main::open_terminal_cb, item_type => '<Item>'},
-		{ path => '/Bookmarks',								 		item_type => '<Item>'},
+		{ path => '/Copy',			callback => \&main::copy_cb,		item_type => '<Item>'},
+		{ path => '/Cut',			callback => \&main::cut_cb,		item_type => '<Item>'},
+		{ path => '/Paste',			callback => \&main::paste_cb,		item_type => '<Item>'},
+		{ path => '/sep1',								item_type => '<Separator>'},
+		{ path => '/MkDir',			callback => \&main::mkdir_cb,		item_type => '<Item>'},
+		{ path => '/sep2',								item_type => '<Separator>'},
+		{ path => '/Open Terminal',		callback => \&main::open_terminal_cb,	item_type => '<Item>'},
+		{ path => '/Bookmarks',								item_type => '<Item>'},
 		);
 
 		$item_factory->create_items(undef, @menu_items);
@@ -447,10 +447,10 @@ sub get_pwd {
 	}
 }
 
-sub get_path {
-	my ($self,$file) = @_;
-	return Cwd::abs_path($self->[FILEPATH] . "/$file");
-}
+# sub get_path {
+# 	my ($self,$file) = @_;
+# 	return Cwd::abs_path($self->[FILEPATH] . "/$file");
+# }
 
 sub get_selected_item {
 	my ($self) = @_;
