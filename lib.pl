@@ -159,18 +159,18 @@ sub main_window {
 
 	$toolbar->insert(new Gtk2::SeparatorToolItem, 7);
 
-	$button = Gtk2::ToolButton->new_from_stock('gtk-delete');
-	$button->signal_connect("clicked", \&delete_cb);
-	$toolbar->insert($button, 8);
-
 	$button = Gtk2::ToolButton->new(undef, "Rename");
 	$button->signal_connect("clicked", \&rename_cb);
-	$toolbar->insert($button, 9);
+	$toolbar->insert($button, 8);
 
 	$button = Gtk2::ToolButton->new(undef, "Mkdir");
 	$button->signal_connect("clicked", \&mkdir_cb);
-	$toolbar->insert($button, 10);
+	$toolbar->insert($button, 9);
 	
+	$button = Gtk2::ToolButton->new_from_stock('gtk-delete');
+	$button->signal_connect("clicked", \&delete_cb);
+	$toolbar->insert($button, 10);
+
 	$widgets->{vbox}->pack_start($toolbar, 0, 0, 0);
 
 	$widgets->{location_bar} = new Gtk2::HBox(0,0);
