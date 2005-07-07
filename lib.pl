@@ -49,7 +49,6 @@ use Filer::FileCopy;
 use Filer::Copy;
 use Filer::Move;
 use Filer::Delete;
-# use Filer::Trash;
 use Filer::Search;
 
 use constant NORTON_COMMANDER_MODE => 0;
@@ -100,7 +99,7 @@ sub main_window {
 	{ path => '/_Options/Ask confirmation for/Copying',				callback => \&ask_copy_cb,	item_type => '<CheckItem>'},
 	{ path => '/_Options/Ask confirmation for/Moving',				callback => \&ask_move_cb,	item_type => '<CheckItem>'},
 	{ path => '/_Options/Ask confirmation for/Deleting',				callback => \&ask_delete_cb,	item_type => '<CheckItem>'},
-	{ path => '/_Options/Move files to Trash when deleting',			callback => \&move_to_trash_cb,	item_type => '<CheckItem>'},
+#	{ path => '/_Options/Move files to Trash when deleting',			callback => \&move_to_trash_cb,	item_type => '<CheckItem>'},
 	{ path => '/_Options/Show Hidden Files',	accelerator => '<control>H',	callback => \&hidden_cb,	item_type => '<CheckItem>'},
 	{ path => '/_Options/sep',											item_type => '<Separator>'},
 	{ path => '/_Options/File Associations',					callback => \&file_ass_cb,	item_type => '<Item>'},
@@ -130,22 +129,48 @@ sub main_window {
 	$widgets->{vbox}->pack_start($widgets->{item_factory}->get_widget('<main>'), 0, 0, 0);
 
 	$toolbar = new Gtk2::Toolbar;
-	$toolbar->set_style('GTK_TOOLBAR_BOTH_HORIZ');
+	$toolbar->set_style('GTK_TOOLBAR_TEXT');
 
-	$widgets->{home_button} = $toolbar->append_item('Home', 'Home', undef, Gtk2::Image->new_from_stock('gtk-home', 'GTK_ICON_SIZE_SMALL_TOOLBAR'), \&go_home_cb);
-	$widgets->{refresh_button} = $toolbar->append_item('Refresh', 'Refresh', undef, Gtk2::Image->new_from_stock('gtk-refresh', 'GTK_ICON_SIZE_SMALL_TOOLBAR'), \&refresh_cb);
-	$widgets->{sync_button} = $toolbar->append_item('Synchronize', 'Synchronize', undef, undef, \&synchronize_cb);
+	$widgets->{home_button} = Gtk2::ToolButton->new_from_stock('gtk-home');
+	$widgets->{home_button}->signal_connect("clicked", \&go_home_cb);
+	$toolbar->insert($widgets->{home_button}, 0);
 
-#	$toolbar->insert(new Gtk2::SeparatorToolItem, 4);
+	$widgets->{refresh_button} = Gtk2::ToolButton->new_from_stock('gtk-refresh');
+	$widgets->{refresh_button}->signal_connect("clicked", \&refresh_cb);
+	$toolbar->insert($widgets->{refresh_button}, 1);
 
-	$toolbar->append_item('Copy', 'Copy', undef, Gtk2::Image->new_from_stock('gtk-copy', 'GTK_ICON_SIZE_SMALL_TOOLBAR'), \&copy_cb);
-	$toolbar->append_item('Cut', 'Cut', undef, Gtk2::Image->new_from_stock('gtk-cut', 'GTK_ICON_SIZE_SMALL_TOOLBAR'), \&cut_cb);
-	$toolbar->append_item('Paste', 'Paste', undef, Gtk2::Image->new_from_stock('gtk-paste', 'GTK_ICON_SIZE_SMALL_TOOLBAR'), \&paste_cb);
+	$widgets->{sync_button} = Gtk2::ToolButton->new(undef, "Synchronize");
+	$widgets->{sync_button}->signal_connect("clicked", \&synchronize_cb);
+	$toolbar->insert($widgets->{sync_button}, 2);
 
-	$toolbar->append_item('Delete', 'Delete', undef, Gtk2::Image->new_from_stock('gtk-delete', 'GTK_ICON_SIZE_SMALL_TOOLBAR'), \&delete_cb);
+	$toolbar->insert(new Gtk2::SeparatorToolItem, 3);
 
-	$toolbar->append_item('Open Terminal', 'Open Terminal', undef, undef, \&open_terminal_cb);
+	$button = Gtk2::ToolButton->new_from_stock('gtk-copy');
+	$button->signal_connect("clicked", \&copy_cb);
+	$toolbar->insert($button, 4);
 
+	$button = Gtk2::ToolButton->new_from_stock('gtk-cut');
+	$button->signal_connect("clicked", \&cut_cb);
+	$toolbar->insert($button, 5);
+
+	$button = Gtk2::ToolButton->new_from_stock('gtk-paste');
+	$button->signal_connect("clicked", \&paste_cb);
+	$toolbar->insert($button, 6);
+
+	$toolbar->insert(new Gtk2::SeparatorToolItem, 7);
+
+	$button = Gtk2::ToolButton->new_from_stock('gtk-delete');
+	$button->signal_connect("clicked", \&delete_cb);
+	$toolbar->insert($button, 8);
+
+	$button = Gtk2::ToolButton->new(undef, "Rename");
+	$button->signal_connect("clicked", \&rename_cb);
+	$toolbar->insert($button, 9);
+
+	$button = Gtk2::ToolButton->new(undef, "Mkdir");
+	$button->signal_connect("clicked", \&mkdir_cb);
+	$toolbar->insert($button, 10);
+	
 	$widgets->{vbox}->pack_start($toolbar, 0, 0, 0);
 
 	$widgets->{location_bar} = new Gtk2::HBox(0,0);
@@ -211,22 +236,16 @@ sub main_window {
 
 	$i2->set_group($i1->get_group);
 
-	if ($config->get_option('Mode') == NORTON_COMMANDER_MODE) {
-		$i1->set_active(1);
-		$i2->set_active(0);
-
-#		$widgets->{item_factory}->get_item("/Edit/Cut")->set("visible", 0);
-#		$widgets->{item_factory}->get_item("/Edit/Paste")->set("visible", 0);
-	} elsif ($config->get_option('Mode') == EXPLORER_MODE) {
+	if ($config->get_option('Mode') == EXPLORER_MODE) {
 		$i1->set_active(0);
 		$i2->set_active(1);
-
-#		$widgets->{item_factory}->get_item("/Edit/Cut")->set("visible", 1);
-#		$widgets->{item_factory}->get_item("/Edit/Paste")->set("visible", 1);
+	} else {
+		$i1->set_active(1);
+		$i2->set_active(0);
 	}
 
-	$widgets->{list1}->open_path($config->get_option('PathLeft'));
-	$widgets->{list2}->open_path((defined $ARGV[0] and -d $ARGV[0]) ? $ARGV[0] : $config->get_option('PathRight'));
+	$widgets->{list1}->open_path((defined $ARGV[0] and -d $ARGV[0]) ? $ARGV[0] : $config->get_option('PathLeft'));
+	$widgets->{list2}->open_path((defined $ARGV[1] and -d $ARGV[1]) ? $ARGV[1] : $config->get_option('PathRight'));
 
 	$widgets->{main_window}->show_all;
 
@@ -241,7 +260,7 @@ sub main_window {
 	&switch_mode;
 
 	$widgets->{item_factory}->get_item("/Options/Show Hidden Files")->set_active($config->get_option('ShowHiddenFiles'));
-	$widgets->{item_factory}->get_item("/Options/Move files to Trash when deleting")->set_active($config->get_option('MoveToTrash'));
+#	$widgets->{item_factory}->get_item("/Options/Move files to Trash when deleting")->set_active($config->get_option('MoveToTrash'));
 	$widgets->{item_factory}->get_item("/Options/Ask confirmation for/Copying")->set_active($config->get_option('ConfirmCopy'));
 	$widgets->{item_factory}->get_item("/Options/Ask confirmation for/Moving")->set_active($config->get_option('ConfirmMove'));
 	$widgets->{item_factory}->get_item("/Options/Ask confirmation for/Deleting")->set_active($config->get_option('ConfirmDelete'));
@@ -396,12 +415,12 @@ sub explorer_cb {
 }
 
 sub switch_mode {
-	my $opt = $config->get_option('Mode');
-
-	if ($opt == EXPLORER_MODE) {
+	if ($config->get_option('Mode') == EXPLORER_MODE) {
+		$widgets->{list2}->get_location_bar->hide;
 		$widgets->{list2}->get_location_bar->reparent($widgets->{location_bar});
+		$widgets->{list2}->get_location_bar->show;
 
-		$widgets->{location_bar}->hide;
+#		$widgets->{location_bar}->hide;
 
 		$widgets->{sync_button}->set("visible", 0);
 		$widgets->{tree}->get_vbox->set("visible", 1);
@@ -412,8 +431,10 @@ sub switch_mode {
 
 		$pane->[LEFT] = $widgets->{tree};
 
-	} elsif ($opt == NORTON_COMMANDER_MODE) {
+	} else {
+		$widgets->{list2}->get_location_bar->hide;
 		$widgets->{list2}->get_location_bar->reparent($widgets->{list2}->get_location_bar_parent);
+		$widgets->{list2}->get_location_bar->show;
 
 		$widgets->{sync_button}->set("visible", 1);
 		$widgets->{tree}->get_vbox->set("visible", 0);

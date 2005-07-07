@@ -192,7 +192,7 @@ sub set_icon_dialog {
 	$table->attach($frame, 0, 1, 0, 2, [], [], 0, 0);
 
 	$icon_image = new Gtk2::Image;
-	$icon_image->set_from_file($self->get_icon($type));
+	$icon_image->set_from_pixbuf(&main::intelligent_scale(Gtk2::Gdk::Pixbuf->new_from_file($self->get_icon($type)),50));
 	$icon_image->set_alignment(0.50,0.50);
 	$frame->add($icon_image);
 
@@ -226,10 +226,8 @@ sub set_icon_dialog {
 
 		if ($fs->run eq 'ok') {
 			my $mimeicon = $fs->get_filename;
-			my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($mimeicon) || return;
-
 			$icon_entry->set_text($mimeicon);
-			$icon_image->set_from_pixbuf(&main::intelligent_scale($pixbuf,100));
+			$icon_image->set_from_pixbuf(&main::intelligent_scale(Gtk2::Gdk::Pixbuf->new_from_file($mimeicon),50));
 		}
 
 		$fs->destroy;
@@ -239,8 +237,7 @@ sub set_icon_dialog {
 	$dialog->show_all;
 
 	if ($dialog->run eq 'close') {
-		my $mimeicon = $icon_entry->get_text;
-		$self->set_icon($type, $mimeicon);
+		$self->set_icon($type, $icon_entry->get_text);
 	}
 
 	$dialog->destroy;
@@ -249,8 +246,7 @@ sub set_icon_dialog {
 sub file_association_dialog {
 	my ($dialog,$bbox,$hbox,$vbox,$sw,$treeview);
 	my ($types_model,$commands_model,$selection);
-	my ($cell,$col);
-	my $button;
+	my ($cell,$col,$button);
 
 	my $mime = new Filer::Mime;
 	my $type = "";
@@ -322,12 +318,12 @@ sub file_association_dialog {
 	$selection = $treeview->get_selection;
 	$selection->signal_connect("changed", sub {
 		my ($selection) = @_;
-		my (@q) = $selection->get_selected_rows;
-
-		if (@q > 0) {
-			$type = $types_model->get($types_model->get_iter($q[0]), 1);
+		my $iter = $selection->get_selected;
+		if (defined $iter) {
+			$type = $types_model->get($iter, 1);
 			&{$refresh_commands}($type);
 		}
+			
 	});
 	$sw->add($treeview);
 
@@ -344,14 +340,11 @@ sub file_association_dialog {
 	$selection = $treeview->get_selection;
 	$selection->signal_connect("changed", sub {
 		my ($selection) = @_;
-		my (@q) = $selection->get_selected_rows;
-
-		if (@q > 0) {
-			$command_iter = $commands_model->get_iter($q[0]);
+		$command_iter = $selection->get_selected;
+		$command = undef;
+		
+		if (defined $command_iter) {
 			$command = $commands_model->get($command_iter, 0);
-		} else {
-			$command_iter = undef;
-			$command = undef;
 		}
 	});
 	$sw->add($treeview);
@@ -363,17 +356,16 @@ sub file_association_dialog {
 
 	$button = Gtk2::Button->new("Edit");
 	$button->signal_connect("clicked", sub {
-		if (defined $command) {
-			my $fs = new Gtk2::FileChooserDialog("Select Command", undef, 'GTK_FILE_CHOOSER_ACTION_OPEN', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
-			$fs->set_filename($command);
+		return if (not defined $command_iter);
 
-			if ($fs->run eq 'ok') {
-				$commands_model->set($command_iter, 0, $fs->get_filename);
-				&{$set_commands};
-			}
+		my $fs = new Gtk2::FileChooserDialog("Select Command", undef, 'GTK_FILE_CHOOSER_ACTION_OPEN', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
+		$fs->set_filename($command);
 
-			$fs->destroy;
+		if ($fs->run eq 'ok') {
+			$commands_model->set($command_iter, 0, $fs->get_filename);
+			&{$set_commands};
 		}
+		$fs->destroy;
 	});
 	$bbox->add($button);
 
@@ -392,10 +384,10 @@ sub file_association_dialog {
 
 	$button = Gtk2::Button->new_from_stock('gtk-remove');
 	$button->signal_connect("clicked", sub {
-		if (defined $command_iter) {
-			$commands_model->remove($command_iter);
-			&{$set_commands};
-		}
+		return if (not defined $command_iter);
+		
+		$commands_model->remove($command_iter);
+		&{$set_commands};
 	});
 	$bbox->add($button);
 
@@ -404,10 +396,7 @@ sub file_association_dialog {
 		my $treepath = $commands_model->get_path($command_iter);
 
 		if ($treepath->prev) {
-			my $a = $commands_model->get_iter($treepath);
-			my $b = $command_iter;
-
-			$commands_model->swap($a,$b);
+			$commands_model->swap($commands_model->get_iter($treepath),$command_iter);
 			&{$set_commands};
 		}
 	});
@@ -418,11 +407,10 @@ sub file_association_dialog {
 		my $treepath = $commands_model->get_path($command_iter);
 		$treepath->next;
 	
-		my $a = $command_iter;
 		my $b = $commands_model->get_iter($treepath);
 
 		if ($b) {
-			$commands_model->swap($a,$b);
+			$commands_model->swap($command_iter,$b);
 			&{$set_commands};
 		}
 	});

@@ -73,15 +73,19 @@ sub filecopy {
 		}
 	}
 
-	my @stat = stat $source;
-	my $mode = $stat[2] || return File::DirWalk::FAILED;
+	$source = Cwd::abs_path($source);
+	$dest = Cwd::abs_path($dest);
+
+	my @stat = stat($source); # || return File::DirWalk::FAILED;
+
+	my $mode = $stat[2];
 	my $size = $stat[7];
-	my $buf;
-	my $buf_size = $stat[11] || return File::DirWalk::FAILED; # use filesystem blocksize
+	my $buf_size = $stat[11]; # use filesystem blocksize
+	my $buf = "";
 	my $written = 0;
 	my $written_avg = 0;
 
-	my $id = Glib::Timeout->add(1000, sub {
+	Glib::Timeout->add(1000, sub {
 		return 0 if ($written_avg == 0);
 
 		$self->[PROGRESSBAR]->set_text(&Filer::FilePane::calculate_size($written_avg) . "/s");
@@ -90,8 +94,8 @@ sub filecopy {
 		return 1;
 	});
 
-	sysopen(SOURCE, $source, O_RDONLY) || return File::DirWalk::FAILED;
-	sysopen(DEST, $dest, O_CREAT|O_WRONLY) || return File::DirWalk::FAILED;
+	sysopen(SOURCE, $source, O_RDONLY);
+	sysopen(DEST, $dest, O_CREAT|O_WRONLY|O_TRUNC);
 
 	while (sysread(SOURCE, $buf, $buf_size)) {
 		syswrite DEST, $buf, $buf_size;
@@ -106,12 +110,10 @@ sub filecopy {
 		while (Gtk2->events_pending) { Gtk2->main_iteration; }
 	}
 
-	Glib::Source->remove($id);
-
 	close(SOURCE);
 	close(DEST);
 
-	chmod $mode, $dest;
+	chmod $mode, $dest || return File::DirWalk::FAILED;
 
 	if ($return_overwrite_all) {
 		$main::OVERWRITE_ALL = 1;

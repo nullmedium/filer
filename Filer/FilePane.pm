@@ -35,15 +35,13 @@ use constant OVERRIDES		=> 10;
 use constant MIMEICONS		=> 11;
 use constant FOLDER_STATUS	=> 12;
 
-use constant LOCATION_BAR	=> 13;
-use constant HBOX		=> 14;
+use constant LOCATION_BAR_PARENT	=> 13;
+use constant LOCATION_BAR		=> 14;
+use constant NAVIGATION_BOX		=> 15;
+use constant NAVIGATION_BUTTONS		=> 16;
 
-use constant MOUSE_MOTION_SELECT => 15;
-
-use constant NAVIGATION_BOX => 16;
-use constant NAVIGATION_BUTTONS => 17;
-
-our ($y_old);
+use constant MOUSE_MOTION_SELECT	=> 17;
+use constant MOUSE_MOTION_Y_POS_OLD	=> 18;
 
 Memoize::memoize("calculate_size");
 Memoize::memoize("Stat::lsMode::format_mode");
@@ -61,11 +59,11 @@ sub new {
 
 	$self->[VBOX] = new Gtk2::VBox(0,0);
 
-	$self->[LOCATION_BAR] = new Gtk2::HBox(0,0);
-	$self->[VBOX]->pack_start($self->[LOCATION_BAR], 0, 1, 0);
+	$self->[LOCATION_BAR_PARENT] = new Gtk2::HBox(0,0);
+	$self->[VBOX]->pack_start($self->[LOCATION_BAR_PARENT], 0, 1, 0);
 
-	$self->[HBOX] = new Gtk2::HBox(0,0);
-	$self->[LOCATION_BAR]->pack_start($self->[HBOX], 1, 1, 0);
+	$self->[LOCATION_BAR] = new Gtk2::HBox(0,0);
+	$self->[LOCATION_BAR_PARENT]->pack_start($self->[LOCATION_BAR], 1, 1, 0);
 
 	$button = new Gtk2::Button("Up");
 	$button->signal_connect("clicked", sub {
@@ -75,7 +73,7 @@ sub new {
 			$self->open_path(Cwd::abs_path("$self->[FILEPATH]/.."));
 		}
 	});
-	$self->[HBOX]->pack_start($button, 0, 1, 0);
+	$self->[LOCATION_BAR]->pack_start($button, 0, 1, 0);
 
 	$self->[PATH_ENTRY] = new Gtk2::Entry;
 	$self->[PATH_ENTRY]->signal_connect('key-press-event', sub {
@@ -84,13 +82,13 @@ sub new {
 		}
 	});
 
-	$self->[HBOX]->pack_start($self->[PATH_ENTRY], 1, 1, 0);
+	$self->[LOCATION_BAR]->pack_start($self->[PATH_ENTRY], 1, 1, 0);
 
 	$button = new Gtk2::Button("Go");
 	$button->signal_connect("clicked", sub {
 		$self->open_file($self->[PATH_ENTRY]->get_text)
 	});
-	$self->[HBOX]->pack_start($button, 0, 1, 0);
+	$self->[LOCATION_BAR]->pack_start($button, 0, 1, 0);
 
 	$self->[NAVIGATION_BOX] = new Gtk2::HBox(0,0);
 	$self->[VBOX]->pack_start($self->[NAVIGATION_BOX], 0, 1, 0);
@@ -112,7 +110,6 @@ sub new {
 	$self->[TREEVIEW]->drag_dest_set('all', ['move','copy'], &Filer::DND::target_table);
 	$self->[TREEVIEW]->drag_source_set(['button1_mask','shift-mask'], ['move','copy'], &Filer::DND::target_table);
 
-#	$self->[TREEVIEW]->signal_connect("drag_begin", \&Filer::DND::filepane_treeview_drag_begin_cb, $self);
 	$self->[TREEVIEW]->signal_connect("drag_data_get", \&Filer::DND::filepane_treeview_drag_data_get_cb, $self);
 	$self->[TREEVIEW]->signal_connect("drag_data_received", \&Filer::DND::filepane_treeview_drag_data_received_cb, $self);
 
@@ -159,12 +156,12 @@ sub get_type {
 
 sub get_location_bar_parent {
 	my ($self) = @_;
-	return $self->[LOCATION_BAR];
+	return $self->[LOCATION_BAR_PARENT];
 }
 
 sub get_location_bar {
 	my ($self) = @_;
-	return $self->[HBOX];
+	return $self->[LOCATION_BAR];
 }
 
 sub get_navigation_box {
@@ -342,9 +339,16 @@ sub treeview_event_cb {
 
 	if ($e->type eq "button-press" and $e->button == 2) {
 		$self->[MOUSE_MOTION_SELECT] = 1;
+		$self->[MOUSE_MOTION_Y_POS_OLD] = $e->y;
+
+		my ($p) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
+
+		if (defined $p) {
+			$self->[TREESELECTION]->unselect_all;
+			$self->[TREESELECTION]->select_path($p);
+		}
+
 		$self->set_focus;
-		$y_old = $e->y;
-		$self->_select_helper_button2($e->x,$e->y);
 		return 1;
 	}
 
@@ -354,7 +358,14 @@ sub treeview_event_cb {
 	}
 
 	if (($e->type eq "motion-notify") and ($self->[MOUSE_MOTION_SELECT] == 1)) {
-		$self->_select_helper_motion($e->x,$y_old,$e->y);
+		my ($p_old) = $self->[TREEVIEW]->get_path_at_pos($e->x,$self->[MOUSE_MOTION_Y_POS_OLD]);
+		my ($p_new) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
+
+		if ((defined $p_old) and (defined $p_new)) {
+			$self->[TREESELECTION]->unselect_all;
+			$self->[TREESELECTION]->select_range($p_old,$p_new);
+		}
+
 		return 0;
 	}
 
@@ -365,27 +376,6 @@ sub treeview_event_cb {
 	}
 
 	return 0;
-}
-
-sub _select_helper_button2 {
-	my ($self,$x,$y) = @_;
-	my ($p) = $self->[TREEVIEW]->get_path_at_pos($x,$y);
-
-	if (defined $p) {
-		$self->[TREESELECTION]->unselect_all;
-		$self->[TREESELECTION]->select_path($p);
-	}
-}
-
-sub _select_helper_motion {
-	my ($self,$x,$y_old,$y_new) = @_;
-	my ($p_old) = $self->[TREEVIEW]->get_path_at_pos($x,$y_old);
-	my ($p_new) = $self->[TREEVIEW]->get_path_at_pos($x,$y_new);
-
-	if ((defined $p_old) and (defined $p_new)) {
-		$self->[TREESELECTION]->unselect_all;
-		$self->[TREESELECTION]->select_range($p_old,$p_new);
-	}
 }
 
 sub init_icons {
@@ -416,19 +406,13 @@ sub set_model {
 
 	$model->foreach(sub {
 		my ($model,$path,$iter,$data) = @_;
+		my $iter_new = $self->[TREEMODEL]->append;
 
-		my $mypixbuf = $model->get($iter,0);
-		my $file = $model->get($iter,1);
-		my $size = $model->get($iter,2);
-		my $type = $model->get($iter,3);
-		my $ctime = $model->get($iter,4);
-		my $uid = $model->get($iter,5);
-		my $gid = $model->get($iter,6);
-		my $mode = $model->get($iter,7);
-		my $target = $model->get($iter,8);
-		my $abspath =  $model->get($iter,9);
-
-		$self->[TREEMODEL]->set($self->[TREEMODEL]->append, 0, $mypixbuf, 1, $file, 2, $size, 3, $type, 4, $ctime, 5, $uid, 6, $gid, 7, $mode, 8, $target, 9, $abspath);
+		for (0 .. 9) {
+			$self->[TREEMODEL]->set($iter_new, $_, $model->get($iter,$_));			
+		}	
+		
+		return 0;
 	});
 }
 
@@ -510,7 +494,7 @@ sub remove_selected {
 
 sub update_navigation_buttons {
 	my ($self,$filepath) = @_;
-	my $path = "/";
+	my $path = File::Spec->rootdir();
 	my $button = undef;
 
 	foreach (reverse sort keys %{$self->[NAVIGATION_BUTTONS]}) {
@@ -523,8 +507,8 @@ sub update_navigation_buttons {
 	}
 
 	foreach (File::Spec->splitdir($filepath)) {
-		$path = Cwd::abs_path("$path/$_");
-
+		$path = File::Spec->catfile(File::Spec->splitdir($path), $_);
+		
 		if (not defined $self->[NAVIGATION_BUTTONS]->{$path}) {
 
 			$button = new Gtk2::RadioButton($self->[NAVIGATION_BUTTONS]->{"/"}, "");
@@ -535,14 +519,14 @@ sub update_navigation_buttons {
 			if ($path eq $filepath) {
 				$button->set(active => 1);
 
-				if ($path eq "/") {
-					$w[0]->set_markup("<b>/</b>");
+				if ($path eq File::Spec->rootdir()) {
+					$w[0]->set_markup(sprintf("<b>%s</b>", File::Spec->rootdir()));
 				} else {
 					$w[0]->set_markup(sprintf("<b>%s</b>", File::Basename::basename($path)));
 				}
 			} else {
-				if ($path eq "/") {
-					$w[0]->set_text("/");
+				if ($path eq File::Spec->rootdir()) {
+					$w[0]->set_text(File::Spec->rootdir());
 				} else {
 					$w[0]->set_text(File::Basename::basename($path));
 				}
@@ -553,16 +537,16 @@ sub update_navigation_buttons {
 				my @w = $widget->get_children;
 
 				if ($widget->get_active) {
-					if ($data eq "/") {
-						$w[0]->set_markup("<b>/</b>");
+					if ($data eq File::Spec->rootdir()) {
+						$w[0]->set_markup(sprintf("<b>%s</b>", File::Spec->rootdir()));
 					} else {
 						$w[0]->set_markup(sprintf("<b>%s</b>", File::Basename::basename($data)));
 					}
 
 					$self->open_path($data);
 				} else {
-					if ($data eq "/") {
-						$w[0]->set_text("/");
+					if ($data eq File::Spec->rootdir()) {
+						$w[0]->set_text(File::Spec->rootdir());
 					} else {
 						$w[0]->set_text(File::Basename::basename($data));
 					}
@@ -579,10 +563,10 @@ sub update_navigation_buttons {
 sub open_file {
 	my ($self,$filepath) = @_;
 
-	if ($filepath eq "trash:/") {
-		my $trashdir = (new File::BaseDir)->xdg_data_home . "/Trash/files";
-		$filepath = $trashdir;
-	}
+#	if ($filepath eq "trash:/") {
+#		my $trashdir = (new File::BaseDir)->xdg_data_home . "/Trash/files";
+#		$filepath = $trashdir;
+#	}
 
 	return 0 if ((not defined $filepath) or (not -R $filepath));
 
