@@ -112,7 +112,8 @@ sub main_window {
 	my $size = $config->get_option("WindowSize");
 	my ($w,$h) = split /:/, $size;
 
-	$widgets->{main_window}->resize($w,$h);
+#	$widgets->{main_window}->resize($w,$h);
+	$widgets->{main_window}->resize(784,606);
 
 	$widgets->{main_window}->signal_connect("event", \&window_event_cb);
 	$widgets->{main_window}->signal_connect("delete-event", \&quit_cb);
@@ -817,23 +818,21 @@ sub rename_cb {
 
 	if ($dialog->run eq 'ok') {
 		my $old_name = $active_pane->get_selected_item;
-		my $new_name = $entry->get_text;
-
-		if ((new Filer::Move)->move($old_name, $new_name) == File::DirWalk::SUCCESS) {
-
+		my $new_name = Cwd::abs_path((($active_pane->get_type eq "TREE") ? dirname($active_pane->get_pwd) : $active_pane->get_pwd) . "/" . $entry->get_text);  
+		
+		if (rename($old_name, $new_name)) {
 			my $model = $active_pane->get_treeview->get_model;
 			my $iter = $active_pane->get_selected_iter;
 
-			$model->set($iter, 1, $new_name);
+			$model->set($iter, 1, $entry->get_text);
 
 			if ($active_pane->get_type eq "TREE") {
-				my $p = dirname($active_pane->get_pwd);
-				$model->set($iter, 2, "$p/$new_name");
+				$model->set($iter, 2, $new_name);
 			} else {
-				$model->set($iter, 9, $active_pane->get_pwd . "/$new_name");
+				$model->set($iter, 9, $new_name);
 			}
 
-			$active_pane->set_selected_item($new_name);
+			$active_pane->set_selected_item($entry->get_text);
 
 			&refresh_inactive_pane;
 		} else {
