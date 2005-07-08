@@ -112,8 +112,8 @@ sub main_window {
 	my $size = $config->get_option("WindowSize");
 	my ($w,$h) = split /:/, $size;
 
-#	$widgets->{main_window}->resize($w,$h);
-	$widgets->{main_window}->resize(784,606);
+ 	$widgets->{main_window}->resize($w,$h);
+#	$widgets->{main_window}->resize(784,606);
 
 	$widgets->{main_window}->signal_connect("event", \&window_event_cb);
 	$widgets->{main_window}->signal_connect("delete-event", \&quit_cb);
@@ -825,12 +825,7 @@ sub rename_cb {
 			my $iter = $active_pane->get_selected_iter;
 
 			$model->set($iter, 1, $entry->get_text);
-
-			if ($active_pane->get_type eq "TREE") {
-				$model->set($iter, 2, $new_name);
-			} else {
-				$model->set($iter, 9, $new_name);
-			}
+			$model->set($iter, ($active_pane->get_type eq "TREE") ? 2 : 9, $new_name);
 
 			$active_pane->set_selected_item($entry->get_text);
 
