@@ -176,22 +176,7 @@ sub show_popup_menu {
 	my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
 	my $popup_menu = $item_factory->get_widget('<main>');
 
-	my ($p) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
-
-	if (defined $p) {
-		if (! $self->[TREESELECTION]->path_is_selected($p)) {
-			$self->[TREESELECTION]->unselect_all;
-			$self->[TREESELECTION]->select_path($p);
-		}
-
-		if (! defined $self->[SELECTED_ITEM]) {
-			return;
-		}
-
-		my $mime = new Filer::Mime;
-		my $type = File::MimeInfo::Magic::mimetype($self->[SELECTED_ITEM]);
-
-		my @menu_items = (
+	my @menu_items = (
 		{ path => '/Open',										item_type => '<Item>'},
 		{ path => '/sep1',								      		item_type => '<Separator>'},
 		{ path => '/Copy',			callback => \&main::copy_cb,				item_type => '<Item>'},
@@ -207,20 +192,35 @@ sub show_popup_menu {
 		{ path => '/Archive/Create tar.gz',	callback => sub { $self->create_tar_gz_archive },	item_type => '<Item>'},
 		{ path => '/Archive/Create tar.bz2',	callback => sub { $self->create_tar_bz2_archive },	item_type => '<Item>'},
 		{ path => '/Archive/Extract',		callback => sub { $self->extract_archive },		item_type => '<Item>'},
-		{ path => '/Bookmarks',								 		item_type => '<Item>'},
+		{ path => '/Bookmarks',								 		item_type => '<Item>'},		
 		{ path => '/sep4',										item_type => '<Separator>'},
 		{ path => '/Properties',		callback => sub { $self->set_properties },		item_type => '<Item>'},
-		);
+	);
 
-		$item_factory->create_items(undef, @menu_items);
+	$item_factory->create_items(undef, @menu_items);
+
+	$item = $item_factory->get_item('/Bookmarks');
+	$item->set_submenu(&main::get_bookmarks_menu);
+
+	my ($p) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
+
+	if (defined $p) {
+		if (! $self->[TREESELECTION]->path_is_selected($p)) {
+			$self->[TREESELECTION]->unselect_all;
+			$self->[TREESELECTION]->select_path($p);
+		}
+
+		if (! defined $self->[SELECTED_ITEM]) {
+			return;
+		}
+
+		my $mime = new Filer::Mime;
+		my $type = File::MimeInfo::Magic::mimetype($self->[SELECTED_ITEM]);
 
 		# Customize archive submenu
 		if (! Filer::Archive::is_supported_archive($type)) {
-			$item_factory->delete_item('/Archive/Extract');
+			$item_factory->get_item('/Archive/Extract')->set_sensitive(0);
 		}
-
-		$item = $item_factory->get_item('/Bookmarks');
-		$item->set_submenu(&main::get_bookmarks_menu);
 
 		if ($self->count_selected_items == 1) {
 			my $commands_menu = new Gtk2::Menu;
@@ -240,31 +240,18 @@ sub show_popup_menu {
 			$item = new Gtk2::MenuItem('Other ...');
 			$item->signal_connect("activate", sub { $self->open_file_with });
 			$commands_menu->add($item);
-		} else {
-			$item_factory->delete_item('/Open');
-			$item_factory->delete_item('/sep1');
-			$item_factory->delete_item('/Rename');
+		} else {		
+			$item_factory->get_item('/Open')->set_sensitive(0);
+			$item_factory->get_item('/Rename')->set_sensitive(0);			
 		}
-
-	} else {
-		my @menu_items = (
-		{ path => '/Copy',			callback => \&main::copy_cb,		item_type => '<Item>'},
-		{ path => '/Cut',			callback => \&main::cut_cb,		item_type => '<Item>'},
-		{ path => '/Paste',			callback => \&main::paste_cb,		item_type => '<Item>'},
-		{ path => '/sep1',								item_type => '<Separator>'},
-		{ path => '/MkDir',			callback => \&main::mkdir_cb,		item_type => '<Item>'},
-		{ path => '/sep2',								item_type => '<Separator>'},
-		{ path => '/Open Terminal',		callback => \&main::open_terminal_cb,	item_type => '<Item>'},
-		{ path => '/Bookmarks',								item_type => '<Item>'},
-		);
-
-		$item_factory->create_items(undef, @menu_items);
-
+	} else {		
+		$item_factory->get_item('/Open')->set_sensitive(0);
+		$item_factory->get_item('/Rename')->set_sensitive(0);
+		$item_factory->get_item('/Delete')->set_sensitive(0);
 		$item_factory->get_item('/Copy')->set_sensitive(0);
 		$item_factory->get_item('/Cut')->set_sensitive(0);
-
-		$item = $item_factory->get_item('/Bookmarks');
-		$item->set_submenu(&main::get_bookmarks_menu);
+		$item_factory->get_item('/Archive')->set_sensitive(0);
+		$item_factory->get_item('/Properties')->set_sensitive(0);
 	}
 
 	my $clipboard = Gtk2::Clipboard->get_for_display($self->[TREEVIEW]->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
@@ -531,6 +518,31 @@ sub update_navigation_buttons {
 					$w[0]->set_text(File::Basename::basename($path));
 				}
 			}
+
+# 			$button->signal_connect(event => sub {
+# 				my ($w,$e) = @_;
+# 				if ($e->type eq "button-press" and $e->button == 3) {
+# 					my $menu = new Gtk2::Menu;
+# 					my $item;
+# 
+# 					$item = new Gtk2::MenuItem("Open");
+# 					$item->signal_connect("activate", sub {
+# 						my ($w,$b) = @_;
+# 						$b->set(active => 1);
+# 					},$w);
+# 					$menu->add($item);
+# 
+# 					$item = new Gtk2::MenuItem("Close");
+# 					$item->signal_connect("activate", sub {
+# 						my ($w,$b) = @_;
+# 						$b->destroy;
+# 					},$w);
+# 					$menu->add($item);
+# 
+# 					$menu->show_all;
+# 					$menu->popup(undef, undef, undef, undef, $e->button, $e->time);
+# 				}
+# 			});
 
 			$button->signal_connect(toggled => sub {
 				my ($widget, $data) = @_;

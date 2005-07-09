@@ -65,18 +65,8 @@ sub destroy {
 
 sub copy {
 	my ($self,$source,$dest) = @_;
-#	my $copy_inside_same_directory = 0;
 
 	my $dirwalk = new File::DirWalk;
-
-# 	if (dirname($dest) eq ".") {
-# 		$dest = dirname($source) . "/" . $dest;
-# 		$copy_inside_same_directory = 1;
-#
-# 		if (-d $source) {
-# 			mkdir($dest);
-# 		}
-# 	}
 
 	$dirwalk->onBeginWalk(sub {
 		if ($self->{progress} == 0) {
@@ -97,29 +87,22 @@ sub copy {
 
 	$dirwalk->onDirEnter(sub {
 		my ($dir) = @_;
-
-# 		if ($copy_inside_same_directory == 1) {
-# 			$copy_inside_same_directory = 0;
-# 		} else {
-			$dest = Cwd::abs_path("$dest/" . basename($dir));
-#		}
+		$dest = Cwd::abs_path("$dest/" . basename($dir));
 
 		if (! -e $dest) {
 			mkdir($dest) || return File::DirWalk::FAILED;
-		} else {
-			if (dirname($dir) eq dirname($dest)) {
-				my $i = 1;
-				while (1) {
-					if (-e "$dest-$i") {
-						$i++;
-					} else {
-						$dest = "$dest-$i";
-						last;
-					}
-				}
+		}
 
-				mkdir($dest) || return File::DirWalk::FAILED;
+		if ((-e $dest) and (dirname($source) eq dirname($dest))) {
+			my $i = 1;
+			while (1) {
+				last unless (-e "$dest-$i");
+				$i++;
 			}
+
+			$dest = "$dest-$i";
+
+			mkdir($dest) || return File::DirWalk::FAILED;
 		}
 
 		return File::DirWalk::SUCCESS;
@@ -131,24 +114,47 @@ sub copy {
 	});
 
 	$dirwalk->onFile(sub {
-		my ($file) = @_;
-		my $my_dest = $dest;
+		my ($source) = @_;
+		my $my_source = $source;
+		my $my_dest = Cwd::abs_path("$dest/" . basename($my_source));
 
-# 		if ($copy_inside_same_directory == 1) {
-# 			$copy_inside_same_directory = 0;
-# 		} else {
-			$my_dest = Cwd::abs_path("$dest/" . basename($file));
-#		}
+		if (-e $my_dest) {
+			if (dirname($my_source) eq dirname($my_dest)) {
+				my $i = 1;
+				while (1) {
+					last unless (-e "$my_dest-$i");
+					$i++;
+				}
 
- 		$self->{progress_label}->set_text("$file\n$my_dest");
+				$my_dest = "$my_dest-$i";
+			} else {
+				if ($main::SKIP_ALL) {
+					return File::DirWalk::SUCCESS;
+				}
+
+				if (!$main::OVERWRITE_ALL) {
+					my $r = Filer::Dialog->ask_overwrite_dialog("Overwrite", "Overwrite: <b>$my_dest</b>\nwith: <b>$my_source</b>");
+
+					if ($r eq 'no') {
+						return File::DirWalk::SUCCESS;
+					} elsif ($r eq 1) {
+						$main::OVERWRITE_ALL = 1;
+					} elsif ($r eq 2) {
+						$main::SKIP_ALL = 1;
+						return File::DirWalk::SUCCESS;
+					}
+				}
+			}
+		}
+
+ 		$self->{progress_label}->set_text("$my_source\n$my_dest");
 		$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
 		$self->{progressbar_total}->set_text("Copying file $self->{progress_count} of $self->{progress_total} ...");
 
 		while (Gtk2->events_pending) { Gtk2->main_iteration; }
 
-		if ($file ne $dest) {
-			my $filecopy = new Filer::FileCopy($self->{progressbar_part}, \$self->{progress});
-			return $filecopy->filecopy($file,$my_dest);
+		if ($my_source ne $dest) {
+			return (new Filer::FileCopy($self->{progressbar_part}, \$self->{progress}))->filecopy($my_source,$my_dest);
 		} else {
 			Filer::Dialog->msgbox_error("Destination and target are the same! Aborting!");
 			return File::DirWalk::ABORTED;

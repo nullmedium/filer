@@ -19,6 +19,7 @@ package Filer::FileCopy;
 use strict;
 use warnings;
 
+use File::Basename; 
 use Fcntl;
 
 use constant PROGRESSBAR => 0;
@@ -40,44 +41,8 @@ sub new {
 
 sub filecopy {
 	my ($self,$source,$dest) = @_;
-	my $return_overwrite_all = 0;
 	
-	if (File::Basename::dirname($source) eq File::Basename::dirname($dest)) {
-		my $i = 1;
-		while (1) {
-			if (-e "$dest-$i") {
-				$i++;
-			} else {
-				$dest = "$dest-$i";
-				last;
-			}
-		}
-	}
-
-	if (-e $dest) {
-		if ($main::SKIP_ALL) {
-			return File::DirWalk::SUCCESS;
-		}
-		
-		if (!$main::OVERWRITE_ALL) {
-			my $r = Filer::Dialog->ask_overwrite_dialog("Overwrite", "Overwrite: <b>$dest</b>\nwith: <b>$source</b>");
-
-			if ($r eq 'no') {
-				return File::DirWalk::SUCCESS;
-			} elsif ($r eq 1) {
-				$return_overwrite_all = 1;
-			} elsif ($r eq 2) {
-				$main::SKIP_ALL = 1;
-				return File::DirWalk::SUCCESS;
-			}
-		}
-	}
-
-	$source = Cwd::abs_path($source);
-	$dest = Cwd::abs_path($dest);
-
 	my @stat = stat($source); # || return File::DirWalk::FAILED;
-
 	my $mode = $stat[2];
 	my $size = $stat[7];
 	my $buf_size = $stat[11]; # use filesystem blocksize
@@ -85,7 +50,7 @@ sub filecopy {
 	my $written = 0;
 	my $written_avg = 0;
 
-	Glib::Timeout->add(1000, sub {
+	my $id = Glib::Timeout->add(1000, sub {
 		return 0 if ($written_avg == 0);
 
 		$self->[PROGRESSBAR]->set_text(&Filer::FilePane::calculate_size($written_avg) . "/s");
@@ -115,12 +80,9 @@ sub filecopy {
 
 	chmod $mode, $dest || return File::DirWalk::FAILED;
 
-	if ($return_overwrite_all) {
-		$main::OVERWRITE_ALL = 1;
-		return File::DirWalk::SUCCESS;
-	}
+	Glib::Source->remove($id);
 
-	return 1;
+	return File::DirWalk::SUCCESS;
 }
 
 1;

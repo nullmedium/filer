@@ -285,6 +285,8 @@ sub get_bookmarks_menu {
 					$bookmarks->set_bookmark($active_pane->get_pwd);
 				}
 			}
+		} else {
+			$bookmarks->set_bookmark($active_pane->get_pwd);
 		}
 
 		my $menu = $widgets->{item_factory}->get_item("/Bookmarks");
@@ -305,6 +307,8 @@ sub get_bookmarks_menu {
 					$bookmarks->remove_bookmark($active_pane->get_pwd);
 				}
 			}
+		} else {
+			$bookmarks->remove_bookmark($active_pane->get_pwd);
 		}
 
 		my $menu = $widgets->{item_factory}->get_item("/Bookmarks");

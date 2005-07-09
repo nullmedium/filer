@@ -65,54 +65,32 @@ sub destroy {
 
 sub move {
 	my ($self,$source,$dest) = @_;
-	my $r;
 
 	return File::DirWalk::FAILED if ($source eq $dest);
 
-# 	my $trashdir = (new File::BaseDir)->xdg_data_home . "/Trash";
-# 	my $trashdir_files = "$trashdir/files";
-# 	my $trashdir_info = "$trashdir/info";
-# 	my $file_basename = basename($source);
+	my $my_dest = Cwd::abs_path("$dest/" . basename($source));
 
-	if (dirname($dest) ne '.') {
-		my $my_dest = Cwd::abs_path("$dest/" . basename($source));
-		
-		if ((-e $my_dest) and (! -d $my_dest)) {
-			if ($main::SKIP_ALL) {
-				return File::DirWalk::SUCCESS;
-			}
-
-			if (!$main::OVERWRITE_ALL) {
-				my $r = Filer::Dialog->ask_overwrite_dialog("Replace", "Replace: <b>$my_dest</b>\nwith: <b>$source</b>");
-
-				if ($r eq 'no') {
-					return File::DirWalk::SUCCESS;
-				} elsif ($r == 1) {
-					$main::OVERWRITE_ALL = 1;
-				} elsif ($r == 2) {
-					$main::SKIP_ALL = 1;
-					return File::DirWalk::SUCCESS;
-				}
-			}
+	if (-e $my_dest) {
+		if ($main::SKIP_ALL) {
+			return File::DirWalk::SUCCESS;
 		}
 
-		$r = rename($source,$my_dest);
-		
-# 		# it's 'renamed' out of the trash. so remove its .trashinfo file
-# 		if (dirname($source) eq $trashdir_files) {
-# 			unlink("$trashdir_info/$file_basename.trashinfo")
-# 		}
+		if (!$main::OVERWRITE_ALL) {
+			my $r = Filer::Dialog->ask_overwrite_dialog("Replace", "Replace: <b>$my_dest</b>\nwith: <b>$source</b>");
 
-	} else {
-		$r = rename($source,Cwd::abs_path(dirname($source) . "/$dest"));
-
-# 		# the file is renamed inside the trash -> rename its .trashinfo file too
-# 		if (dirname($source) eq $trashdir_files) {
-# 			rename("$trashdir_info/$file_basename.trashinfo", "$trashdir_info/" . basename($dest) . ".trashinfo");
-# 		}
+			if ($r eq 'no') {
+				return File::DirWalk::SUCCESS;
+			} elsif ($r eq 1) {
+				$main::OVERWRITE_ALL = 1;
+			} elsif ($r eq 2) {
+				$main::SKIP_ALL = 1;
+				return File::DirWalk::SUCCESS;
+			}
+		}
 	}
 
-	if (!$r) {
+	if (! rename($source,$my_dest)) {
+
 		my $dirwalk = new File::DirWalk;
 
 		$dirwalk->onBeginWalk(sub {
@@ -154,33 +132,108 @@ sub move {
 
 		$dirwalk->onFile(sub {
 			my ($file) = @_;
-			my $dest = Cwd::abs_path("$dest/" . basename($file));
+			my $my_source = $file;
+			my $my_dest = Cwd::abs_path("$dest/" . basename($my_source));
 
-	 		$self->{progress_label}->set_text("$file\n$dest");
+	 		$self->{progress_label}->set_text("$my_source\n$my_dest");
 			$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
 			$self->{progressbar_total}->set_text("Moving file $self->{progress_count} of $self->{progress_total} ...");
 			while (Gtk2->events_pending) { Gtk2->main_iteration; }
 
-			if ($file ne $dest) {
-				my $filecopy = new Filer::FileCopy($self->{progressbar_part}, \$self->{progress});
-
-				if ((my $r = $filecopy->filecopy($file,$dest)) != File::DirWalk::SUCCESS) {
-					return $r;
-				}
-
-				unlink($file) || return File::DirWalk::FAILED;
-
-				return File::DirWalk::SUCCESS;
-			} else {
-				Filer::Dialog->msgbox_error("Destination and target are the same! Aborting!");
-				return File::DirWalk::ABORTED;
+			if ((my $r = (new Filer::FileCopy($self->{progressbar_part}, \$self->{progress}))->filecopy($my_source,$my_dest)) != File::DirWalk::SUCCESS) {
+				return $r;
 			}
+
+			unlink($my_source) || return File::DirWalk::FAILED;
+
+			return File::DirWalk::SUCCESS;
 		});
 
 		return $dirwalk->walk($source);
 	}
 
 	return File::DirWalk::SUCCESS;
+
+# 	my $dirwalk = new File::DirWalk;
+# 
+# 	$dirwalk->onBeginWalk(sub {
+# 		if ($self->{progress} == 0) {
+# 			return File::DirWalk::ABORTED;
+# 		}
+# 
+# 		return File::DirWalk::SUCCESS;
+# 	});
+# 
+# 	$dirwalk->onLink(sub {
+# 		my ($source) = @_;
+# 
+# 		symlink(readlink($source), Cwd::abs_path("$dest/" . basename($source))) || return File::DirWalk::FAILED;
+# 
+# 		return File::DirWalk::SUCCESS;
+# 	});
+# 
+# 	$dirwalk->onDirEnter(sub {
+# 		my ($dir) = @_;
+# 
+# 		$dest = Cwd::abs_path("$dest/" . basename($dir));
+# 
+# 		if (! -e $dest) {
+# 			mkdir($dest) || return File::DirWalk::FAILED;
+# 		}
+# 
+# 		return File::DirWalk::SUCCESS;
+# 	});
+# 
+# 	$dirwalk->onDirLeave(sub {
+# 		my ($dir) = @_;
+# 		$dest = Cwd::abs_path("$dest/..");
+# 
+# 		rmdir($dir) || return File::DirWalk::FAILED;
+# 
+# 		return File::DirWalk::SUCCESS;
+# 	});
+# 
+# 	$dirwalk->onFile(sub {
+# 		my ($file) = @_;
+# 		my $my_source = $file;
+# 		my $my_dest = Cwd::abs_path("$dest/" . basename($my_source));
+# 
+# 		if (-e $my_dest) {
+# 			if ($main::SKIP_ALL) {
+# 				return File::DirWalk::SUCCESS;
+# 			}
+# 
+# 			if (!$main::OVERWRITE_ALL) {
+# 				my $r = Filer::Dialog->ask_overwrite_dialog("Replace", "Replace: <b>$my_dest</b>\nwith: <b>$my_source</b>");
+# 
+# 				if ($r eq 'no') {
+# 					return File::DirWalk::SUCCESS;
+# 				} elsif ($r eq 1) {
+# 					$main::OVERWRITE_ALL = 1;
+# 				} elsif ($r eq 2) {
+# 					$main::SKIP_ALL = 1;
+# 					return File::DirWalk::SUCCESS;
+# 				}
+# 			}
+# 		}
+# 
+# 	 	$self->{progress_label}->set_text("$my_source\n$my_dest");
+# 		$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
+# 		$self->{progressbar_total}->set_text("Moving file $self->{progress_count} of $self->{progress_total} ...");
+# 		while (Gtk2->events_pending) { Gtk2->main_iteration; }
+# 
+# 		if (! rename($my_source,$my_dest)) {
+# 			if ((my $r = (new Filer::FileCopy($self->{progressbar_part}, \$self->{progress}))->filecopy($my_source,$my_dest)) != File::DirWalk::SUCCESS) {
+# 				return $r;
+# 			}
+# 
+# 			unlink($my_source) || return File::DirWalk::FAILED;
+# 		}
+# 
+# 		return File::DirWalk::SUCCESS;
+# 	});
+# 
+# 	return $dirwalk->walk($source);
 }
 
 *action = \&move;
