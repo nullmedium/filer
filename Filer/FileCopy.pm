@@ -49,11 +49,18 @@ sub filecopy {
 	my $buf = "";
 	my $written = 0;
 	my $written_avg = 0;
+	my $percent_written = 0;
+	my $size_h = &Filer::FilePane::calculate_size($size);
 
 	my $id = Glib::Timeout->add(1000, sub {
 		return 0 if ($written_avg == 0);
+		
+		my $p = sprintf("%.0f", $percent_written * 100);
+		my $str = "$p% of $size_h (" .  &Filer::FilePane::calculate_size($written_avg) . "/s)"; 
+  
+		$self->[PROGRESSBAR]->get_parent_window->set_title($str);
+		$self->[PROGRESSBAR]->set_text($str);
 
-		$self->[PROGRESSBAR]->set_text(&Filer::FilePane::calculate_size($written_avg) . "/s");
 		$written_avg = 0;
 
 		return 1;
@@ -70,8 +77,9 @@ sub filecopy {
 		my $l = length($buf);
 		$written += $l;
 		$written_avg += $l;
+		$percent_written = $written/$size; 
 
-		$self->[PROGRESSBAR]->set_fraction($written/$size);
+		$self->[PROGRESSBAR]->set_fraction($percent_written);
 		while (Gtk2->events_pending) { Gtk2->main_iteration; }
 	}
 

@@ -125,40 +125,136 @@ sub copy {
 		my $my_source = $source;
 		my $my_dest = abs_path(catfile(splitdir($dest), basename($my_source)));
 
-		if (-e $my_dest) {
-			if (dirname($my_source) eq dirname($my_dest)) {
-				my $i = 1;
-				while (1) {
-					last unless (-e "$my_dest-$i");
-					$i++;
-				}
-
-				$my_dest = "$my_dest-$i";
-			} else {
-				if ($main::SKIP_ALL) {
-					return File::DirWalk::SUCCESS;
-				}
-
-				if (!$main::OVERWRITE_ALL) {
-					my $r = Filer::Dialog->ask_overwrite_dialog("Overwrite", "Overwrite: <b>$my_dest</b>\nwith: <b>$my_source</b>");
-
-					if ($r eq 'no') {
-						return File::DirWalk::SUCCESS;
-					} elsif ($r eq 1) {
-						$main::OVERWRITE_ALL = 1;
-					} elsif ($r eq 2) {
-						$main::SKIP_ALL = 1;
-						return File::DirWalk::SUCCESS;
-					}
-				}
-			}
-		}
-
  		$self->{progress_label}->set_text("$my_source\n$my_dest");
 		$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
 		$self->{progressbar_total}->set_text("Copying file $self->{progress_count} of $self->{progress_total} ...");
 
 		while (Gtk2->events_pending) { Gtk2->main_iteration; }
+
+		if (-e $my_dest) {
+			if ($main::SKIP_ALL) {
+				return File::DirWalk::SUCCESS;
+			}
+
+			if (!$main::OVERWRITE_ALL) {
+				my ($dialog,$label,$button,$hbox,$entry);
+
+				if (dirname($my_source) eq dirname($my_dest)) {
+					$dialog = new Gtk2::Dialog("File exists already", undef, 'modal');
+					$dialog->set_position('center');
+					$dialog->set_modal(1);
+
+					$label = new Gtk2::Label;
+					$label->set_use_markup(1);
+					$label->set_alignment(0.0,0.0);
+					$label->set_markup("This action would overwrite '$my_source' with itself.\nPlease enter a new file name:");
+					$dialog->vbox->pack_start($label, 1,1,5);
+
+					$hbox = new Gtk2::HBox(0,0);
+					$dialog->vbox->pack_start($hbox, 1,1,5);
+
+					$entry = new Gtk2::Entry;
+					$entry->set_alignment(0.0);
+					$hbox->pack_start($entry, 1,1,5);
+
+					$button = new Gtk2::Button("Suggest New Name");
+					$button->signal_connect("clicked", sub {
+						my $i = 1;
+						while (1) {
+							last unless (-e "$my_dest-$i");
+							$i++;
+						}
+
+						$entry->set_text(basename("$my_dest-$i"));
+					});
+					$hbox->pack_start($button, 0,1,5);
+
+					$dialog->add_button("Continue", 'ok');
+					$dialog->add_button("Cancel", 'cancel');
+
+					$dialog->show_all;
+					my $r = $dialog->run;
+					$dialog->destroy;
+
+					if ($r eq 'ok') {
+						$my_dest = catfile(dirname($my_dest), $entry->get_text);
+					} elsif ($r eq 'cancel') {
+						return File::DirWalk::ABORTED;
+					}
+
+				} else {
+					my ($dialog,$label,$button,$hbox,$entry);
+
+					$dialog = new Gtk2::Dialog("Overwrite", undef, 'modal');
+					$dialog->set_position('center');
+					$dialog->set_modal(1);
+
+					$label = new Gtk2::Label;
+					$label->set_use_markup(1);
+					$label->set_alignment(0.0,0.0);
+					$label->set_markup("Overwrite: <b>$my_dest</b>\nwith: <b>$my_source</b>");
+					$dialog->vbox->pack_start($label, 1,1,5);
+
+					$hbox = new Gtk2::HBox(0,0);
+					$dialog->vbox->pack_start($hbox, 1,1,5);
+
+					$label = new Gtk2::Label;
+					$label->set_use_markup(1);
+					$label->set_alignment(0.0,0.5);
+					$label->set_markup("New Name: ");
+					$hbox->pack_start($label, 0,0,0);
+
+					$entry = new Gtk2::Entry;
+					$entry->set_alignment(0.0);
+					$hbox->pack_start($entry, 0,1,5);
+
+					$button = new Gtk2::Button("Suggest new name");
+					$button->signal_connect("clicked", sub {
+						my $i = 1;
+						while (1) {
+							last unless (-e "$my_dest-$i");
+							$i++;
+						}
+
+						$entry->set_text(basename("$my_dest-$i"));
+					});
+					$hbox->pack_start($button, 0,1,5);
+
+					$dialog->add_button("Rename", 3);
+					$dialog->add_button("Overwrite", 'yes');
+					$dialog->add_button("Auto Skip", 'no');
+					$dialog->add_button("Overwrite All", 1);
+					$dialog->add_button("Overwrite None", 2);
+					$dialog->add_button("Cancel", 'cancel');
+
+					$dialog->show_all;
+					my $r = $dialog->run;
+					$dialog->destroy;
+
+					if ($r eq 'no') {
+						return File::DirWalk::SUCCESS;
+					} elsif ($r eq 'cancel') {
+						return File::DirWalk::ABORTED;
+					} elsif ($r eq 1) {
+						$main::OVERWRITE_ALL = 1;
+					} elsif ($r eq 2) {
+						$main::SKIP_ALL = 1;
+						return File::DirWalk::SUCCESS;
+					} elsif ($r eq 3) {
+						$my_dest = catfile(dirname($my_dest), $entry->get_text);
+					}
+				}
+
+				if ($my_source eq $my_dest) {
+					Filer::Dialog->msgbox_error("Can't overwrite file with itself! Skipping!");
+					return File::DirWalk::SUCCESS;
+				}
+			}
+		}
+
+ 		$self->{progress_label}->set_text("$my_source\n$my_dest");
+		$self->{progressbar_total}->set_fraction($self->{progress_count}/$self->{progress_total});
+		$self->{progressbar_total}->set_text("Copying file $self->{progress_count} of $self->{progress_total} ...");
 
 		if ($my_source ne $dest) {
 			return (new Filer::FileCopy($self->{progressbar_part}, \$self->{progress}))->filecopy($my_source,$my_dest);

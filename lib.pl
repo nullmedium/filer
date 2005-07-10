@@ -655,10 +655,10 @@ sub paste_cb {
 		$do->destroy;
 	};
 
-	my @files = split /\n/, &get_clipboard_contents;
+	my $files = [ split /\n/, &get_clipboard_contents ];
 
 	# copy or cut files
-	&{$f}(\@files, $active_pane->get_pwd);
+	&{$f}($files, $active_pane->get_pwd);
 
 	# refresh panes.
 	$active_pane->refresh;
@@ -855,6 +855,7 @@ sub delete_cb {
 	return if (($active_pane->count_selected_items == 0) or (not defined $active_pane->get_selected_item));
 
 	if ($config->get_option("ConfirmDelete") == 1) {
+	
 		if ($active_pane->count_selected_items == 1) {
 			if (-f $active_pane->get_selected_item) {
 				return if (Filer::Dialog->yesno_dialog(sprintf("Delete file \"%s\"?", basename($active_pane->get_selected_item))) eq 'no');
@@ -867,22 +868,32 @@ sub delete_cb {
 	}
 
 	my $delete = Filer::Delete->new;
-	$delete->set_total(&files_count);
-	$delete->show;
+	my $t = &files_count; 
 
-	foreach (@{$active_pane->get_selected_items}) {
-		my $r = $delete->delete($_);
+	if (($t > 1) or (-d $active_pane->get_selected_item)) {
+		$delete->set_total($t);
+		$delete->show;
 
-		if ($r == File::DirWalk::FAILED) {
-			Filer::Dialog->msgbox_info("Deleting of $_ failed: $!");
-			last;
-		} elsif ($r == File::DirWalk::ABORTED) {
-			Filer::Dialog->msgbox_info("Deleting of $_ aborted!");
-			last;
+		foreach (@{$active_pane->get_selected_items}) {
+			my $r = $delete->delete($_);
+
+			if ($r == File::DirWalk::FAILED) {
+				Filer::Dialog->msgbox_info("Deleting of $_ failed: $!");
+				last;
+			} elsif ($r == File::DirWalk::ABORTED) {
+				Filer::Dialog->msgbox_info("Deleting of $_ aborted!");
+				last;
+			}
+		}
+
+		$delete->destroy;
+	} else {
+		my $f = $active_pane->get_selected_item; 
+		
+		if (! unlink($f)) {
+			Filer::Dialog->msgbox_info(sprintf("Deleting of \"%s\" failed: $!", $f));
 		}
 	}
-
-	$delete->destroy;
 
 	$active_pane->remove_selected;
 	&refresh_inactive_pane;
@@ -1078,15 +1089,7 @@ sub files_count_paste {
 		return File::DirWalk::SUCCESS;
 	});
 
-	my @files = ();
-	my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
-
-	$clipboard->request_text(sub {
-		my ($c,$t) = @_;
-		@files = split /\n/, $t;
-	});
-
-	foreach (@files) {
+	foreach (split /\n/, &get_clipboard_contents) {
 		if (-e $_) {
 			$dirwalk->walk($_);
 		}
