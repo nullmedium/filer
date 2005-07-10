@@ -19,35 +19,40 @@ package Filer::FilePane;
 use strict;
 use warnings;
 
+use Cwd qw(abs_path);
+use File::Spec::Functions qw(catfile splitdir);
+use Stat::lsMode qw(format_mode);
+
+Memoize::memoize("File::MimeInfo::mimetype");
+Memoize::memoize("File::MimeInfo::describe");
+Memoize::memoize("format_mode");
+Memoize::memoize("abs_path");
+Memoize::memoize("catfile");
+Memoize::memoize("splitdir");
+
+Memoize::memoize("calculate_size");
+
 use constant LEFT	=> 0;
 use constant RIGHT	=> 1;
 
-use constant SIDE		=> 0;
-use constant FILEPATH		=> 1;
-use constant VBOX		=> 2;
-use constant TREEVIEW		=> 3;
-use constant TREEMODEL		=> 4;
-use constant TREESELECTION	=> 5;
-use constant PATH_ENTRY		=> 6;
-use constant SELECTED_ITEM	=> 7;
-use constant SELECTED_ITER	=> 8;
-use constant OVERRIDES		=> 10;
-use constant MIMEICONS		=> 11;
-use constant FOLDER_STATUS	=> 12;
-
+use constant SIDE			=> 0;
+use constant FILEPATH			=> 1;
+use constant VBOX			=> 2;
+use constant TREEVIEW			=> 3;
+use constant TREEMODEL			=> 4;
+use constant TREESELECTION		=> 5;
+use constant PATH_ENTRY			=> 6;
+use constant SELECTED_ITEM		=> 7;
+use constant SELECTED_ITER		=> 8;
+use constant OVERRIDES			=> 10;
+use constant MIMEICONS			=> 11;
+use constant FOLDER_STATUS		=> 12;
 use constant LOCATION_BAR_PARENT	=> 13;
 use constant LOCATION_BAR		=> 14;
 use constant NAVIGATION_BOX		=> 15;
 use constant NAVIGATION_BUTTONS		=> 16;
-
 use constant MOUSE_MOTION_SELECT	=> 17;
 use constant MOUSE_MOTION_Y_POS_OLD	=> 18;
-
-Memoize::memoize("calculate_size");
-Memoize::memoize("Stat::lsMode::format_mode");
-Memoize::memoize("File::MimeInfo::mimetype");
-Memoize::memoize("File::MimeInfo::describe");
-Memoize::memoize("Cwd::abs_path");
 
 sub new {
 	my ($class,$side) = @_;
@@ -68,9 +73,9 @@ sub new {
 	$button = new Gtk2::Button("Up");
 	$button->signal_connect("clicked", sub {
 		if ($main::config->get_option("Mode") == &main::EXPLORER_MODE) {
-			$self->open_path_helper(Cwd::abs_path("$self->[FILEPATH]/.."));
+			$self->open_path_helper($self->get_updir);
 		} else {
-			$self->open_path(Cwd::abs_path("$self->[FILEPATH]/.."));
+			$self->open_path($self->get_updir);
 		}
 	});
 	$self->[LOCATION_BAR]->pack_start($button, 0, 1, 0);
@@ -254,19 +259,11 @@ sub show_popup_menu {
 		$item_factory->get_item('/Properties')->set_sensitive(0);
 	}
 
-	my $clipboard = Gtk2::Clipboard->get_for_display($self->[TREEVIEW]->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
 	my $hide_paste = 1;
 
-	$clipboard->request_text(sub {
-		my ($c,$t) = @_;
-		return if (!$t);
-	
-		foreach (split /\n/, $t) { 
-			if (-e $_) {
-				$hide_paste = 0;
-			}
-		}
-	});
+	foreach (split /\n/, &main::get_clipboard_contents) { 
+		$hide_paste = 0 if (-e $_);
+	}
 	
 	if ($hide_paste) {
 		$item_factory->get_item('/Paste')->set_sensitive(0);
@@ -303,11 +300,10 @@ sub treeview_event_cb {
 	$main::widgets->{statusbar}->push(1,$self->[FOLDER_STATUS]);
 
 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'BackSpace'})) {
-
 		if ($main::config->get_option("Mode") == &main::EXPLORER_MODE) {
-			$self->open_path_helper(Cwd::abs_path("$self->[FILEPATH]/.."));
+			$self->open_path_helper($self->get_updir);
 		} else {
-			$self->open_path(Cwd::abs_path("$self->[FILEPATH]/.."));
+			$self->open_path($self->get_updir);
 		}
 
 		return 1;
@@ -412,16 +408,16 @@ sub get_pwd {
 	my ($self) = @_;
 
 	if (defined $self->[FILEPATH]) {
-		return Cwd::abs_path($self->[FILEPATH]);
+		return abs_path($self->[FILEPATH]);
 	} else {
 		return undef;
 	}
 }
 
-# sub get_path {
-# 	my ($self,$file) = @_;
-# 	return Cwd::abs_path($self->[FILEPATH] . "/$file");
-# }
+sub get_updir { 
+	my ($self) = @_;
+	return abs_path(catfile(splitdir($self->[FILEPATH]), File::Spec->updir));
+}
 
 sub get_selected_item {
 	my ($self) = @_;
@@ -481,7 +477,8 @@ sub remove_selected {
 
 sub update_navigation_buttons {
 	my ($self,$filepath) = @_;
-	my $path = File::Spec->rootdir();
+	my $rootdir = File::Spec->rootdir; 
+	my $path = $rootdir;
 	my $button = undef;
 
 	foreach (reverse sort keys %{$self->[NAVIGATION_BUTTONS]}) {
@@ -492,13 +489,13 @@ sub update_navigation_buttons {
 			delete $self->[NAVIGATION_BUTTONS]->{$_};
 		}
 	}
-
-	foreach (File::Spec->splitdir($filepath)) {
-		$path = File::Spec->catfile(File::Spec->splitdir($path), $_);
+	
+	foreach (splitdir($filepath)) {
+		$path = catfile(splitdir($path), $_);
 		
 		if (not defined $self->[NAVIGATION_BUTTONS]->{$path}) {
 
-			$button = new Gtk2::RadioButton($self->[NAVIGATION_BUTTONS]->{"/"}, "");
+			$button = new Gtk2::RadioButton($self->[NAVIGATION_BUTTONS]->{$rootdir}, "");
 			$button->set(draw_indicator => 0); # i'm evil
 
 			my @w = $button->get_children;
@@ -506,59 +503,34 @@ sub update_navigation_buttons {
 			if ($path eq $filepath) {
 				$button->set(active => 1);
 
-				if ($path eq File::Spec->rootdir()) {
-					$w[0]->set_markup(sprintf("<b>%s</b>", File::Spec->rootdir()));
+				if ($path eq $rootdir) {
+					$w[0]->set_markup("<b>$rootdir</b>");
 				} else {
 					$w[0]->set_markup(sprintf("<b>%s</b>", File::Basename::basename($path)));
 				}
 			} else {
-				if ($path eq File::Spec->rootdir()) {
-					$w[0]->set_text(File::Spec->rootdir());
+				if ($path eq $rootdir) {
+					$w[0]->set_text($rootdir);
 				} else {
 					$w[0]->set_text(File::Basename::basename($path));
 				}
 			}
-
-# 			$button->signal_connect(event => sub {
-# 				my ($w,$e) = @_;
-# 				if ($e->type eq "button-press" and $e->button == 3) {
-# 					my $menu = new Gtk2::Menu;
-# 					my $item;
-# 
-# 					$item = new Gtk2::MenuItem("Open");
-# 					$item->signal_connect("activate", sub {
-# 						my ($w,$b) = @_;
-# 						$b->set(active => 1);
-# 					},$w);
-# 					$menu->add($item);
-# 
-# 					$item = new Gtk2::MenuItem("Close");
-# 					$item->signal_connect("activate", sub {
-# 						my ($w,$b) = @_;
-# 						$b->destroy;
-# 					},$w);
-# 					$menu->add($item);
-# 
-# 					$menu->show_all;
-# 					$menu->popup(undef, undef, undef, undef, $e->button, $e->time);
-# 				}
-# 			});
 
 			$button->signal_connect(toggled => sub {
 				my ($widget, $data) = @_;
 				my @w = $widget->get_children;
 
 				if ($widget->get_active) {
-					if ($data eq File::Spec->rootdir()) {
-						$w[0]->set_markup(sprintf("<b>%s</b>", File::Spec->rootdir()));
+					if ($data eq $rootdir) {
+						$w[0]->set_markup("<b>$rootdir</b>");
 					} else {
 						$w[0]->set_markup(sprintf("<b>%s</b>", File::Basename::basename($data)));
 					}
 
 					$self->open_path($data);
 				} else {
-					if ($data eq File::Spec->rootdir()) {
-						$w[0]->set_text(File::Spec->rootdir());
+					if ($data eq $rootdir) {
+						$w[0]->set_text($rootdir);
 					} else {
 						$w[0]->set_text(File::Basename::basename($data));
 					}
@@ -574,11 +546,6 @@ sub update_navigation_buttons {
 
 sub open_file {
 	my ($self,$filepath) = @_;
-
-#	if ($filepath eq "trash:/") {
-#		my $trashdir = (new File::BaseDir)->xdg_data_home . "/Trash/files";
-#		$filepath = $trashdir;
-#	}
 
 	return 0 if ((not defined $filepath) or (not -R $filepath));
 
@@ -602,7 +569,12 @@ sub open_file {
                         my $command = $mime->get_default_command($type);
                         system("$command $filepath & exit");
 		} else {
-			if ($type eq 'application/x-compressed-tar') {
+			if ($type =~ /^text\/.+/) {
+
+				my $command = $main::config->get_option("Editor");
+	                        system("$command $filepath & exit");
+
+			} elsif ($type eq 'application/x-compressed-tar') {
 
 				my $dir = $self->get_temp_archive_dir();
 				system("cd $dir && tar -xzf $filepath");
@@ -708,16 +680,10 @@ sub open_file_with {
 		}
 
 		if ($run_terminal_checkbutton->get_active) {
-			if (defined $ENV{'TERMCMD'}) {
-				$command = "$ENV{TERMCMD} -e $command";
-			} else {
-				Filer::Dialog->msgbox_info("TERMCMD not defined!");
-
-				$dialog->destroy;
-				return;
-			}
+			my $term = $main::config->get_option("Terminal");
+			$command = "$term -x $command";
 		}
-
+		
 		system("$command '$self->[SELECTED_ITEM]' & exit");
 	}
 
@@ -728,11 +694,9 @@ sub open_terminal {
 	my ($self) = @_;
 
 	if (-d $self->[SELECTED_ITEM]) {
-		if (defined $ENV{'TERMCMD'}) {
-			system("cd '$self->[SELECTED_ITEM]' && $ENV{TERMCMD} & exit");
-		} else {
-			Filer::Dialog->msgbox_info("TERMCMD not defined!");
-		}
+		my $path = $self->get_pwd;
+		my $term = $main::config->get_option("Terminal");
+		system("cd '$path' && $term & exit");
 	}
 }
 
@@ -743,8 +707,8 @@ sub open_path_helper {
 		$self->[NAVIGATION_BUTTONS]->{$filepath}->set(active => 1);
 		my @w = $self->[NAVIGATION_BUTTONS]->{$filepath}->get_children();
 
-		if ($filepath eq "/") {
-			$w[0]->set_markup("<b>/</b>");
+		if ($filepath eq File::Spec->rootdir) {
+			$w[0]->set_markup(sprintf("<b>%s</b>", File::Spec->rootdir));
 		} else {
 			$w[0]->set_markup(sprintf("<b>%s</b>", File::Basename::basename($filepath)));
 		}
@@ -772,11 +736,7 @@ sub open_path {
 	my @dir_contents = sort readdir(DIR);
 	closedir(DIR);
 
-	if ($opt == 1) {
-		@dir_contents = @dir_contents[2 .. $#dir_contents];
-	} else {
-		@dir_contents = @dir_contents[(($filepath eq "/") ? 2 : 1) .. $#dir_contents];
-	}
+	@dir_contents = File::Spec->no_upwards(@dir_contents);
 
 	delete $self->[SELECTED_ITEM];
 	delete $self->[SELECTED_ITER];
@@ -808,9 +768,10 @@ sub open_path {
 
 	foreach my $file (@dirs,@files) {
 		next if ($file =~ /^\.+\w+/ and $show_hidden == 0);
-
-		my @stat = lstat("$filepath/$file");
-		my $type = File::MimeInfo::mimetype("$filepath/$file");
+		
+		my $fp = catfile(splitdir($filepath), $file);
+		my @stat = lstat($fp);
+		my $type = File::MimeInfo::mimetype($fp);
 		my $mypixbuf = $self->[MIMEICONS]->{'default'};
 
 		my $size = calculate_size($stat[7]);
@@ -821,8 +782,8 @@ sub open_path {
 
 		$total_size += $stat[7];
 
-		my $abspath = Cwd::abs_path("$filepath/$file");
-		my $target = readlink("$filepath/$file");
+		my $abspath = abs_path($fp);
+		my $target = readlink($fp);
 
 		if (-l "$filepath/$file") {
 			$type = "inode/symlink";
@@ -893,7 +854,7 @@ sub extract_archive {
 sub get_temp_archive_dir {
 	my ($self) = @_;
 	my $dir = File::Temp::tempdir(CLEANUP => 1);
-	my $dir_up = Cwd::abs_path("$dir/..");
+	my $dir_up = abs_path(catfile(splitdir($dir), File::Spec->updir));
 
 	# this overrides the path if the user clicks on the .. inside the temp archive directory
 	$self->[OVERRIDES]->{$dir_up} = $self->[FILEPATH];

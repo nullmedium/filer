@@ -29,30 +29,27 @@ $default_config = {
 	ConfirmCopy		=> 1,
 	ConfirmMove		=> 1,
 	ConfirmDelete		=> 1,
-	MoveToTrash		=> 1,
 	WindowSize		=> "800:600",
+	Terminal		=> "xterm",
+	Editor			=> "nedit",
 };
 
 sub new {
 	my ($class,$side) = @_;
 	my $self = bless {}, $class;
-	$self->{cfg_home} = (new File::BaseDir)->xdg_config_home . "/filer";
+	my $xdg_config_home = (new File::BaseDir)->xdg_config_home;
+	$self->{cfg_home} = File::Spec->catfile(File::Spec->splitdir($xdg_config_home), "filer");
+	$self->{config_store} = File::Spec->catfile($self->{cfg_home}, "config");
 
-	# move old config directory if it exists:
-	if (-e "$ENV{HOME}/.filer/") {
-		print "moving old config directory to new location ...\n";
-		rename("$ENV{HOME}/.filer", $self->{cfg_home});
-	}
-
-	if (! -e File::BaseDir::xdg_config_home) {
-		mkdir(File::BaseDir::xdg_config_home);
+	if (! -e $xdg_config_home) {
+		mkdir($xdg_config_home);
 	}
 
 	if (! -e $self->{cfg_home}) {
 		mkdir($self->{cfg_home});
 	}
 
-	if (! -e "$self->{cfg_home}/config") {
+	if (! -e $self->{config_store}) {
 		$self->store($default_config);
 	}
 
@@ -61,12 +58,12 @@ sub new {
 
 sub store {
 	my ($self,$config) = @_;
-	Storable::store($config, "$self->{cfg_home}/config");
+	Storable::store($config, $self->{config_store});
 }
 
 sub get {
 	my ($self) = @_;
-	return Storable::retrieve("$self->{cfg_home}/config");
+	return Storable::retrieve($self->{config_store});
 }
 
 sub set_option {

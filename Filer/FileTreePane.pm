@@ -19,6 +19,13 @@ package Filer::FileTreePane;
 use strict;
 use warnings;
 
+use Cwd qw(abs_path);
+use File::Spec::Functions qw(catfile splitdir);
+
+Memoize::memoize("abs_path");
+Memoize::memoize("catfile");
+Memoize::memoize("splitdir");
+
 use constant LEFT 		=> 0;
 use constant RIGHT		=> 1;
 
@@ -30,10 +37,8 @@ use constant TREESELECTION	=> 4;
 use constant FILEPATH		=> 5;
 use constant FILEPATH_ITER	=> 6;
 use constant MIMEICONS		=> 7;
-
 use constant MOUSE_MOTION_SELECT => 8;
-
-our ($y_old);
+use constant MOUSE_MOTION_Y_POS_OLD => 9;
 
 sub new {
 	my ($class,$side) = @_;
@@ -127,7 +132,6 @@ sub show_popup_menu {
 
 		my @menu_items =
 		(
-	#	{ path => '/sep4',								        			item_type => '<Separator>'},
 		{ path => '/Copy',					callback => \&main::copy_cb,				item_type => '<Item>'},
 		{ path => '/Cut',					callback => \&main::cut_cb,				item_type => '<Item>'},
 		{ path => '/Paste',					callback => \&main::paste_cb,				item_type => '<Item>'},
@@ -139,7 +143,7 @@ sub show_popup_menu {
 		{ path => '/sep1',								        			item_type => '<Separator>'},
 		{ path => '/Bookmarks',												item_type => '<Item>'},
 		{ path => '/sep2',								        			item_type => '<Separator>'},
-	#	{ path => '/Open Terminal',				callback => sub { $self->open_terminal },	        item_type => '<Item>'},
+		{ path => '/Open Terminal',				callback => sub { $self->open_terminal },	        item_type => '<Item>'},
 		{ path => '/Archive/Create tar.gz',			callback => sub { $self->create_tar_gz_archive },	item_type => '<Item>'},
 		{ path => '/Archive/Create tar.bz2',			callback => sub { $self->create_tar_bz2_archive },	item_type => '<Item>'},
 		{ path => '/sep3',								       				item_type => '<Separator>'},
@@ -185,25 +189,16 @@ sub show_popup_menu {
 			$bookmarks_menu->add($item);
 		}
 
-
-		my $clipboard = Gtk2::Clipboard->get_for_display($self->[TREEVIEW]->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
 		my $hide_paste = 1;
 
-		$clipboard->request_text(sub {
-			my ($c,$t) = @_;
-			return if (!$t);
-
-			foreach (split /\n/, $t) { 
-				if (-e $_) {
-					$hide_paste = 0;
-				}
-			}
-		});
+		foreach (split /\n/, &main::get_clipboard_contents) { 
+			$hide_paste = 0 if (-e $_);
+		}
 
 		if ($hide_paste) {
 			$item_factory->get_item('/Paste')->set_sensitive(0);
 		}
-
+	
 		$popup_menu->show_all;
 		$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
 	} else {
@@ -250,14 +245,26 @@ sub treeview_event_cb {
 
 	if ($e->type eq "button-press" and $e->button == 1) {
 		$self->set_focus;
-		$self->_select_helper_button1($e->x,$e->y);
+		my ($p) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
+
+		if (! defined $p) {
+			$self->[TREESELECTION]->unselect_all;
+		}
 	}
 
 	if ($e->type eq "button-press" and $e->button == 2) {
 		$self->[MOUSE_MOTION_SELECT] = 1;
-		$self->set_focus;
-		$y_old = $e->y;
-		$self->_select_helper_button2($e->x,$e->y);
+		$self->[MOUSE_MOTION_Y_POS_OLD] = $e->y;
+
+		my ($p) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
+
+		if (defined $p) {
+			$self->[TREESELECTION]->unselect_all;
+			$self->[TREESELECTION]->select_path($p);
+		} else {
+			$self->[TREESELECTION]->unselect_all;
+		}
+
 		return 1;
 	}
 
@@ -267,7 +274,13 @@ sub treeview_event_cb {
 	}
 
 	if (($e->type eq "motion-notify") and ($self->[MOUSE_MOTION_SELECT] == 1)) {
-		$self->_select_helper_motion($e->x,$y_old,$e->y);
+		my ($p_old) = $self->[TREEVIEW]->get_path_at_pos($e->x, $self->[MOUSE_MOTION_Y_POS_OLD]);
+		my ($p_new) = $self->[TREEVIEW]->get_path_at_pos($e->x, $e->y);
+
+		if ((defined $p_old) and (defined $p_new)) {
+			$self->[TREESELECTION]->unselect_all;
+			$self->[TREESELECTION]->select_range($p_old,$p_new);
+		}
 		return 0;
 	}
 
@@ -278,38 +291,6 @@ sub treeview_event_cb {
 	}
 
 	return 0;
-}
-
-sub _select_helper_button1 {
-	my ($self,$x,$y) = @_;
-	my ($p) = $self->[TREEVIEW]->get_path_at_pos($x,$y);
-
-	if (! defined $p) {
-		$self->[TREESELECTION]->unselect_all;
-	}
-}
-
-sub _select_helper_button2 {
-	my ($self,$x,$y) = @_;
-	my ($p) = $self->[TREEVIEW]->get_path_at_pos($x,$y);
-
-	if (defined $p) {
-		$self->[TREESELECTION]->unselect_all;
-		$self->[TREESELECTION]->select_path($p);
-	} else {
-		$self->[TREESELECTION]->unselect_all;
-	}
-}
-
-sub _select_helper_motion {
-	my ($self,$x,$y_old,$y_new) = @_;
-	my ($p_old) = $self->[TREEVIEW]->get_path_at_pos($x,$y_old);
-	my ($p_new) = $self->[TREEVIEW]->get_path_at_pos($x,$y_new);
-
-	if ((defined $p_old) and (defined $p_new)) {
-		$self->[TREESELECTION]->unselect_all;
-		$self->[TREESELECTION]->select_range($p_old,$p_new);
-	}
 }
 
 sub treeview_row_expanded_cb {
@@ -355,12 +336,17 @@ sub set_focus {
 
 sub filepath {
 	my ($self) = @_;
-	return Cwd::abs_path($self->[FILEPATH]);
+	return abs_path($self->[FILEPATH]);
 }
 
 *get_pwd = \&filepath;
 *get_path = \&filepath;
 *get_selected_item = \&filepath;
+
+sub get_updir { 
+	my ($self) = @_;
+	return abs_path(catfile(splitdir($self->[FILEPATH]), File::Spec->updir));
+}
 
 sub get_selected_iter {
 	my ($self) = @_;
@@ -425,14 +411,12 @@ sub CreateRootNodes {
 	my $iter;
 
 	$iter = $self->[TREEMODEL]->append(undef);
-	$self->[TREEMODEL]->set($iter, 0, $self->[MIMEICONS]->{'inode/directory'}, 1, "Filesystem", 2, "/");
+	$self->[TREEMODEL]->set($iter, 0, $self->[MIMEICONS]->{'inode/directory'}, 1, "Filesystem", 2, File::Spec->rootdir);
 	$self->[TREEMODEL]->append($iter);
-#	$self->[TREEVIEW]->expand_row($self->[TREEMODEL]->get_path($iter), 0);
 
 	$iter = $self->[TREEMODEL]->append(undef);
-	$self->[TREEMODEL]->set($iter, 0, $self->[MIMEICONS]->{'inode/directory'}, 1, "Home", 2, "$ENV{HOME}");
+	$self->[TREEMODEL]->set($iter, 0, $self->[MIMEICONS]->{'inode/directory'}, 1, "Home", 2, $ENV{HOME});
 	$self->[TREEMODEL]->append($iter);
-#	$self->[TREEVIEW]->expand_row($self->[TREEMODEL]->get_path($iter), 0);
 }
 
 sub DirRead {
@@ -442,26 +426,23 @@ sub DirRead {
 	opendir (DIR, $dir) || return Filer::Dialog->msgbox_error("$dir: $!");
 	my @dir_contents = sort readdir(DIR);
 	closedir(DIR);
+	
+	@dir_contents = File::Spec->no_upwards(@dir_contents);
 
-	my @dirs = grep { -d "$dir/$_" and (($show_hidden == 0 and $_ !~ /^\.+\w+/) or ($show_hidden == 1)) } @dir_contents[2 .. $#dir_contents];
+	foreach my $file (@dir_contents) {
+		my $fp = catfile(splitdir($dir), $file);
 
-	foreach my $file (@dirs) {
+		next unless (-d $fp);
+		next if ($file =~ /^\.+\w+/ and $show_hidden == 0);
+
 		my $iter = $self->[TREEMODEL]->append($parent_iter);
+		my $icon = (-l $fp) ? $self->[MIMEICONS]->{'inode/symlink'} : $self->[MIMEICONS]->{'inode/directory'};
 
-		$self->[TREEMODEL]->set(
-			$iter,
-			0, (-l "$dir/$file") ? $self->[MIMEICONS]->{'inode/symlink'} : $self->[MIMEICONS]->{'inode/directory'},
-			1, $file,
-			2, Cwd::abs_path("$dir/$file")
-		);
-
-		if (-R "$dir/$file") {
-			$self->[TREEMODEL]->append($iter);
-		}
+		$self->[TREEMODEL]->set($iter, 0, $icon, 1, $file, 2, abs_path($fp));
+		$self->[TREEMODEL]->append($iter) if (-R $fp);
 	}
 
-	my $iter = $self->[TREEMODEL]->iter_nth_child($parent_iter, 0); # dummy iter
-	$self->[TREEMODEL]->remove($iter);
+	$self->[TREEMODEL]->remove($self->[TREEMODEL]->iter_nth_child($parent_iter, 0)); # remove dummy iter
 }
 
 sub set_properties {
@@ -472,7 +453,7 @@ sub set_properties {
 sub create_tar_gz_archive {
 	my ($self) = @_;
 
-	my $archive = new Filer::Archive("$self->[FILEPATH]/..", $self->get_selected_items);
+	my $archive = new Filer::Archive($self->get_updir, $self->get_selected_items);
 	$archive->create_tar_gz_archive;
 
 	&main::refresh_inactive_pane;
@@ -481,7 +462,7 @@ sub create_tar_gz_archive {
 sub create_tar_bz2_archive {
 	my ($self) = @_;
 
-	my $archive = new Filer::Archive("$self->[FILEPATH]/..", $self->get_selected_items);
+	my $archive = new Filer::Archive($self->get_updir, $self->get_selected_items);
 	$archive->create_tar_bz2_archive;
 
 	&main::refresh_inactive_pane;

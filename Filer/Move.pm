@@ -20,7 +20,14 @@ use strict;
 use warnings;
 
 use Fcntl;
-use File::Basename;
+use Cwd qw( abs_path );
+use File::Spec::Functions qw(catfile splitdir);
+use File::Basename qw(dirname basename);
+
+Memoize::memoize("abs_path");
+Memoize::memoize("catfile");
+Memoize::memoize("splitdir");
+Memoize::memoize("basename");
 
 sub new {
 	my ($class) = @_;
@@ -68,7 +75,7 @@ sub move {
 
 	return File::DirWalk::FAILED if ($source eq $dest);
 
-	my $my_dest = Cwd::abs_path("$dest/" . basename($source));
+	my $my_dest = abs_path(catfile(splitdir($dest), basename($source)));
 
 	if (-e $my_dest) {
 		if ($main::SKIP_ALL) {
@@ -104,7 +111,7 @@ sub move {
 		$dirwalk->onLink(sub {
 			my ($source) = @_;
 
-			symlink(readlink($source), Cwd::abs_path("$dest/" . basename($source))) || return File::DirWalk::FAILED;
+			symlink(readlink($source), abs_path(catfile(splitdir($dest), basename($source)))) || return File::DirWalk::FAILED;
 
 			return File::DirWalk::SUCCESS;
 		});
@@ -112,7 +119,7 @@ sub move {
 		$dirwalk->onDirEnter(sub {
 			my ($dir) = @_;
 
-			$dest = Cwd::abs_path("$dest/" . basename($dir));
+			$dest = abs_path(catfile(splitdir($dest), basename($dir)));
 
 			if (! -e $dest) {
 				mkdir($dest) || return File::DirWalk::FAILED;
@@ -123,7 +130,7 @@ sub move {
 
 		$dirwalk->onDirLeave(sub {
 			my ($dir) = @_;
-			$dest = Cwd::abs_path("$dest/..");
+			$dest = abs_path(catfile(splitdir($dest), File::Spec->updir));
 
 			rmdir($dir) || return File::DirWalk::FAILED;
 
@@ -133,7 +140,7 @@ sub move {
 		$dirwalk->onFile(sub {
 			my ($file) = @_;
 			my $my_source = $file;
-			my $my_dest = Cwd::abs_path("$dest/" . basename($my_source));
+			my $my_dest = abs_path(catfile(splitdir($dest), basename($my_source)));
 
 	 		$self->{progress_label}->set_text("$my_source\n$my_dest");
 			$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
@@ -153,87 +160,6 @@ sub move {
 	}
 
 	return File::DirWalk::SUCCESS;
-
-# 	my $dirwalk = new File::DirWalk;
-# 
-# 	$dirwalk->onBeginWalk(sub {
-# 		if ($self->{progress} == 0) {
-# 			return File::DirWalk::ABORTED;
-# 		}
-# 
-# 		return File::DirWalk::SUCCESS;
-# 	});
-# 
-# 	$dirwalk->onLink(sub {
-# 		my ($source) = @_;
-# 
-# 		symlink(readlink($source), Cwd::abs_path("$dest/" . basename($source))) || return File::DirWalk::FAILED;
-# 
-# 		return File::DirWalk::SUCCESS;
-# 	});
-# 
-# 	$dirwalk->onDirEnter(sub {
-# 		my ($dir) = @_;
-# 
-# 		$dest = Cwd::abs_path("$dest/" . basename($dir));
-# 
-# 		if (! -e $dest) {
-# 			mkdir($dest) || return File::DirWalk::FAILED;
-# 		}
-# 
-# 		return File::DirWalk::SUCCESS;
-# 	});
-# 
-# 	$dirwalk->onDirLeave(sub {
-# 		my ($dir) = @_;
-# 		$dest = Cwd::abs_path("$dest/..");
-# 
-# 		rmdir($dir) || return File::DirWalk::FAILED;
-# 
-# 		return File::DirWalk::SUCCESS;
-# 	});
-# 
-# 	$dirwalk->onFile(sub {
-# 		my ($file) = @_;
-# 		my $my_source = $file;
-# 		my $my_dest = Cwd::abs_path("$dest/" . basename($my_source));
-# 
-# 		if (-e $my_dest) {
-# 			if ($main::SKIP_ALL) {
-# 				return File::DirWalk::SUCCESS;
-# 			}
-# 
-# 			if (!$main::OVERWRITE_ALL) {
-# 				my $r = Filer::Dialog->ask_overwrite_dialog("Replace", "Replace: <b>$my_dest</b>\nwith: <b>$my_source</b>");
-# 
-# 				if ($r eq 'no') {
-# 					return File::DirWalk::SUCCESS;
-# 				} elsif ($r eq 1) {
-# 					$main::OVERWRITE_ALL = 1;
-# 				} elsif ($r eq 2) {
-# 					$main::SKIP_ALL = 1;
-# 					return File::DirWalk::SUCCESS;
-# 				}
-# 			}
-# 		}
-# 
-# 	 	$self->{progress_label}->set_text("$my_source\n$my_dest");
-# 		$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
-# 		$self->{progressbar_total}->set_text("Moving file $self->{progress_count} of $self->{progress_total} ...");
-# 		while (Gtk2->events_pending) { Gtk2->main_iteration; }
-# 
-# 		if (! rename($my_source,$my_dest)) {
-# 			if ((my $r = (new Filer::FileCopy($self->{progressbar_part}, \$self->{progress}))->filecopy($my_source,$my_dest)) != File::DirWalk::SUCCESS) {
-# 				return $r;
-# 			}
-# 
-# 			unlink($my_source) || return File::DirWalk::FAILED;
-# 		}
-# 
-# 		return File::DirWalk::SUCCESS;
-# 	});
-# 
-# 	return $dirwalk->walk($source);
 }
 
 *action = \&move;

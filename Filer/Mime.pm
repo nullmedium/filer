@@ -73,9 +73,10 @@ $default_mimetypes = {
 sub new {
 	my ($class) = @_;
 	my $self = bless {}, $class;
-	$self->{cfg_home} = (new File::BaseDir)->xdg_config_home . "/filer";
+	$self->{cfg_home} = File::Spec->catfile((new File::BaseDir)->xdg_config_home, "/filer");
+	$self->{mime_store} = File::Spec->catfile(File::Spec->splitdir($self->{cfg_home}), "mime");
 
-	if (! -e "$self->{cfg_home}/mime") {
+	if (! -e $self->{mime_store}) {
 		$self->store($default_mimetypes);
 	}
 
@@ -84,12 +85,12 @@ sub new {
 
 sub store {
 	my ($self,$mime) = @_;
-	Storable::store($mime,"$self->{cfg_home}/mime");
+	Storable::store($mime, $self->{mime_store});
 }
 
 sub get {
 	my ($self) = @_;
-	return Storable::retrieve("$self->{cfg_home}/mime");
+	return Storable::retrieve($self->{mime_store});
 }
 
 sub get_mimetypes {
@@ -354,7 +355,20 @@ sub file_association_dialog {
 	$bbox->set_spacing_default(5);
 	$hbox->pack_start($bbox,0,0,2);
 
-	$button = Gtk2::Button->new("Edit");
+	$button = Gtk2::Button->new_from_stock('gtk-add');
+	$button->signal_connect("clicked", sub {
+		my $fs = new Gtk2::FileChooserDialog("Select Command", undef, 'GTK_FILE_CHOOSER_ACTION_OPEN', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
+
+		if ($fs->run eq 'ok') {
+			$commands_model->set($commands_model->append, 0, $fs->get_filename);
+			&{$set_commands};
+		}
+
+		$fs->destroy;
+	});
+	$bbox->add($button);
+
+	$button = Gtk2::Button->new_from_stock('gtk-edit');
 	$button->signal_connect("clicked", sub {
 		return if (not defined $command_iter);
 
@@ -365,19 +379,6 @@ sub file_association_dialog {
 			$commands_model->set($command_iter, 0, $fs->get_filename);
 			&{$set_commands};
 		}
-		$fs->destroy;
-	});
-	$bbox->add($button);
-
-	$button = Gtk2::Button->new_from_stock('gtk-add');
-	$button->signal_connect("clicked", sub {
-		my $fs = new Gtk2::FileChooserDialog("Select Command", undef, 'GTK_FILE_CHOOSER_ACTION_OPEN', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
-
-		if ($fs->run eq 'ok') {
-			$commands_model->set($commands_model->append, 0, $fs->get_filename);
-			&{$set_commands};
-		}
-
 		$fs->destroy;
 	});
 	$bbox->add($button);

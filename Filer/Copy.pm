@@ -20,7 +20,14 @@ use strict;
 use warnings;
 
 use Fcntl;
-use File::Basename;
+use Cwd qw( abs_path );
+use File::Spec::Functions qw(catfile splitdir);
+use File::Basename qw(dirname basename);
+
+Memoize::memoize("abs_path");
+Memoize::memoize("catfile");
+Memoize::memoize("splitdir");
+Memoize::memoize("basename");
 
 sub new {
 	my ($class) = @_;
@@ -80,14 +87,14 @@ sub copy {
 		my ($source) = @_;
 		my $target = readlink($source);
 
-		symlink($target, Cwd::abs_path("$dest/" . basename($source))) || return File::DirWalk::FAILED;
+		symlink($target, abs_path(catfile(splitdir($dest), basename($source)))) || return File::DirWalk::FAILED;
 
 		return File::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onDirEnter(sub {
 		my ($dir) = @_;
-		$dest = Cwd::abs_path("$dest/" . basename($dir));
+		$dest = abs_path(catfile(splitdir($dest), basename($dir)));
 
 		if (! -e $dest) {
 			mkdir($dest) || return File::DirWalk::FAILED;
@@ -109,14 +116,14 @@ sub copy {
 	});
 
 	$dirwalk->onDirLeave(sub {
-		$dest = Cwd::abs_path("$dest/..");
+		$dest = abs_path(catfile(splitdir($dest), File::Spec->updir));
 		return File::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onFile(sub {
 		my ($source) = @_;
 		my $my_source = $source;
-		my $my_dest = Cwd::abs_path("$dest/" . basename($my_source));
+		my $my_dest = abs_path(catfile(splitdir($dest), basename($my_source)));
 
 		if (-e $my_dest) {
 			if (dirname($my_source) eq dirname($my_dest)) {

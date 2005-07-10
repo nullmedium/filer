@@ -98,36 +98,7 @@ sub destroy {
 
 sub delete {
 	my ($self,$source) = @_;
-# 	my $trash = Filer::Trash->new;
-# 
-# 	# check if object is to be deleted from inside the trash.
-# 	if (dirname($source) eq $trash->trash_path) {
-# 		
-# 		if ($self->{dirwalk}->walk($source) == File::DirWalk::SUCCESS) {
-# 			$trash->delete_trashinfo($source) || return File::DirWalk::FAILED;				
-# 		} else {
-# 			return File::DirWalk::FAILED;
-# 		}
-# 	}
-# 
-# 	# move file to trash
-# 	if ($main::config->get_option("MoveToTrash") == 1) {
-# 		my $r = $trash->move_to_trash($source);
-# 
-# 		if ($r == File::DirWalk::FAILED) {
-# 			Filer::Dialog->msgbox_info("Moving of $_ to Trash failed: $!");
-# 			return File::DirWalk::FAILED;
-# 
-# 		} elsif ($r == File::DirWalk::ABORTED) {
-# 
-# 			Filer::Dialog->msgbox_info("Moving of $_ to Trash aborted!");
-# 			return File::DirWalk::ABORTED;
-# 		}
-# 
-# 		return File::DirWalk::SUCCESS;
-# 	} else {
-		return $self->{dirwalk}->walk($source);
-#	}
+	return $self->{dirwalk}->walk($source);
 }
 
 1;

@@ -90,25 +90,56 @@ sub ask_overwrite_dialog {
 	return $r;
 }
 
-# sub input_dialog {
-# 	my ($str) = pop;
-# 	my ($dialog,$label);
-#
-# 	$dialog = new Gtk2::Dialog($question, undef, 'modal', 'gtk-no' => 'no', 'gtk-yes' => 'yes');
-# 	$dialog->set_has_separator(1);
-# 	$dialog->set_position('center');
-# 	$dialog->set_modal(1);
-#
-# 	$label = new Gtk2::Label;
-# 	$label->set_use_markup(1);
-# 	$label->set_markup($question);
-# 	$label->set_alignment(0.0,0.0);
-# 	$dialog->vbox->pack_start($label, 1,1,5);
-#
-# 	$dialog->show_all;
-# 	my $r = $dialog->run;
-# 	$dialog->destroy;
-# }
+sub ask_command_dialog {
+	my ($str,$default) = @_;
+	my ($dialog,$label,$entry,$button);
+	my $text;
+
+	$dialog = new Gtk2::Dialog($str, undef, 'modal', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
+	$dialog->set_size_request(450,150);
+	$dialog->set_has_separator(1);
+	$dialog->set_position('center');
+	$dialog->set_modal(1);
+
+	$label = new Gtk2::Label;
+	$label->set_use_markup(1);
+	$label->set_markup($str);
+	$label->set_alignment(0.0,0.0);
+	$dialog->vbox->pack_start($label, 1,1,5);
+
+	my $hbox = new Gtk2::HBox(0,0);
+	$dialog->vbox->pack_start($hbox, 0,0,5);
+
+	$entry = new Gtk2::Entry;
+	$entry->set_text($default);
+	$hbox->pack_start($entry, 1,1,5);
+
+	$button = new Gtk2::Button;
+	$button->add(Gtk2::Image->new_from_stock('gtk-open', 'button'));
+	$button->signal_connect("clicked", sub {
+		my $fs = new Gtk2::FileChooserDialog("Select Command", undef, 'GTK_FILE_CHOOSER_ACTION_OPEN', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
+		$fs->set_filename($entry->get_text);
+
+		if ($fs->run eq 'ok') {
+			$entry->set_text($fs->get_filename);
+		}
+
+		$fs->destroy;
+	});
+	$hbox->pack_start($button, 0,0,0);
+
+	$dialog->show_all;
+
+	if ($dialog->run eq 'ok') {
+		$text = $entry->get_text;				
+	} else {
+		$text = $default;
+	}
+
+	$dialog->destroy;
+
+	return $text;
+}
 
 sub source_target_dialog {
 	my ($dialog,$table,$source_label,$target_label,$source_entry,$target_entry);

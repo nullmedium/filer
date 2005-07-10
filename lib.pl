@@ -23,15 +23,23 @@ use Storable;
 use Gtk2;
 use Gtk2::Gdk::Keysyms;
 
-use Cwd;
+# use Cwd;
+use Cwd qw(abs_path);
 use Fcntl;
 use Memoize;
+use File::Spec;
+# use File::Spec::Functions;
+use File::Spec::Functions qw(catfile splitdir);
 use File::BaseDir;
 use File::Basename;
 use File::MimeInfo::Magic;
 use File::Temp;
 use File::DirWalk;
 use Stat::lsMode;
+
+Memoize::memoize("abs_path");
+Memoize::memoize("catfile");
+Memoize::memoize("splitdir");
 
 use Filer::Config;
 use Filer::Bookmarks;
@@ -79,7 +87,6 @@ sub main_window {
 	{ path => '/_Edit/_Paste',			accelerator => '<control>V',	callback => \&paste_cb,	 	item_type => '<Item>'},
 
 	{ path => '/_Edit/_Rename',							callback => \&rename_cb, 	item_type => '<Item>'},
-#	{ path => '/_Edit/_Move',			accelerator => 'F6',		callback => \&move_cb, 	 	item_type => '<Item>'},
 	{ path => '/_Edit/M_kDir',			accelerator => 'F7',		callback => \&mkdir_cb,	 	item_type => '<Item>'},
 	{ path => '/_Edit/_Delete',			accelerator => 'F8',		callback => \&delete_cb,	item_type => '<Item>'},
 	{ path => '/_Edit/sep', 											item_type => '<Separator>'},
@@ -99,8 +106,10 @@ sub main_window {
 	{ path => '/_Options/Ask confirmation for/Copying',				callback => \&ask_copy_cb,	item_type => '<CheckItem>'},
 	{ path => '/_Options/Ask confirmation for/Moving',				callback => \&ask_move_cb,	item_type => '<CheckItem>'},
 	{ path => '/_Options/Ask confirmation for/Deleting',				callback => \&ask_delete_cb,	item_type => '<CheckItem>'},
-#	{ path => '/_Options/Move files to Trash when deleting',			callback => \&move_to_trash_cb,	item_type => '<CheckItem>'},
 	{ path => '/_Options/Show Hidden Files',	accelerator => '<control>H',	callback => \&hidden_cb,	item_type => '<CheckItem>'},
+	{ path => '/_Options/sep',											item_type => '<Separator>'},
+	{ path => '/_Options/Set Terminal',						callback => \&set_terminal_cb,	item_type => '<Item>'},
+	{ path => '/_Options/Set Editor',						callback => \&set_editor_cb,	item_type => '<Item>'},
 	{ path => '/_Options/sep',											item_type => '<Separator>'},
 	{ path => '/_Options/File Associations',					callback => \&file_ass_cb,	item_type => '<Item>'},
 	{ path => '/_Help/About',							callback => \&about_cb,		item_type => '<Item>'},
@@ -392,11 +401,8 @@ sub open_terminal_cb {
 	my $path = $active_pane->get_pwd;
 
 	if (-d $path) {
-		if (defined $ENV{'TERMCMD'}) {
-			system("cd '$path' && $ENV{TERMCMD} & exit");
-		} else {
-			Filer::Dialog->msgbox_info("TERMCMD not defined!");
-		}
+		my $term = $config->get_option("Terminal");
+		system("cd '$path' && $term & exit");
 	}
 }
 
@@ -477,6 +483,16 @@ sub ask_move_cb {
 
 sub ask_delete_cb {
 	$config->set_option('ConfirmDelete', ($_[2]->get_active) ? 1 : 0);
+}
+
+sub set_terminal_cb {
+	my $term = Filer::Dialog->ask_command_dialog("Set Terminal", $config->get_option('Terminal'));
+	$config->set_option('Terminal', $term);	
+}
+
+sub set_editor_cb {
+	my $edit = Filer::Dialog->ask_command_dialog("Set Editor", $config->get_option('Editor'));
+	$config->set_option('Editor', $edit);	
 }
 
 sub file_ass_cb {
@@ -639,14 +655,7 @@ sub paste_cb {
 		$do->destroy;
 	};
 
-	my @files = ();
-	my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
-
-	# request Clipboard contents
-	$clipboard->request_text(sub {
-		my ($c,$t) = @_;
-		@files = split /\n/, $t;
-	});
+	my @files = split /\n/, &get_clipboard_contents;
 
 	# copy or cut files
 	&{$f}(\@files, $active_pane->get_pwd);
@@ -657,7 +666,7 @@ sub paste_cb {
 
 	# reset clipboard
 	if ($CLIPBOARD_ACTION == CUT) {
-		$clipboard->set_text("");
+		&set_clipboard_contents("");
 	}
 
 	# reset Cut property
@@ -665,10 +674,7 @@ sub paste_cb {
 }
 
 sub cut_cb {
-	my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
-	my $contents = join "\n", @{$active_pane->get_selected_items};
-
-	$clipboard->set_text($contents);
+	&set_clipboard_contents(join "\n", @{$active_pane->get_selected_items});
 
 	$CLIPBOARD_ACTION = CUT; # Cut (Move) files on Paste
 }
@@ -677,10 +683,7 @@ sub copy_cb {
 	return if (($active_pane->count_selected_items == 0) or (not defined $active_pane->get_selected_item));
 
 #	if ($config->get_option("Mode") == EXPLORER_MODE) {
-		my $clipboard = Gtk2::Clipboard->get_for_display($active_pane->get_treeview->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
-		my $contents = join "\n", @{$active_pane->get_selected_items};
-
-		$clipboard->set_text($contents);
+		&set_clipboard_contents(join "\n", @{$active_pane->get_selected_items});
 
 		$CLIPBOARD_ACTION = COPY;
 # 	} else {
@@ -822,7 +825,13 @@ sub rename_cb {
 
 	if ($dialog->run eq 'ok') {
 		my $old_name = $active_pane->get_selected_item;
-		my $new_name = Cwd::abs_path((($active_pane->get_type eq "TREE") ? dirname($active_pane->get_pwd) : $active_pane->get_pwd) . "/" . $entry->get_text);  
+		my $new_name;
+		
+		if ($active_pane->get_type eq "TREE") {
+			$new_name = abs_path(catfile(splitdir(dirname($active_pane->get_pwd)), $entry->get_text));			
+		} else {
+			$new_name = abs_path(catfile(splitdir($active_pane->get_pwd), $entry->get_text));			
+		}
 		
 		if (rename($old_name, $new_name)) {
 			my $model = $active_pane->get_treeview->get_model;
@@ -865,12 +874,10 @@ sub delete_cb {
 		my $r = $delete->delete($_);
 
 		if ($r == File::DirWalk::FAILED) {
-			Filer::Dialog->msgbox_info(($config->get_option("MoveToTrash") != 1) ? "Deleting of $_ failed: $!" : "Moving of $_ to Trash failed: $!");
-#			Filer::Dialog->msgbox_info("Deleting of $_ failed: $!");
+			Filer::Dialog->msgbox_info("Deleting of $_ failed: $!");
 			last;
 		} elsif ($r == File::DirWalk::ABORTED) {
-			Filer::Dialog->msgbox_info(($config->get_option("MoveToTrash") != 1) ? "Deleting of $_ aborted!" : "Moving of $_ to Trash aborted!");
-#			Filer::Dialog->msgbox_info("Deleting of $_ aborted!");
+			Filer::Dialog->msgbox_info("Deleting of $_ aborted!");
 			last;
 		}
 	}
@@ -905,7 +912,7 @@ sub mkdir_cb {
 	$dialog->show_all;
 
 	if ($dialog->run eq 'ok') {
-		my $dir = $active_pane->get_pwd . "/" . $entry->get_text;
+		my $dir = catfile(splitdir($active_pane->get_pwd), $entry->get_text);
 
 		if (mkdir($dir)) {
 			$active_pane->refresh;
@@ -928,7 +935,7 @@ sub link_cb {
 	$dialog->set_default_response('ok');
 
 	$link_label->set_markup("<b>Link: </b>");
-	$link_entry->set_text($inactive_pane->get_pwd . "/" . basename($active_pane->get_selected_item));
+	$link_entry->set_text(catfile(splitdir($active_pane->get_pwd), basename($active_pane->get_selected_item)));
 	$link_entry->set_activates_default(1);
 
 	$target_label->set_markup("<b>linked object: </b>");
@@ -941,8 +948,8 @@ sub link_cb {
 		my $link = $link_entry->get_text;
 		my $target = $target_entry->get_text;
 
-		if (dirname($link) eq '.') {
-			$link = $active_pane->get_pwd . "/$link";
+		if (dirname($link) eq File::Spec->curdir) {
+			$link = catfile(splitdir($active_pane->get_pwd), $link);
 		}
 
 		if (link($target, $link)) {
@@ -965,7 +972,7 @@ sub symlink_cb {
 	$dialog->set_default_response('ok');
 
 	$symlink_label->set_markup("<b>Symlink: </b>");
-	$symlink_entry->set_text($inactive_pane->get_pwd . "/" . basename($active_pane->get_selected_item));
+	$symlink_entry->set_text(catfile(splitdir($active_pane->get_pwd), basename($active_pane->get_selected_item)));
 	$symlink_entry->set_activates_default(1);
 
 	$target_label->set_markup("<b>linked object: </b>");
@@ -978,8 +985,8 @@ sub symlink_cb {
 		my $symlink = $symlink_entry->get_text;
 		my $target = $target_entry->get_text;
 
-		if (dirname($symlink) eq '.') {
-			$symlink = $active_pane->get_pwd . "/$symlink";
+		if (dirname($symlink) eq File::Spec->curdir) {
+			$symlink = catfile(splitdir($active_pane->get_pwd), $symlink);
 		}
 
 		if (symlink($target, $symlink)) {
@@ -1092,6 +1099,26 @@ sub files_count_paste {
 	return $c;
 }
 
+sub get_clipboard_contents {
+	my $clipboard = Gtk2::Clipboard->get_for_display($widgets->{main_window}->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
+	my $contents = "";
+
+	$clipboard->request_text(sub {
+		my ($c,$t) = @_;
+		return if (!$t);
+	
+		$contents = $t;
+	});
+	
+	return $contents;
+}
+
+sub set_clipboard_contents {
+	my ($contents) = @_;
+	my $clipboard = Gtk2::Clipboard->get_for_display($widgets->{main_window}->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
+	$clipboard->set_text($contents);
+}
+
 sub intelligent_scale {
 	my ($pixbuf,$scale) = @_;
 	my $scaled;
@@ -1116,6 +1143,12 @@ sub intelligent_scale {
 	}
 
 	return $scaled;
+}
+
+sub concat_path {
+	my ($path,$file) = @_;
+
+	return abs_path(catfile(splitdir($path), $file));
 }
 
 1;
