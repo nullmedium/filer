@@ -110,7 +110,11 @@ sub new {
  	$self->[TREEVIEW]->signal_connect("grab-focus", \&treeview_grab_focus_cb, $self);
 	$self->[TREEVIEW]->signal_connect("event", \&treeview_event_cb, $self);
 
-	$self->[TREEMODEL] = new Gtk2::ListStore('Glib::Object','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String');
+	$self->[TREEMODEL] = new Gtk2::ListStore(
+		'Glib::Object','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String',
+		'Glib::String','Glib::Int','Glib::Int','Glib::Int','Glib::Int','Glib::Int' # hidden values;
+	);
+
 	$self->[TREEVIEW]->set_model($self->[TREEMODEL]);
 
 	# Drag and Drop
@@ -130,13 +134,10 @@ sub new {
 		my ($model,$a,$b,$data) = @_;
 		my ($sort_column_id,$order) = $model->get_sort_column_id; 
 
-		my $name1 = $model->get($a, 1);
-		my $name2 = $model->get($b, 1);
+		my $fp1 = $model->get($a, 9);
+		my $fp2 = $model->get($b, 9);
 
-		if (defined $name1 and defined $name2) {
-			my $fp1 = catfile(splitdir($self->[FILEPATH]), $name1);
-			my $fp2 = catfile(splitdir($self->[FILEPATH]), $name2); 
-	
+		if (defined $fp1 and defined $fp2) {
 			if (-d $fp1 and -f $fp2) {
 
 				return ($order eq "ascending") ? -1 : 1;
@@ -146,36 +147,29 @@ sub new {
 				return ($order eq "ascending") ? 1 : -1;
 
 			} else {
-				if ($sort_column_id == 2) {
+				if ($sort_column_id == 2) { # size
 
-#					return ((lstat $fp1)[7] <=> (lstat $fp2)[7]);
-					return (&main::my_lstat($fp1,7) <=> &main::my_lstat($fp2,7)); 
+					return ($model->get($a, 10) <=> $model->get($b, 10))
 
-				} elsif ($sort_column_id == 4) {
+				} elsif ($sort_column_id == 4) { # date
 
-#					return ((lstat $fp1)[10] <=> (lstat $fp2)[10]);
-					return (&main::my_lstat($fp1,10) <=> &main::my_lstat($fp2,10)); 
+					return ($model->get($a, 11) <=> $model->get($b, 11))
 
-				} elsif ($sort_column_id == 5) {
+				} elsif ($sort_column_id == 5) { # owner
 
-#					return ((lstat $fp1)[4] <=> (lstat $fp2)[4]);
-					return (&main::my_lstat($fp1,4) <=> &main::my_lstat($fp2,4)); 
+					return ($model->get($a, 12) <=> $model->get($b, 12))
 
-				} elsif ($sort_column_id == 6) {
+				} elsif ($sort_column_id == 6) { # group
 
-#					return ((lstat $fp1)[5] <=> (lstat $fp2)[5]);
-					return (&main::my_lstat($fp1,5) <=> &main::my_lstat($fp2,5)); 
+					return ($model->get($a, 13) <=> $model->get($b, 13))
 
-				} elsif ($sort_column_id == 7) {
+				} elsif ($sort_column_id == 7) { # mode
 
-#					return ((lstat $fp1)[2] <=> (lstat $fp2)[2]);
-					return (&main::my_lstat($fp1,2) <=> &main::my_lstat($fp2,2)); 
+					return ($model->get($a, 14) <=> $model->get($b, 14))
 
 				} else {
-					my $s1 = $model->get($a, $sort_column_id);
-					my $s2 = $model->get($b, $sort_column_id);
 
-					return ($s1 cmp $s2);
+					return ($model->get($a, $sort_column_id) cmp $model->get($b, $sort_column_id));
 				}
 			}
 		}
@@ -197,9 +191,11 @@ sub new {
 	$col->add_attribute($cell, text => 1);
 
 	$self->[TREEVIEW]->append_column($col);
+
 	$self->[TREEMODEL]->set_sort_func(1, $sort_func); 
 
 	$i = 2;
+#	foreach (qw(Size Type Date Owner Group Mode Link d1 d2 d3 d4 d5 d6)) {
 	foreach (qw(Size Type Date Owner Group Mode Link)) {
 		$cell = new Gtk2::CellRendererText;
 		$col = Gtk2::TreeViewColumn->new_with_attributes($_, $cell, text => $i);
@@ -850,9 +846,12 @@ sub open_path {
 			$self->init_icons();
 		}
 
-#		$type = File::MimeInfo::describe($type);
+		$type = File::MimeInfo::describe($type);
 
-		$self->[TREEMODEL]->set($self->[TREEMODEL]->append, 0, $mypixbuf, 1, $file, 2, $size, 3, $type, 4, $ctime, 5, $uid, 6, $gid, 7, $mode, 8, $target, 9, $abspath);
+		my $iter = $self->[TREEMODEL]->append; 
+
+		$self->[TREEMODEL]->set($iter, 0, $mypixbuf, 1, $file, 2, $size, 3, $type, 4, $ctime, 5, $uid, 6, $gid, 7, $mode, 8, $target);  # shown
+		$self->[TREEMODEL]->set($iter, 9, $abspath, 10, $stat[7], 11, $stat[10], 12, $stat[4], 13, $stat[5], 14, $stat[2]);		# hidden
 	}
 
 # 	if ($ENV{FILER_DEBUG}) {
@@ -864,6 +863,8 @@ sub open_path {
 	$total_size = &calculate_size($total_size);
 
 	$self->[TREEVIEW]->columns_autosize;
+
+	$self->[TREEMODEL]->set_sort_column_id(1, "ascending"); 
 
 	$self->[PATH_ENTRY]->set_text($self->[FILEPATH]);
 	$self->[FOLDER_STATUS] = "$dirs_count ($dirs_count_total) directories and $files_count ($files_count_total) files: $total_size";

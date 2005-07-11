@@ -39,8 +39,6 @@ Memoize::memoize("abs_path");
 Memoize::memoize("catfile");
 Memoize::memoize("splitdir");
 
-Memoize::memoize("my_lstat");
-
 use Filer::Config;
 use Filer::Bookmarks;
 use Filer::Mime;
@@ -200,41 +198,6 @@ sub main_window {
 	$widgets->{hbox}->pack_start($widgets->{list2}->get_vbox,1,1,0);
 	$widgets->{vbox}->pack_start($widgets->{hpaned},1,1,0);
 
-# 	$hbox = new Gtk2::HBox(1,0);
-# 	$widgets->{vbox}->pack_start($hbox, 0, 0, 0);
-#
-# 	$button = new Gtk2::Button("Refresh");
-# 	$button->signal_connect("clicked", \&refresh_cb);
-# 	$hbox->pack_start($button, 1, 1, 0);
-#
-# 	$button = new Gtk2::Button("Copy");
-# 	$button->signal_connect("clicked", \&copy_cb);
-# 	$hbox->pack_start($button, 1, 1, 0);
-#
-# 	$button = new Gtk2::Button("Cut");
-# 	$button->signal_connect("clicked", \&cut_cb);
-# 	$hbox->pack_start($button, 1, 1, 0);
-#
-# 	$button = new Gtk2::Button("Paste");
-# 	$button->signal_connect("clicked", \&paste_cb);
-# 	$hbox->pack_start($button, 1, 1, 0);
-#
-# 	$widgets->{move_button} = new Gtk2::Button("Move");
-# 	$widgets->{move_button}->signal_connect("clicked", \&move_cb);
-# 	$hbox->pack_start($widgets->{move_button}, 1, 1, 0);
-#
-# 	$button = new Gtk2::Button("Rename");
-# 	$button->signal_connect("clicked", \&rename_cb);
-# 	$hbox->pack_start($button, 1, 1, 0);
-#
-# 	$button = new Gtk2::Button("MkDir");
-# 	$button->signal_connect("clicked", \&mkdir_cb);
-# 	$hbox->pack_start($button, 1, 1, 0);
-#
-# 	$button = new Gtk2::Button("Delete");
-# 	$button->signal_connect("clicked", \&delete_cb);
-# 	$hbox->pack_start($button, 1, 1, 0);
-
 	$widgets->{statusbar} = new Gtk2::Statusbar;
 	$widgets->{vbox}->pack_start($widgets->{statusbar}, 0, 0, 0);
 
@@ -270,7 +233,6 @@ sub main_window {
 	&switch_mode;
 
 	$widgets->{item_factory}->get_item("/Options/Show Hidden Files")->set_active($config->get_option('ShowHiddenFiles'));
-#	$widgets->{item_factory}->get_item("/Options/Move files to Trash when deleting")->set_active($config->get_option('MoveToTrash'));
 	$widgets->{item_factory}->get_item("/Options/Ask confirmation for/Copying")->set_active($config->get_option('ConfirmCopy'));
 	$widgets->{item_factory}->get_item("/Options/Ask confirmation for/Moving")->set_active($config->get_option('ConfirmMove'));
 	$widgets->{item_factory}->get_item("/Options/Ask confirmation for/Deleting")->set_active($config->get_option('ConfirmDelete'));
@@ -430,8 +392,6 @@ sub switch_mode {
 		$widgets->{list2}->get_location_bar->hide;
 		$widgets->{list2}->get_location_bar->reparent($widgets->{location_bar});
 		$widgets->{list2}->get_location_bar->show;
-
-#		$widgets->{location_bar}->hide;
 
 		$widgets->{sync_button}->set("visible", 0);
 		$widgets->{tree}->get_vbox->set("visible", 1);
@@ -1151,17 +1111,6 @@ sub intelligent_scale {
 	}
 
 	return $scaled;
-}
-
-sub my_lstat {
-	my ($file,$i) = @_;
-	return (lstat $file)[$i];
-}
-
-sub concat_path {
-	my ($path,$file) = @_;
-
-	return abs_path(catfile(splitdir($path), $file));
 }
 
 1;
