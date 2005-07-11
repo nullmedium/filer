@@ -20,6 +20,7 @@ use strict;
 use warnings;
 
 use Cwd qw(abs_path);
+use File::Basename; 
 use File::Spec::Functions qw(catfile splitdir);
 use Stat::lsMode qw(format_mode);
 
@@ -29,7 +30,6 @@ Memoize::memoize("format_mode");
 Memoize::memoize("abs_path");
 Memoize::memoize("catfile");
 Memoize::memoize("splitdir");
-
 Memoize::memoize("calculate_size");
 
 use constant LEFT	=> 0;
@@ -53,6 +53,8 @@ use constant NAVIGATION_BOX		=> 15;
 use constant NAVIGATION_BUTTONS		=> 16;
 use constant MOUSE_MOTION_SELECT	=> 17;
 use constant MOUSE_MOTION_Y_POS_OLD	=> 18;
+
+use constant SORT_COLUMN => 19;
 
 sub new {
 	my ($class,$side) = @_;
@@ -124,8 +126,65 @@ sub new {
 
 	$scrolled_window->add($self->[TREEVIEW]);
 
+	my $sort_func = sub {
+		my ($model,$a,$b,$data) = @_;
+		my ($sort_column_id,$order) = $model->get_sort_column_id; 
+
+		my $name1 = $model->get($a, 1);
+		my $name2 = $model->get($b, 1);
+
+		if (defined $name1 and defined $name2) {
+			my $fp1 = catfile(splitdir($self->[FILEPATH]), $name1);
+			my $fp2 = catfile(splitdir($self->[FILEPATH]), $name2); 
+	
+			if (-d $fp1 and -f $fp2) {
+
+				return ($order eq "ascending") ? -1 : 1;
+
+			} elsif (-f $fp1 and -d $fp2) {
+
+				return ($order eq "ascending") ? 1 : -1;
+
+			} else {
+				if ($sort_column_id == 2) {
+
+#					return ((lstat $fp1)[7] <=> (lstat $fp2)[7]);
+					return (&main::my_lstat($fp1,7) <=> &main::my_lstat($fp2,7)); 
+
+				} elsif ($sort_column_id == 4) {
+
+#					return ((lstat $fp1)[10] <=> (lstat $fp2)[10]);
+					return (&main::my_lstat($fp1,10) <=> &main::my_lstat($fp2,10)); 
+
+				} elsif ($sort_column_id == 5) {
+
+#					return ((lstat $fp1)[4] <=> (lstat $fp2)[4]);
+					return (&main::my_lstat($fp1,4) <=> &main::my_lstat($fp2,4)); 
+
+				} elsif ($sort_column_id == 6) {
+
+#					return ((lstat $fp1)[5] <=> (lstat $fp2)[5]);
+					return (&main::my_lstat($fp1,5) <=> &main::my_lstat($fp2,5)); 
+
+				} elsif ($sort_column_id == 7) {
+
+#					return ((lstat $fp1)[2] <=> (lstat $fp2)[2]);
+					return (&main::my_lstat($fp1,2) <=> &main::my_lstat($fp2,2)); 
+
+				} else {
+					my $s1 = $model->get($a, $sort_column_id);
+					my $s2 = $model->get($b, $sort_column_id);
+
+					return ($s1 cmp $s2);
+				}
+			}
+		}
+	};
+
 	# a column with a pixbuf renderer and a text renderer
 	$col = Gtk2::TreeViewColumn->new;
+	$col->set_sort_column_id(1);
+	$col->set_sort_indicator(1);
 	$col->set_resizable(1);
 	$col->set_title("Name");
 
@@ -138,13 +197,20 @@ sub new {
 	$col->add_attribute($cell, text => 1);
 
 	$self->[TREEVIEW]->append_column($col);
+	$self->[TREEMODEL]->set_sort_func(1, $sort_func); 
 
 	$i = 2;
 	foreach (qw(Size Type Date Owner Group Mode Link)) {
 		$cell = new Gtk2::CellRendererText;
-		$col = Gtk2::TreeViewColumn->new_with_attributes($_, $cell, text => $i++);
+		$col = Gtk2::TreeViewColumn->new_with_attributes($_, $cell, text => $i);
+		$col->set_sort_column_id($i);
+		$col->set_sort_indicator(1);
+		$col->set_clickable(1);
 		$col->set_resizable(1);
+
+		$self->[TREEMODEL]->set_sort_func($i, $sort_func); 
 		$self->[TREEVIEW]->append_column($col);
+		$i++; 
 	}
 
 	$self->init_icons;
@@ -195,6 +261,8 @@ sub show_popup_menu {
 		{ path => '/sep3',								      		item_type => '<Separator>'},
 		{ path => '/Open Terminal',		callback => \&main::open_terminal_cb, item_type => '<Item>'},
 		{ path => '/Archive/Create tar.gz',	callback => sub { $self->create_tar_gz_archive },	item_type => '<Item>'},
+		{ path => '/Archive/Create tar.bz2',	callback => sub { $self->create_tar_bz2_archive },	item_type => '<Item>'},
+		{ path => '/Archive/Gzip\/Gunzip',	callback => sub { $self->create_tar_gz_archive },	item_type => '<Item>'},
 		{ path => '/Archive/Create tar.bz2',	callback => sub { $self->create_tar_bz2_archive },	item_type => '<Item>'},
 		{ path => '/Archive/Extract',		callback => sub { $self->extract_archive },		item_type => '<Item>'},
 		{ path => '/Bookmarks',								 		item_type => '<Item>'},		
@@ -484,7 +552,7 @@ sub update_navigation_buttons {
 	foreach (reverse sort keys %{$self->[NAVIGATION_BUTTONS]}) {
 		last if ($_ eq $filepath);
 
-		if ($_ !~ /^$filepath/) {
+		if (! /^$filepath/) {
 			$self->[NAVIGATION_BUTTONS]->{$_}->destroy;
 			delete $self->[NAVIGATION_BUTTONS]->{$_};
 		}
@@ -494,45 +562,27 @@ sub update_navigation_buttons {
 		$path = catfile(splitdir($path), $_);
 		
 		if (not defined $self->[NAVIGATION_BUTTONS]->{$path}) {
-
-			$button = new Gtk2::RadioButton($self->[NAVIGATION_BUTTONS]->{$rootdir}, "");
+			$button = new Gtk2::RadioButton($self->[NAVIGATION_BUTTONS]->{$rootdir}, basename($path));
 			$button->set(draw_indicator => 0); # i'm evil
-
-			my @w = $button->get_children;
-
-			if ($path eq $filepath) {
-				$button->set(active => 1);
-
-				if ($path eq $rootdir) {
-					$w[0]->set_markup("<b>$rootdir</b>");
-				} else {
-					$w[0]->set_markup(sprintf("<b>%s</b>", File::Basename::basename($path)));
-				}
-			} else {
-				if ($path eq $rootdir) {
-					$w[0]->set_text($rootdir);
-				} else {
-					$w[0]->set_text(File::Basename::basename($path));
-				}
-			}
 
 			$button->signal_connect(toggled => sub {
 				my ($widget, $data) = @_;
 				my @w = $widget->get_children;
 
 				if ($widget->get_active) {
-					if ($data eq $rootdir) {
+					if ($data eq $rootdir and $] <= 5.008007) {
 						$w[0]->set_markup("<b>$rootdir</b>");
 					} else {
-						$w[0]->set_markup(sprintf("<b>%s</b>", File::Basename::basename($data)));
+						$w[0]->set_markup(sprintf("<b>%s</b>", basename($data)));
 					}
 
-					$self->open_path($data);
+					# avoid an endless loop/recursion. 
+					$self->open_path($data) if ($data ne $self->get_pwd);
 				} else {
-					if ($data eq $rootdir) {
+					if ($data eq $rootdir and $] <= 5.008007) {
 						$w[0]->set_text($rootdir);
 					} else {
-						$w[0]->set_text(File::Basename::basename($data));
+						$w[0]->set_text(basename($data));
 					}
 				}
 			}, $path);
@@ -542,6 +592,9 @@ sub update_navigation_buttons {
 			$self->[NAVIGATION_BUTTONS]->{$path}->show;
 		}
 	}
+
+	# set last button active. current directory.
+	$self->[NAVIGATION_BUTTONS]->{$filepath}->set(active => 1);
 }
 
 sub open_file {
@@ -707,7 +760,7 @@ sub open_path_helper {
 		$self->[NAVIGATION_BUTTONS]->{$filepath}->set(active => 1);
 		my @w = $self->[NAVIGATION_BUTTONS]->{$filepath}->get_children();
 
-		if ($filepath eq File::Spec->rootdir) {
+		if ($filepath eq File::Spec->rootdir and $] <= 5.008007) {
 			$w[0]->set_markup(sprintf("<b>%s</b>", File::Spec->rootdir));
 		} else {
 			$w[0]->set_markup(sprintf("<b>%s</b>", File::Basename::basename($filepath)));
@@ -726,7 +779,7 @@ sub open_path {
 
 	my $opt = $main::config->get_option("Mode");
 
-	if ($opt == 0) {
+	if ($opt == &main::NORTON_COMMANDER_MODE) {
 		if (defined $self->[OVERRIDES]->{$filepath}) {
 			$filepath = $self->[OVERRIDES]->{$filepath};
 		}
@@ -737,6 +790,10 @@ sub open_path {
 	closedir(DIR);
 
 	@dir_contents = File::Spec->no_upwards(@dir_contents);
+
+# 	if ($opt == &main::NORTON_COMMANDER_MODE and $filepath ne File::Spec->rootdir) {
+# 		@dir_contents = (File::Spec->updir, @dir_contents); 
+# 	}
 
 	delete $self->[SELECTED_ITEM];
 	delete $self->[SELECTED_ITER];
@@ -771,7 +828,7 @@ sub open_path {
 		
 		my $fp = catfile(splitdir($filepath), $file);
 		my @stat = lstat($fp);
-		my $type = File::MimeInfo::mimetype($fp);
+		my $type = (-l $fp) ? "inode/symlink" : File::MimeInfo::mimetype($fp);
 		my $mypixbuf = $self->[MIMEICONS]->{'default'};
 
 		my $size = calculate_size($stat[7]);
@@ -785,10 +842,6 @@ sub open_path {
 		my $abspath = abs_path($fp);
 		my $target = readlink($fp);
 
-		if (-l "$filepath/$file") {
-			$type = "inode/symlink";
-		}
-
 		if (defined $self->[MIMEICONS]->{$type}) {
 			$mypixbuf = $self->[MIMEICONS]->{$type};
 		} else {
@@ -797,7 +850,7 @@ sub open_path {
 			$self->init_icons();
 		}
 
-		$type = File::MimeInfo::describe($type);
+#		$type = File::MimeInfo::describe($type);
 
 		$self->[TREEMODEL]->set($self->[TREEMODEL]->append, 0, $mypixbuf, 1, $file, 2, $size, 3, $type, 4, $ctime, 5, $uid, 6, $gid, 7, $mode, 8, $target, 9, $abspath);
 	}
@@ -819,36 +872,32 @@ sub open_path {
 sub set_properties {
 	my ($self) = @_;
 	Filer::Properties->set_properties_dialog($self->[SELECTED_ITEM]);
-	$self->refresh;
 
-	&main::refresh_inactive_pane;
+	&main::refresh_cb; 
 }
 
 sub create_tar_gz_archive {
 	my ($self) = @_;
 	my $archive = new Filer::Archive($self->[FILEPATH], $self->get_selected_items);
 	$archive->create_tar_gz_archive;
-	$self->refresh;
 
-	&main::refresh_inactive_pane;
+	&main::refresh_cb; 
 }
 
 sub create_tar_bz2_archive {
 	my ($self) = @_;
 	my $archive = new Filer::Archive($self->[FILEPATH], $self->get_selected_items);
 	$archive->create_tar_bz2_archive;
-	$self->refresh;
 
-	&main::refresh_inactive_pane;
+	&main::refresh_cb; 
 }
 
 sub extract_archive {
 	my ($self) = @_;
-	my $archive = Filer::Archive->new($self->[FILEPATH], $self->get_selected_items);
+	my $archive = new Filer::Archive($self->[FILEPATH], $self->get_selected_items);
 	$archive->extract_archive;
-	$self->refresh;
 
-	&main::refresh_inactive_pane;
+	&main::refresh_cb; 
 }
 
 sub get_temp_archive_dir {

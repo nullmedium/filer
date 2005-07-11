@@ -222,7 +222,6 @@ sub copy {
 					$dialog->add_button("Overwrite", 'yes');
 
 					if ($self->{progress_total} > 1) {
-						$dialog->add_button("Auto Skip", 'no');
 						$dialog->add_button("Overwrite All", 1);
 						$dialog->add_button("Overwrite None", 2);
 					}
@@ -233,9 +232,7 @@ sub copy {
 					my $r = $dialog->run;
 					$dialog->destroy;
 
-					if ($r eq 'no') {
-						return File::DirWalk::SUCCESS;
-					} elsif ($r eq 'cancel') {
+					if ($r eq 'cancel') {
 						return File::DirWalk::ABORTED;
 					} elsif ($r eq 1) {
 						$main::OVERWRITE_ALL = 1;

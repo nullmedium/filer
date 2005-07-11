@@ -23,12 +23,10 @@ use Storable;
 use Gtk2;
 use Gtk2::Gdk::Keysyms;
 
-# use Cwd;
 use Cwd qw(abs_path);
 use Fcntl;
 use Memoize;
 use File::Spec;
-# use File::Spec::Functions;
 use File::Spec::Functions qw(catfile splitdir);
 use File::BaseDir;
 use File::Basename;
@@ -40,6 +38,8 @@ use Stat::lsMode;
 Memoize::memoize("abs_path");
 Memoize::memoize("catfile");
 Memoize::memoize("splitdir");
+
+Memoize::memoize("my_lstat");
 
 use Filer::Config;
 use Filer::Bookmarks;
@@ -1151,6 +1151,11 @@ sub intelligent_scale {
 	}
 
 	return $scaled;
+}
+
+sub my_lstat {
+	my ($file,$i) = @_;
+	return (lstat $file)[$i];
 }
 
 sub concat_path {
