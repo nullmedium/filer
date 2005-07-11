@@ -101,13 +101,7 @@ sub copy {
 		}
 
 		if ((-e $dest) and (dirname($source) eq dirname($dest))) {
-			my $i = 1;
-			while (1) {
-				last unless (-e "$dest-$i");
-				$i++;
-			}
-
-			$dest = "$dest-$i";
+			$dest = $self->_suggest_filename_helper($dest);
 
 			mkdir($dest) || return File::DirWalk::FAILED;
 		}
@@ -159,13 +153,11 @@ sub copy {
 
 					$button = new Gtk2::Button("Suggest New Name");
 					$button->signal_connect("clicked", sub {
-						my $i = 1;
-						while (1) {
-							last unless (-e "$my_dest-$i");
-							$i++;
-						}
+						my ($w) = @_;
+						my $suggest = $self->_suggest_filename_helper($my_dest);
 
-						$entry->set_text(basename("$my_dest-$i"));
+						$entry->set_text(basename($suggest));
+						$w->set_sensitive(0);
 					});
 					$hbox->pack_start($button, 0,1,5);
 
@@ -210,21 +202,22 @@ sub copy {
 
 					$button = new Gtk2::Button("Suggest new name");
 					$button->signal_connect("clicked", sub {
-						my $i = 1;
-						while (1) {
-							last unless (-e "$my_dest-$i");
-							$i++;
-						}
-
-						$entry->set_text(basename("$my_dest-$i"));
+						my ($w) = @_;
+						my $suggest = $self->_suggest_filename_helper($my_dest);
+						$entry->set_text(basename($suggest));
+						$w->set_sensitive(0);
 					});
 					$hbox->pack_start($button, 0,1,5);
 
 					$dialog->add_button("Rename", 3);
 					$dialog->add_button("Overwrite", 'yes');
-					$dialog->add_button("Auto Skip", 'no');
-					$dialog->add_button("Overwrite All", 1);
-					$dialog->add_button("Overwrite None", 2);
+
+					if ($self->{progress_total} > 1) {
+						$dialog->add_button("Auto Skip", 'no');
+						$dialog->add_button("Overwrite All", 1);
+						$dialog->add_button("Overwrite None", 2);
+					}
+
 					$dialog->add_button("Cancel", 'cancel');
 
 					$dialog->show_all;
@@ -268,5 +261,64 @@ sub copy {
 }
 
 *action = \&copy;
+
+sub _suggest_filename_helper {
+	my ($self,$filename) = @_;
+	my $suggested = "";
+	my $suffix = "";
+	my $i = 1;
+
+	if (-f $filename) {
+		if ($filename =~ /((\..+)+)$/) {
+			my $re_sx = $1;
+			$suffix = $re_sx;
+
+			# escape parentheses.
+			$re_sx =~ s/\(/\\(/g;
+			$re_sx =~ s/\)/\\)/g;
+			$re_sx =~ s/\[/\\[/g;
+			$re_sx =~ s/\]/\\]/g;
+
+			$filename =~ s/$re_sx//g;
+		}
+	}
+
+	if ($filename =~ /(\s+\(copy\))$/) {
+		my $r = $1;
+		$r =~ s/\(/\\(/g;
+		$r =~ s/\)/\\)/g;
+		$filename =~ s/$r//g;
+		$i = 2;
+	} elsif ($filename =~ /(\s+\(another copy\))$/) {
+		my $r = $1;
+		$r =~ s/\(/\\(/g;
+		$r =~ s/\)/\\)/g;
+		$filename =~ s/$r//g;
+		$i = 3;
+	} elsif ($filename =~ /(\s+\(3rd copy\))$/) {
+		my $r = $1;
+		$r =~ s/\(/\\(/g;
+		$r =~ s/\)/\\)/g;
+		$filename =~ s/$r//g;
+		$i = 4;
+	}
+
+	while (1) {
+		if ($i == 1) {
+			$suggested = "$filename (copy)";
+		} elsif ($i == 2) {
+			$suggested = "$filename (another copy)";
+		} elsif ($i == 3) {
+			$suggested = "$filename (3rd copy)";
+		} else {
+			$suggested = "$filename ($i" . "th" . " copy)";
+		}
+
+		last if (! -e $suggested);
+		$i++;
+	}
+
+	return $suggested . $suffix;
+}
 
 1;
