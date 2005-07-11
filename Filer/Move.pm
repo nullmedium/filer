@@ -80,7 +80,7 @@ sub move {
 	if (-e $my_dest) {
 		my ($dialog,$label,$button,$hbox,$entry);
 		my $f1 = $my_dest; 
-		my $f2 = $source
+		my $f2 = $source;
 		$f1 =~ s/&/&amp;/g;
 		$f2 =~ s/&/&amp;/g;
 

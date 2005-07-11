@@ -181,7 +181,7 @@ sub copy {
 				} else {
 					my ($dialog,$label,$button,$hbox,$entry);
 					my $f1 = $my_dest; 
-					my $f2 = $my_source
+					my $f2 = $my_source;
 					$f1 =~ s/&/&amp;/g;
 					$f2 =~ s/&/&amp;/g;
 
