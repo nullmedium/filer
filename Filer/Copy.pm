@@ -141,7 +141,11 @@ sub copy {
 					$label = new Gtk2::Label;
 					$label->set_use_markup(1);
 					$label->set_alignment(0.0,0.0);
-					$label->set_markup("This action would overwrite '$my_source' with itself.\nPlease enter a new file name:");
+
+					my $f = $my_source;
+					$f =~ s/&/&amp;/g;
+
+					$label->set_markup("This action would overwrite '$f' with itself.\nPlease enter a new file name:");
 					$dialog->vbox->pack_start($label, 1,1,5);
 
 					$hbox = new Gtk2::HBox(0,0);
@@ -176,6 +180,10 @@ sub copy {
 
 				} else {
 					my ($dialog,$label,$button,$hbox,$entry);
+					my $f1 = $my_dest; 
+					my $f2 = $my_source
+					$f1 =~ s/&/&amp;/g;
+					$f2 =~ s/&/&amp;/g;
 
 					$dialog = new Gtk2::Dialog("Overwrite", undef, 'modal');
 					$dialog->set_position('center');
@@ -184,7 +192,8 @@ sub copy {
 					$label = new Gtk2::Label;
 					$label->set_use_markup(1);
 					$label->set_alignment(0.0,0.0);
-					$label->set_markup("Overwrite: <b>$my_dest</b>\nwith: <b>$my_source</b>");
+
+					$label->set_markup("Overwrite: <b>$f1</b>\nwith: <b>$f2</b>");
 					$dialog->vbox->pack_start($label, 1,1,5);
 
 					$hbox = new Gtk2::HBox(0,0);

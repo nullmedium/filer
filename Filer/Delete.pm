@@ -98,7 +98,18 @@ sub destroy {
 
 sub delete {
 	my ($self,$source) = @_;
-	return $self->{dirwalk}->walk($source);
+	
+	if (-f $source) {
+		$self->{progress_label}->set_text($source);
+		$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
+		while (Gtk2->events_pending) { Gtk2->main_iteration; }
+
+		unlink($source) || return File::DirWalk::FAILED;
+
+		return File::DirWalk::SUCCESS;
+	} elsif (-d $source) {
+		return $self->{dirwalk}->walk($source);
+	}
 }
 
 1;

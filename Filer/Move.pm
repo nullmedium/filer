@@ -78,21 +78,56 @@ sub move {
 	my $my_dest = abs_path(catfile(splitdir($dest), basename($source)));
 
 	if (-e $my_dest) {
-		if ($main::SKIP_ALL) {
-			return File::DirWalk::SUCCESS;
-		}
+		my ($dialog,$label,$button,$hbox,$entry);
+		my $f1 = $my_dest; 
+		my $f2 = $source
+		$f1 =~ s/&/&amp;/g;
+		$f2 =~ s/&/&amp;/g;
 
-		if (!$main::OVERWRITE_ALL) {
-			my $r = Filer::Dialog->ask_overwrite_dialog("Replace", "Replace: <b>$my_dest</b>\nwith: <b>$source</b>");
+		$dialog = new Gtk2::Dialog("Overwrite", undef, 'modal');
+		$dialog->set_position('center');
+		$dialog->set_modal(1);
 
-			if ($r eq 'no') {
-				return File::DirWalk::SUCCESS;
-			} elsif ($r eq 1) {
-				$main::OVERWRITE_ALL = 1;
-			} elsif ($r eq 2) {
-				$main::SKIP_ALL = 1;
-				return File::DirWalk::SUCCESS;
-			}
+		$label = new Gtk2::Label;
+		$label->set_use_markup(1);
+		$label->set_alignment(0.0,0.0);
+		$label->set_markup("Overwrite: <b>$f1</b>\nwith: <b>$f2</b>");
+		$dialog->vbox->pack_start($label, 1,1,5);
+
+		$hbox = new Gtk2::HBox(0,0);
+		$dialog->vbox->pack_start($hbox, 1,1,5);
+
+		$label = new Gtk2::Label;
+		$label->set_use_markup(1);
+		$label->set_alignment(0.0,0.5);
+		$label->set_markup("New Name: ");
+		$hbox->pack_start($label, 0,0,0);
+
+		$entry = new Gtk2::Entry;
+		$entry->set_alignment(0.0);
+		$hbox->pack_start($entry, 0,1,5);
+
+		$button = new Gtk2::Button("Suggest new name");
+		$button->signal_connect("clicked", sub {
+			my ($w) = @_;
+			my $suggest = Filer::Copy->_suggest_filename_helper($my_dest);
+			$entry->set_text(basename($suggest));
+			$w->set_sensitive(0);
+		});
+		$hbox->pack_start($button, 0,1,5);
+
+		$dialog->add_button("Overwrite", 1);
+		$dialog->add_button("Rename", 2);
+		$dialog->add_button("Cancel", 'cancel');
+
+		$dialog->show_all;
+		my $r = $dialog->run;
+		$dialog->destroy;
+
+		if ($r eq '2') {
+			$my_dest = catfile(dirname($my_dest), $entry->get_text);
+		} else {
+			return File::DirWalk::ABORTED;
 		}
 	}
 
@@ -118,7 +153,6 @@ sub move {
 
 		$dirwalk->onDirEnter(sub {
 			my ($dir) = @_;
-
 			$dest = abs_path(catfile(splitdir($dest), basename($dir)));
 
 			if (! -e $dest) {

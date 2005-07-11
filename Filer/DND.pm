@@ -66,8 +66,11 @@ sub filepane_treeview_drag_data_received_cb {
 
 			if ($action eq "copy") {
 				if ($main::config->get_option("ConfirmCopy") == 1) {
+					my $f = basename($main::active_pane->get_selected_item); 
+					$f =~ s/&/&amp;/g; # sick fix. meh. 
+
 					if ($main::active_pane->count_selected_items == 1) {
-						return if (Filer::Dialog->yesno_dialog(sprintf("Copy %s to $path?", basename($main::active_pane->get_selected_item))) eq 'no');
+						return if (Filer::Dialog->yesno_dialog("Copy $f to $path?") eq 'no');
 					} else {
 						return if (Filer::Dialog->yesno_dialog(sprintf("Copy %s files to $path?", $main::active_pane->count_selected_items)) eq 'no');
 					}
@@ -76,8 +79,11 @@ sub filepane_treeview_drag_data_received_cb {
 				$do = Filer::Copy->new;
 			} elsif ($action eq "move") {
 				if ($main::config->get_option("ConfirmMove") == 1) {
+					my $f = basename($main::active_pane->get_selected_item); 
+					$f =~ s/&/&amp;/g; # sick fix. meh. 
+
 					if ($main::active_pane->count_selected_items == 1) {
-						return if (Filer::Dialog->yesno_dialog(sprintf("Move %s to $path?", basename($main::active_pane->get_selected_item))) eq 'no');
+						return if (Filer::Dialog->yesno_dialog("Move $f to $path?") eq 'no');
 					} else {
 						return if (Filer::Dialog->yesno_dialog(sprintf("Move %s files to $path?", $main::active_pane->count_selected_items)) eq 'no');
 					}

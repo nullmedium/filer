@@ -28,19 +28,9 @@ sub new {
 	return $self;
 }
 
-sub setCallback {
-	my ($self,$type,$func) = @_;
-	$self->{$type} = $func;
-}
-
-sub removeCallback {
-	my ($self,$type) = @_;
-	$self->{$type} = sub { SUCCESS; };
-}
-
 sub onBeginWalk {
 	my ($self,$func) = @_;
-	$self->setCallback("onBeginWalk", $func);
+	$self->{onBeginWalk} = $func;
 }
 
 sub onLink {

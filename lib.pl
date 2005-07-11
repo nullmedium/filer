@@ -857,10 +857,13 @@ sub delete_cb {
 	if ($config->get_option("ConfirmDelete") == 1) {
 	
 		if ($active_pane->count_selected_items == 1) {
+			my $f = basename($active_pane->get_selected_item); 
+			$f =~ s/&/&amp;/g; # sick fix. meh. 
+
 			if (-f $active_pane->get_selected_item) {
-				return if (Filer::Dialog->yesno_dialog(sprintf("Delete file \"%s\"?", basename($active_pane->get_selected_item))) eq 'no');
+				return if (Filer::Dialog->yesno_dialog("Delete file \"$f\"?") eq 'no');
 			} elsif (-d $active_pane->get_selected_item) {
-				return if (Filer::Dialog->yesno_dialog(sprintf("Delete directory \"%s\"?", basename($active_pane->get_selected_item))) eq 'no');
+				return if (Filer::Dialog->yesno_dialog("Delete directory \"$f\"?") eq 'no');
 			}
 		} else {
 			return if (Filer::Dialog->yesno_dialog(sprintf("Delete %s selected files?", $active_pane->count_selected_items)) eq 'no');
@@ -893,6 +896,8 @@ sub delete_cb {
 		if (! unlink($f)) {
 			Filer::Dialog->msgbox_info(sprintf("Deleting of \"%s\" failed: $!", $f));
 		}
+
+		$active_pane->update_navigation_buttons($active_pane->get_pwd);
 	}
 
 	$active_pane->remove_selected;
