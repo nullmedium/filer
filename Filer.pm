@@ -1,21 +1,21 @@
-#     Copyright (C) 2004-2005 Jens Luedicke <jens.luedicke@gmail.com>
-#
-#     This program is free software; you can redistribute it and/or modify
-#     it under the terms of the GNU General Public License as published by
-#     the Free Software Foundation; either version 2 of the License, or
-#     (at your option) any later version.
-#
-#     This program is distributed in the hope that it will be useful,
-#     but WITHOUT ANY WARRANTY; without even the implied warranty of
-#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#     GNU General Public License for more details.
-#
-#     You should have received a copy of the GNU General Public License
-#     along with this program; if not, write to the Free Software
-#     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+package Filer;
 
 use strict;
 use warnings;
+
+require Exporter; 
+our @ISA = qw(Exporter);
+our @EXPORT = qw($VERSION $widgets $pane $active_pane $inactive_pane $config $CLIPBOARD_ACTION $SKIP_ALL $OVERWRITE_ALL);
+
+our $VERSION = "0.0.13-svn";
+our $widgets;
+our $pane;
+our $active_pane;
+our $inactive_pane;
+our $config;
+our $CLIPBOARD_ACTION;
+our $SKIP_ALL;
+our $OVERWRITE_ALL;
 
 use Storable;
 use Gtk2;
@@ -33,30 +33,29 @@ use File::Temp;
 use File::DirWalk;
 use Stat::lsMode;
 
-use Filer;
 use Filer::Constants;
 
-use Filer::Config;
-use Filer::Bookmarks;
+require Filer::Config;
+require Filer::Bookmarks;
 
-use Filer::FileInfo;
-use Filer::Tools;
+require Filer::FileInfo;
+require Filer::Tools;
 
-use Filer::Mime;
-use Filer::Archive;
-use Filer::Properties;
-use Filer::Dialog;
-use Filer::ProgressDialog;
+require Filer::Mime;
+require Filer::Archive;
+require Filer::Properties;
+require Filer::Dialog;
+require Filer::ProgressDialog;
+require Filer::SelectDialog;
 
-use Filer::DND;
-use Filer::FilePane;
-use Filer::FileTreePane;
+require Filer::FilePane;
+require Filer::FileTreePane;
 
-use Filer::FileCopy;
-use Filer::Copy;
-use Filer::Move;
-use Filer::Delete;
-use Filer::Search;
+require Filer::FileCopy;
+require Filer::Copy;
+require Filer::Move;
+require Filer::Delete;
+require Filer::Search;
 
 Memoize::memoize("abs_path");
 Memoize::memoize("catfile");
@@ -255,19 +254,17 @@ sub quit_cb {
 }
 
 sub about_cb {
-	my $dialog = new Gtk2::Dialog("About", undef, 'modal', 'gtk-close' => 'close');
-	$dialog->signal_connect(response => sub { $_[0]->destroy });
-	$dialog->set_position('center');
-	$dialog->set_modal(1);
+	my $dialog = new Gtk2::AboutDialog; 
+	$dialog->set_name("Filer");
+	$dialog->set_version($VERSION);
+	$dialog->set_copyright("&copy; 2004-2005 Jens Luedicke");
+	$dialog->set_website("http://perldude.de/"); 
+	$dialog->set_website_label("http://perldude.de/");
+	$dialog->set_authors(	"Jens Luedicke <jens.luedicke\@gmail.com>",
+				"Bjoern Martensen <bjoern.martensen\@gmail.com>"
+	);
 
-	my $label = new Gtk2::Label;
-	$label->set_use_markup(1);
-	$label->set_markup("<b>Filer $VERSION</b>\n\nCopyright (C) 2004-2005\nby Jens Luedicke &lt;jens.luedicke\@gmail.com&gt;\n");
-	$label->set_alignment(0.0,0.0);
-	$dialog->vbox->pack_start($label, 1,1,5);
-
-	$dialog->show_all;
-	$dialog->run;
+	$dialog->show;
 }
 
 sub open_cb {
@@ -403,6 +400,18 @@ sub refresh_cb {
 	return 1;
 }
 
+sub refresh_inactive_pane {
+	if ($active_pane->get_pwd eq $inactive_pane->get_pwd) {
+		if ($active_pane->get_type eq $inactive_pane->get_type) {
+			$inactive_pane->set_model($active_pane->get_model);
+		} else {
+			$inactive_pane->refresh;
+		}
+	} else {
+		$inactive_pane->refresh;
+	}
+}
+
 sub go_home_cb {
 	my $opt = $config->get_option('Mode');
 
@@ -414,87 +423,15 @@ sub go_home_cb {
 }
 
 sub synchronize_cb {
-	$inactive_pane->open_path($active_pane->get_pwd());
+	$inactive_pane->open_path($active_pane->get_pwd);
 }
 
 sub unselect_cb {
-	&select_dialog(UNSELECT);
+	Filer::SelectDialog->new(Filer::SelectDialog->UNSELECT);
 }
 
 sub select_cb {
-	&select_dialog(SELECT);
-}
-
-sub select_dialog {
-	my ($type) = @_;
-	my ($dialog,$hbox,$label,$entry);
-
-	$dialog = new Gtk2::Dialog("", undef, 'modal', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
-	$dialog->set_default_response('ok');
-	$dialog->set_has_separator(1);
-	$dialog->set_position('center');
-	$dialog->set_modal(1);
-
-	$hbox = new Gtk2::HBox(0,0);
-	$dialog->vbox->pack_start($hbox,0,1,5);
-
-	$label = new Gtk2::Label;
-	$hbox->pack_start($label,0,0,0);
-
-	$entry = new Gtk2::Entry;
-	$entry->set_activates_default(1);
-	$entry->set_text("*");
-	$hbox->pack_start($entry,0,0,0);
-
-	if ($type == SELECT) {
-		$dialog->set_title("Select Files");
-		$label->set_text("Select: ");
-	} else {
-		$dialog->set_title("Unselect Files");
-		$label->set_text("Unselect: ");
-	}
-
-	$dialog->show_all;
-
-	if ($dialog->run eq 'ok') {
-		my $mypane = $active_pane;
-		my $selection = $mypane->get_treeview->get_selection;
-		my $str = $entry->get_text;
-#		my $bx = (split //, $str)[0];
-
-		$str =~ s/\//\\\//g;
-		$str =~ s/\./\\./g;
-		$str =~ s/\*/\.*/g;
-		$str =~ s/\?/\./g;
-
-		$mypane->get_treeview->get_model->foreach(sub {
-			my $model = $_[0];
-			my $iter = $_[2];
-			my $item = $model->get($iter, Filer::FilePane::COL_NAME);
-
-			return 0 if ($item eq "..");
-
-# 			if (-d $mypane->get_path($item)) {
-# 				if ($bx eq '/') {
-# 					$item = "/$item";
-# 				} else {
-# 					return 0;
-# 				}
-# 			}
-
-			if ($item =~ /\A$str\Z/)  {
-				if ($type == SELECT) {
-					$selection->select_iter($iter);
-				}
-
-				if ($type == UNSELECT) {
-					$selection->unselect_iter($iter);
-				}
-			}
-		}, undef);
-	}
-
-	$dialog->destroy;
+	Filer::SelectDialog->new(Filer::SelectDialog->SELECT);
 }
 
 sub search_cb {
@@ -545,7 +482,8 @@ sub paste_cb {
 	my $files = [ split /\n/, &get_clipboard_contents ];
 
 	# copy or cut files
-	&{$f}($files, $active_pane->get_pwd);
+	my $target = ($active_pane->get_type eq "TREE") ? $active_pane->get_updir : $active_pane->get_pwd;
+	&{$f}($files, $target);
 
 	# refresh panes.
 	$active_pane->refresh;
@@ -895,18 +833,6 @@ sub symlink_cb {
 	}
 
 	$dialog->destroy;
-}
-
-sub refresh_inactive_pane {
-	if ($active_pane->get_pwd eq $inactive_pane->get_pwd) {
-		if ($active_pane->get_type eq $inactive_pane->get_type) {
-			$inactive_pane->set_model($active_pane->get_model);
-		} else {
-			$inactive_pane->refresh;
-		}
-	} else {
-		$inactive_pane->refresh;
-	}
 }
 
 sub files_count {

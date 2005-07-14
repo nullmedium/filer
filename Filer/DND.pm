@@ -16,9 +16,14 @@
 
 package Filer::DND;
 
-use strict;
-use warnings;
+# use strict;
+# use warnings;
+
 use File::Basename;
+
+require Filer;
+use Filer::Constants;
+our @ISA = qw(Filer);
 
 use constant TARGET_URI_LIST => 0;
 
@@ -26,18 +31,12 @@ sub target_table {
 	return ({'target' => "text/uri-list", 'flags' => [], 'info' => TARGET_URI_LIST});
 }
 
-sub filepane_treeview_drag_begin_cb {
-	my ($widget, $context) = @_;
-
-	return 1;
-}
-
 sub filepane_treeview_drag_data_get_cb {
 	my ($widget,$context,$data,$info,$time,$self) = @_;
 
 	if ($info == TARGET_URI_LIST) {
-		if ($self->count_selected_items > 0) {
-			my $d = join "\r\n", @{$self->get_selected_items};
+		if ($self->count_items > 0) {
+			my $d = join "\r\n", @{$self->get_items};
 			$data->set($data->target, 8, $d);
 		}
 	}
@@ -62,37 +61,37 @@ sub filepane_treeview_drag_data_received_cb {
 			$path = $self->get_pwd;
 		}
 
-		if ($main::active_pane->get_pwd ne $path) {
+		if ($active_pane->get_pwd ne $path) {
 
 			if ($action eq "copy") {
-				if ($main::config->get_option("ConfirmCopy") == 1) {
-					my $f = basename($main::active_pane->get_selected_item); 
+				if ($config->get_option("ConfirmCopy") == 1) {
+					my $f = basename($active_pane->get_item); 
 					$f =~ s/&/&amp;/g; # sick fix. meh. 
 
-					if ($main::active_pane->count_selected_items == 1) {
+					if ($active_pane->count_items == 1) {
 						return if (Filer::Dialog->yesno_dialog("Copy $f to $path?") eq 'no');
 					} else {
-						return if (Filer::Dialog->yesno_dialog(sprintf("Copy %s files to $path?", $main::active_pane->count_selected_items)) eq 'no');
+						return if (Filer::Dialog->yesno_dialog(sprintf("Copy %s files to $path?", $active_pane->count_items)) eq 'no');
 					}
 				}
 
 				$do = Filer::Copy->new;
 			} elsif ($action eq "move") {
-				if ($main::config->get_option("ConfirmMove") == 1) {
-					my $f = basename($main::active_pane->get_selected_item); 
+				if ($config->get_option("ConfirmMove") == 1) {
+					my $f = basename($active_pane->get_item); 
 					$f =~ s/&/&amp;/g; # sick fix. meh. 
 
-					if ($main::active_pane->count_selected_items == 1) {
+					if ($active_pane->count_items == 1) {
 						return if (Filer::Dialog->yesno_dialog("Move $f to $path?") eq 'no');
 					} else {
-						return if (Filer::Dialog->yesno_dialog(sprintf("Move %s files to $path?", $main::active_pane->count_selected_items)) eq 'no');
+						return if (Filer::Dialog->yesno_dialog(sprintf("Move %s files to $path?", $active_pane->count_items)) eq 'no');
 					}
 				}
 
 				$do = Filer::Move->new;
 			}
 
-			$do->set_total(&main::files_count);
+			$do->set_total(&Filer::files_count);
 			$do->show;
 
 			for (split /\r\n/, $data->data) {
@@ -114,10 +113,10 @@ sub filepane_treeview_drag_data_received_cb {
 			$do->destroy;
 
 			if ($action eq "move") {
-				$main::active_pane->remove_selected;
+				$active_pane->remove_selected;
 			}
 
-			&main::refresh_inactive_pane;
+			&Filer::refresh_inactive_pane;
 
 			$context->finish (1, 0, $time);
 			return;

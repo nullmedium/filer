@@ -16,13 +16,17 @@
 
 package Filer::Move;
 
-use strict;
-use warnings;
+# use strict;
+# use warnings;
 
 use Fcntl;
 use Cwd qw( abs_path );
 use File::Spec::Functions qw(catfile splitdir);
 use File::Basename qw(dirname basename);
+
+use Filer;
+use Filer::Constants;
+our @ISA = qw(Filer);
 
 Memoize::memoize("abs_path");
 Memoize::memoize("catfile");
@@ -48,8 +52,8 @@ sub new {
 		$self->{progress_dialog}->destroy;
 	});
 
-	$main::SKIP_ALL = 0;
-	$main::OVERWRITE_ALL = 0;
+	$SKIP_ALL = 0;
+	$OVERWRITE_ALL = 0;
 
 	return $self;
 }

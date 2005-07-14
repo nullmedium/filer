@@ -16,29 +16,38 @@
 
 package Filer::FileTreePane;
 
-use strict;
-use warnings;
+# use strict;
+# use warnings;
 
 use Cwd qw(abs_path);
 use File::Spec::Functions qw(catfile splitdir);
 
+use Filer;
+use Filer::Constants;
+our @ISA = qw(Filer);
+
+use Filer::DND;
+
+my $i = 0; 
+
+use constant SIDE 			=> $i++;
+use constant VBOX			=> $i++;
+use constant TREEVIEW			=> $i++;
+use constant TREEMODEL			=> $i++;
+use constant TREESELECTION		=> $i++;
+use constant FILEPATH			=> $i++;
+use constant FILEPATH_ITER		=> $i++;
+use constant MIMEICONS			=> $i++;
+use constant MOUSE_MOTION_SELECT	=> $i++;
+use constant MOUSE_MOTION_Y_POS_OLD 	=> $i++;
+
+use constant COL_ICON		=> 0;
+use constant COL_NAME		=> 1;
+use constant COL_FILEPATH	=> 2;
+
 Memoize::memoize("abs_path");
 Memoize::memoize("catfile");
 Memoize::memoize("splitdir");
-
-use constant LEFT 		=> 0;
-use constant RIGHT		=> 1;
-
-use constant SIDE 		=> 0;
-use constant VBOX		=> 1;
-use constant TREEVIEW		=> 2;
-use constant TREEMODEL		=> 3;
-use constant TREESELECTION	=> 4;
-use constant FILEPATH		=> 5;
-use constant FILEPATH_ITER	=> 6;
-use constant MIMEICONS		=> 7;
-use constant MOUSE_MOTION_SELECT => 8;
-use constant MOUSE_MOTION_Y_POS_OLD => 9;
 
 sub new {
 	my ($class,$side) = @_;
@@ -88,16 +97,16 @@ sub new {
 
 	$cell = Gtk2::CellRendererPixbuf->new;
 	$col->pack_start ($cell, 0);
-	$col->add_attribute ($cell, pixbuf => 0);
+	$col->add_attribute ($cell, pixbuf => COL_ICON);
 
 	$cell = Gtk2::CellRendererText->new;
 	$col->pack_start ($cell, 1);
-	$col->add_attribute ($cell, text => 1);
+	$col->add_attribute ($cell, text => COL_NAME);
 
 	$self->[TREEVIEW]->append_column($col);
 
 # 	$cell = new Gtk2::CellRendererText;
-# 	$col = Gtk2::TreeViewColumn->new_with_attributes("Path", $cell, text => 2);
+# 	$col = Gtk2::TreeViewColumn->new_with_attributes("Path", $cell, text => COL_FILEPATH);
 # 	$self->[TREEVIEW]->append_column($col);
 
 	$self->init_icons;
@@ -127,19 +136,17 @@ sub show_popup_menu {
 		my $item;
 		my $item_factory = new Gtk2::ItemFactory("Gtk2::Menu", '<main>', undef);
 		my $popup_menu = $item_factory->get_widget('<main>');
-		my $bookmarks_menu = new Gtk2::Menu;
-		my $commands_menu = new Gtk2::Menu;
 
 		my @menu_items =
 		(
-		{ path => '/Copy',					callback => \&main::copy_cb,				item_type => '<Item>'},
-		{ path => '/Cut',					callback => \&main::cut_cb,				item_type => '<Item>'},
-		{ path => '/Paste',					callback => \&main::paste_cb,				item_type => '<Item>'},
+		{ path => '/Copy',					callback => \&Filer::copy_cb,				item_type => '<Item>'},
+		{ path => '/Cut',					callback => \&Filer::cut_cb,				item_type => '<Item>'},
+		{ path => '/Paste',					callback => \&Filer::paste_cb,				item_type => '<Item>'},
 		{ path => '/sep5',								        			item_type => '<Separator>'},
-		{ path => '/Move',					callback => \&main::move_cb,				item_type => '<Item>'},
-		{ path => '/Rename',					callback => \&main::rename_cb,				item_type => '<Item>'},
-		{ path => '/MkDir',					callback => \&main::mkdir_cb,				item_type => '<Item>'},
-		{ path => '/Delete',					callback => \&main::delete_cb,		        	item_type => '<Item>'},
+		{ path => '/Move',					callback => \&Filer::move_cb,				item_type => '<Item>'},
+		{ path => '/Rename',					callback => \&Filer::rename_cb,				item_type => '<Item>'},
+		{ path => '/MkDir',					callback => \&Filer::mkdir_cb,				item_type => '<Item>'},
+		{ path => '/Delete',					callback => \&Filer::delete_cb,		        	item_type => '<Item>'},
 		{ path => '/sep1',								        			item_type => '<Separator>'},
 		{ path => '/Bookmarks',												item_type => '<Item>'},
 		{ path => '/sep2',								        			item_type => '<Separator>'},
@@ -155,43 +162,11 @@ sub show_popup_menu {
 		# Bookmarks Menu
 
 		$item = $item_factory->get_item('/Bookmarks');
-		$item->set_submenu($bookmarks_menu);
-
-		$item = new Gtk2::MenuItem("Set Bookmark");
-		$item->signal_connect("activate", sub {
-			my $bookmarks = new Filer::Bookmarks;
-			foreach (@{$self->get_selected_items}) {
-				if (-d $_) {
-					$bookmarks->set_bookmark($_);
-				}
-			}
-		});
-		$bookmarks_menu->add($item);
-
-		$item = new Gtk2::MenuItem("Remove Bookmark");
-		$item->signal_connect("activate", sub {
-			my $bookmarks = new Filer::Bookmarks;
-			foreach (@{$self->get_selected_items}) {
-				if (-d $_) {
-					$bookmarks->remove_bookmark($_);
-				}
-			}
-		});
-		$bookmarks_menu->add($item);
-
-		$item = new Gtk2::SeparatorMenuItem;
-		$bookmarks_menu->add($item);
-
-		my $bookmarks = new Filer::Bookmarks;
-		foreach ($bookmarks->get_bookmarks) {
-			$item = new Gtk2::MenuItem($_);
-			$item->signal_connect("activate", sub {	$main::pane->[!$self->[SIDE]]->open_path($_[1]) }, $_);
-			$bookmarks_menu->add($item);
-		}
+		$item->set_submenu((new Filer::Bookmarks)->bookmarks_menu);
 
 		my $hide_paste = 1;
 
-		foreach (split /\n/, &main::get_clipboard_contents) { 
+		foreach (split /\n/, &Filer::get_clipboard_contents) { 
 			$hide_paste = 0 if (-e $_);
 		}
 
@@ -209,8 +184,8 @@ sub show_popup_menu {
 sub selection_changed_cb {
 	my ($selection,$self) = @_;
 
-	$self->[FILEPATH] = $self->get_selected_items->[0];
-	$self->[FILEPATH_ITER] = $self->get_selected_iters->[0];
+	$self->[FILEPATH] = $self->get_items->[0];
+	$self->[FILEPATH_ITER] = $self->get_iters->[0];
 
 	return 1;
 }
@@ -218,8 +193,8 @@ sub selection_changed_cb {
 sub treeview_grab_focus_cb {
 	my ($w,$self) = @_;
 
-	$main::active_pane = $self; # self
-	$main::inactive_pane = $main::pane->[!$self->[SIDE]];
+	$active_pane = $self; # self
+	$inactive_pane = $pane->[!$self->[SIDE]];
 
 	return 1;
 }
@@ -230,7 +205,7 @@ sub treeview_event_cb {
 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Return'})
 	or ($e->type eq "2button-press" and $e->button == 1))
 	 {
-		$main::inactive_pane->open_path_helper($self->[FILEPATH]);
+		$inactive_pane->open_path_helper($self->[FILEPATH]);
 
 		my $path = $self->[TREEMODEL]->get_path($self->[FILEPATH_ITER]);
 
@@ -240,6 +215,11 @@ sub treeview_event_cb {
 			$self->[TREEVIEW]->expand_row($path,0);
 		}
 
+		return 1;
+	}
+
+	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Delete'})) {
+		&Filer::delete_cb;
 		return 1;
 	}
 
@@ -295,7 +275,7 @@ sub treeview_event_cb {
 
 sub treeview_row_expanded_cb {
 	my ($treeview,$iter,$path,$self) = @_;
-	my $dir = $self->[TREEMODEL]->get($iter, 2);
+	my $dir = $self->[TREEMODEL]->get($iter, COL_FILEPATH);
 
 	$self->DirRead($dir,$iter);
 
@@ -341,39 +321,44 @@ sub filepath {
 
 *get_pwd = \&filepath;
 *get_path = \&filepath;
-*get_selected_item = \&filepath;
+*get_item = \&filepath;
 
 sub get_updir { 
 	my ($self) = @_;
 	return abs_path(catfile(splitdir($self->[FILEPATH]), File::Spec->updir));
 }
 
-sub get_selected_iter {
+sub get_iter {
 	my ($self) = @_;
 	return $self->[FILEPATH_ITER];
 }
 
-sub get_selected_iters {
+sub get_iters {
 	my ($self) = @_;
 	return [ map { $self->[TREEMODEL]->get_iter($_) } $self->[TREESELECTION]->get_selected_rows ];
 }
 
-sub get_selected_items {
+sub get_items {
 	my ($self) = @_;
-	return [ map { $self->[TREEMODEL]->get($_, 2) } @{$self->get_selected_iters} ];
+	return [ map { $self->[TREEMODEL]->get($_, COL_FILEPATH) } @{$self->get_iters} ];
 }
 
-sub set_selected_item {
-	my ($self,$name) = @_;
-	$self->[FILEPATH] = $name;
+sub set_item {
+	my ($self,$fi) = @_;
+
+	$self->[FILEPATH] = $fi->get_path_latin1;
+	$self->[TREEMODEL]->set($self->[FILEPATH_ITER], 
+		COL_NAME, $fi->get_basename,
+		COL_FILEPATH, $self->[FILEPATH]
+	);
 }
 
 sub get_path_by_treepath {
 	my ($self,$p) = @_;
-	return $self->[TREEMODEL]->get($self->[TREEMODEL]->get_iter($p), 2);
+	return $self->[TREEMODEL]->get($self->[TREEMODEL]->get_iter($p), COL_FILEPATH);
 }
 
-sub count_selected_items {
+sub count_items {
 	my ($self) = @_;
 	return $self->[TREESELECTION]->count_selected_rows;
 }
@@ -394,8 +379,8 @@ sub refresh {
 sub remove_selected {
 	my ($self) = @_;
 
-	foreach (@{$self->get_selected_iters}) {
-		my $file = $self->[TREEMODEL]->get($_, 2);
+	foreach (@{$self->get_iters}) {
+		my $file = $self->[TREEMODEL]->get($_, COL_FILEPATH);
 
 		if (! -e $file) {
 			$self->[TREEMODEL]->remove($_);
@@ -411,17 +396,17 @@ sub CreateRootNodes {
 	my $iter;
 
 	$iter = $self->[TREEMODEL]->append(undef);
-	$self->[TREEMODEL]->set($iter, 0, $self->[MIMEICONS]->{'inode/directory'}, 1, "Filesystem", 2, File::Spec->rootdir);
+	$self->[TREEMODEL]->set($iter, COL_ICON, $self->[MIMEICONS]->{'inode/directory'}, COL_NAME, "Filesystem", COL_FILEPATH, File::Spec->rootdir);
 	$self->[TREEMODEL]->append($iter);
 
 	$iter = $self->[TREEMODEL]->append(undef);
-	$self->[TREEMODEL]->set($iter, 0, $self->[MIMEICONS]->{'inode/directory'}, 1, "Home", 2, $ENV{HOME});
+	$self->[TREEMODEL]->set($iter, COL_ICON, $self->[MIMEICONS]->{'inode/directory'}, COL_NAME, "Home", COL_FILEPATH, $ENV{HOME});
 	$self->[TREEMODEL]->append($iter);
 }
 
 sub DirRead {
 	my ($self,$dir,$parent_iter) = @_;
-	my $show_hidden = $main::config->get_option('ShowHiddenFiles');
+	my $show_hidden = $config->get_option('ShowHiddenFiles');
 
 	opendir (DIR, $dir) || return Filer::Dialog->msgbox_error("$dir: $!");
 	my @dir_contents = sort readdir(DIR);
@@ -433,13 +418,15 @@ sub DirRead {
 		my $fp = catfile(splitdir($dir), $file);
 
 		next unless (-d $fp);
-		next if ($file =~ /^\.+\w+/ and $show_hidden == 0);
+		next if ($file =~ /^\.+\w+/ and !$show_hidden);
+
+		my $fi = new Filer::FileInfo($fp);
+		my $type = $fi->get_mimetype;
+		my $icon = $self->[MIMEICONS]->{$type};
 
 		my $iter = $self->[TREEMODEL]->append($parent_iter);
-		my $icon = (-l $fp) ? $self->[MIMEICONS]->{'inode/symlink'} : $self->[MIMEICONS]->{'inode/directory'};
-
-		$self->[TREEMODEL]->set($iter, 0, $icon, 1, $file, 2, abs_path($fp));
-		$self->[TREEMODEL]->append($iter) if (-R $fp);
+		$self->[TREEMODEL]->set($iter, COL_ICON, $icon, COL_NAME, $file, COL_FILEPATH, $fi->get_path_utf8);
+		$self->[TREEMODEL]->append($iter) if (-R $fi->get_path_latin1);
 	}
 
 	$self->[TREEMODEL]->remove($self->[TREEMODEL]->iter_nth_child($parent_iter, 0)); # remove dummy iter
@@ -453,19 +440,19 @@ sub set_properties {
 sub create_tar_gz_archive {
 	my ($self) = @_;
 
-	my $archive = new Filer::Archive($self->get_updir, $self->get_selected_items);
+	my $archive = new Filer::Archive($self->get_updir, $self->get_items);
 	$archive->create_tar_gz_archive;
 
-	&main::refresh_inactive_pane;
+	&Filer::refresh_inactive_pane;
 }
 
 sub create_tar_bz2_archive {
 	my ($self) = @_;
 
-	my $archive = new Filer::Archive($self->get_updir, $self->get_selected_items);
+	my $archive = new Filer::Archive($self->get_updir, $self->get_items);
 	$archive->create_tar_bz2_archive;
 
-	&main::refresh_inactive_pane;
+	&Filer::refresh_inactive_pane;
 }
 
 1;

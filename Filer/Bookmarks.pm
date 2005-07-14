@@ -16,8 +16,12 @@
 
 package Filer::Bookmarks;
 
-use strict;
-use warnings;
+use Filer;
+use Filer::Constants;
+our @ISA = qw(Filer);
+
+# use strict;
+# use warnings;
 
 sub new {
 	my ($class,$side) = @_;
@@ -66,6 +70,69 @@ sub remove_bookmark {
 	delete $bookmarks->{$path};	
 
 	$self->store($bookmarks);
+}
+
+sub bookmarks_menu {
+	my ($self) = @_;
+	my $menu = new Gtk2::Menu;
+	my $menuitem;
+
+	$menuitem = new Gtk2::MenuItem("Set Bookmark");
+	$menuitem->signal_connect("activate", sub {
+
+		if ($active_pane->count_items > 0) {
+			foreach (@{$active_pane->get_items}) {
+				if (-d $_) {
+					$self->set_bookmark($_);
+				} else {
+					$self->set_bookmark($active_pane->get_pwd);
+				}
+			}
+		} else {
+			$self->set_bookmark($active_pane->get_pwd);
+		}
+
+		my $menu = $widgets->{item_factory}->get_item("/Bookmarks");
+		$menu->set_submenu($self->bookmarks_menu);
+	});
+	$menuitem->show;
+	$menu->add($menuitem);
+
+	$menuitem = new Gtk2::MenuItem("Remove Bookmark");
+	$menuitem->signal_connect("activate", sub {
+		if ($active_pane->count_items > 0) {
+			foreach (@{$active_pane->get_items}) {
+				if (-d $_) {
+					$self->remove_bookmark($_);
+				} else {
+					$self->remove_bookmark($active_pane->get_pwd);
+				}
+			}
+		} else {
+			$self->remove_bookmark($active_pane->get_pwd);
+		}
+
+		my $menu = $widgets->{item_factory}->get_item("/Bookmarks");
+		$menu->set_submenu($self->bookmarks_menu);
+	});
+	$menuitem->show;
+	$menu->add($menuitem);
+
+	$menuitem = new Gtk2::SeparatorMenuItem;
+	$menuitem->show;
+	$menu->add($menuitem);
+
+	foreach ($self->get_bookmarks) {
+		$menuitem = new Gtk2::MenuItem($_);
+		$menuitem->signal_connect("activate", sub {
+			my $p = ($config->get_option("Mode") == NORTON_COMMANDER_MODE) ? $active_pane : $pane->[RIGHT];
+			$p->open_path_helper($_[1]);
+		},$_);
+		$menuitem->show;
+		$menu->add($menuitem);
+	}
+
+	return $menu;
 }
 
 1;

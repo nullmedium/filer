@@ -16,13 +16,18 @@
 
 package Filer::Copy;
 
-use strict;
-use warnings;
+# use strict;
+# use warnings;
 
 use Fcntl;
 use Cwd qw( abs_path );
 use File::Spec::Functions qw(catfile splitdir);
 use File::Basename qw(dirname basename);
+use File::DirWalk;
+
+use Filer;
+use Filer::Constants;
+our @ISA = qw(Filer);
 
 Memoize::memoize("abs_path");
 Memoize::memoize("catfile");
@@ -48,8 +53,8 @@ sub new {
 		$self->destroy;
 	});
 
-	$main::SKIP_ALL = 0;
-	$main::OVERWRITE_ALL = 0;
+	$SKIP_ALL = 0;
+	$OVERWRITE_ALL = 0;
 
 	return $self;
 }
@@ -126,11 +131,11 @@ sub copy {
 		while (Gtk2->events_pending) { Gtk2->main_iteration; }
 
 		if (-e $my_dest) {
-			if ($main::SKIP_ALL) {
+			if ($SKIP_ALL) {
 				return File::DirWalk::SUCCESS;
 			}
 
-			if (!$main::OVERWRITE_ALL) {
+			if (!$OVERWRITE_ALL) {
 				my ($dialog,$label,$button,$hbox,$entry);
 
 				if (dirname($my_source) eq dirname($my_dest)) {
@@ -235,9 +240,9 @@ sub copy {
 					if ($r eq 'cancel') {
 						return File::DirWalk::ABORTED;
 					} elsif ($r eq 1) {
-						$main::OVERWRITE_ALL = 1;
+						$OVERWRITE_ALL = 1;
 					} elsif ($r eq 2) {
-						$main::SKIP_ALL = 1;
+						$SKIP_ALL = 1;
 						return File::DirWalk::SUCCESS;
 					} elsif ($r eq 3) {
 						$my_dest = catfile(dirname($my_dest), $entry->get_text);

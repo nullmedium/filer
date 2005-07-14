@@ -17,25 +17,22 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 BEGIN {
-	use Cwd;
+	use Cwd qw(abs_path);
 
 	$libpath = $0;
 	$libpath =~ s!/[^/]+$!!;
 	$libpath =~ s!/bin$!/lib/filer!;
 	die "Can't find required files in $libpath" unless -e $libpath;
-
-	$libpath = Cwd::abs_path($libpath);
+	
+	$libpath = abs_path($libpath);
 }
 
+# use strict;
 use warnings;
 
 use lib "$libpath";
-require "lib.pl";
-
-$VERSION = '0.0.13-svn';
-
-use constant LEFT => 0;
-use constant RIGHT => 1;
+use Filer;		
+use Filer::Constants;
 
 Glib->install_exception_handler(sub {
 	Filer::Dialog->msgbox_error($_[0]);
@@ -44,8 +41,8 @@ Glib->install_exception_handler(sub {
 
 Gtk2->init;
 
-&init_config;
-&main_window;
+&Filer::init_config;
+&Filer::main_window;
 
 Gtk2->main;
 

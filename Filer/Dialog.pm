@@ -198,7 +198,7 @@ sub preview_file_selection {
 		return if ((not defined $filename) or (-d $filename));
 
 		my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($filename);
-		$preview->set_from_pixbuf(&main::intelligent_scale($pixbuf,100));
+		$preview->set_from_pixbuf(Filer::Tools->intelligent_scale($pixbuf,100));
 	}, $preview);
 
 	return $dialog;

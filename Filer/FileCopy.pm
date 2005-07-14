@@ -42,7 +42,7 @@ sub new {
 sub filecopy {
 	my ($self,$source,$dest) = @_;
 	
-	my @stat = stat($source); # || return File::DirWalk::FAILED;
+	my @stat = stat($source); 
 	my $mode = $stat[2];
 	my $size = $stat[7];
 	my $buf_size = $stat[11]; # use filesystem blocksize
@@ -50,13 +50,13 @@ sub filecopy {
 	my $written = 0;
 	my $written_avg = 0;
 	my $percent_written = 0;
-	my $size_h = &Filer::FilePane::calculate_size($size);
+	my $size_h = Filer::Tools->calculate_size($size);
 
 	my $id = Glib::Timeout->add(1000, sub {
 		return 0 if ($written_avg == 0);
 		
 		my $p = sprintf("%.0f", $percent_written * 100);
-		my $str = "$p% of $size_h (" .  &Filer::FilePane::calculate_size($written_avg) . "/s)"; 
+		my $str = "$p% of $size_h (" .  Filer::Tools->calculate_size($written_avg) . "/s)"; 
   
 		$self->[PROGRESSBAR]->get_parent_window->set_title($str);
 		$self->[PROGRESSBAR]->set_text($str);
