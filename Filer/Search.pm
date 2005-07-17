@@ -20,7 +20,7 @@ use strict;
 use warnings;
 
 sub new {
-	my ($class) = @_;
+	my ($class,$filer) = @_;
 	my $self = bless {}, $class;
 	my ($dialog,$table,$label,$button,$hbox,$sw);
 
@@ -30,7 +30,7 @@ sub new {
 	$dialog->set_position('center');
 	$dialog->set_modal(1);
 
-	$table = new Gtk2::Table(4,3);
+	$table = new Gtk2::Table(5,2);
 	$table->set_homogeneous(0);
 	$table->set_col_spacings(5);
 	$table->set_row_spacings(1);
@@ -40,38 +40,31 @@ sub new {
 	$label->set_alignment(0.0,0.0);
 	$table->attach($label, 0, 1, 0, 1, [ "fill" ], [], 0, 0);
 
+	$self->{filechooser_button} = new Gtk2::FileChooserButton("Search in ...", 'GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER');
+	$self->{filechooser_button}->set_current_folder($filer->{active_pane}->get_item);
+       	$table->attach($self->{filechooser_button}, 1, 2, 0, 1, [ "fill", "expand" ], [], 0, 0);
+ 
 	$label = new Gtk2::Label("Filename: ");
 	$label->set_alignment(0.0,0.0);
 	$table->attach($label, 0, 1, 1, 2, [ "fill" ], [], 0, 0);
+
+ 	$self->{file_pattern_entry} = new Gtk2::Entry;
+	$table->attach($self->{file_pattern_entry}, 1, 2, 1, 2, [ "fill", "expand" ], [], 0, 0);
 
 	$label = new Gtk2::Label("Content: ");
 	$label->set_alignment(0.0,0.0);
 	$table->attach($label, 0, 1, 2, 3, [ "fill" ], [], 0, 0);
 
+	$self->{grep_pattern_entry} = new Gtk2::Entry;
+	$table->attach($self->{grep_pattern_entry}, 1, 2, 2, 3, [ "fill", "expand" ], [], 0, 0);
+
 	$self->{follow_symlinks_checkbutton} = new Gtk2::CheckButton("Follow symlinks");
 	$self->{follow_symlinks_checkbutton}->set_alignment(0.0,0.0);
-	$table->attach($self->{follow_symlinks_checkbutton}, 0, 3, 3, 4, [ "fill" ], [], 0, 0);
+	$table->attach($self->{follow_symlinks_checkbutton}, 0, 2, 3, 4, [ "fill" ], [], 0, 0);
 
 	$self->{first_match_checkbutton} = new Gtk2::CheckButton("List only first line with given content string");
 	$self->{first_match_checkbutton}->set_alignment(0.0,0.0);
-	$table->attach($self->{first_match_checkbutton}, 0, 3, 4, 5, [ "fill" ], [], 0, 0);
-
-# 	$self->{path_combo} = Gtk2::ComboBoxEntry->new_text;
-# 	$self->{path_combo}->get_child->set_text($ENV{HOME});
-# 	$table->attach($self->{path_combo}, 1, 2, 0, 1, [ "fill", "expand" ], [], 0, 0);
-
-	$self->{file_pattern_entry} = new Gtk2::Entry;
-	$table->attach($self->{file_pattern_entry}, 1, 3, 1, 2, [ "fill", "expand" ], [], 0, 0);
-
-	$self->{grep_pattern_entry} = new Gtk2::Entry;
-	$table->attach($self->{grep_pattern_entry}, 1, 3, 2, 3, [ "fill", "expand" ], [], 0, 0);
-
-# 	$button = new Gtk2::Button;
-# 	$button->add(Gtk2::Image->new_from_stock('gtk-open', 'button'));
-# 	$button->signal_connect("clicked", sub {
-# 		$self->select_path
-# 	});
-# 	$table->attach($button, 2, 3, 0, 1, [ "fill" ], [], 0, 0);
+	$table->attach($self->{first_match_checkbutton}, 0, 2, 4, 5, [ "fill" ], [], 0, 0);
 
 	$hbox = new Gtk2::HButtonBox;
 	$hbox->set_layout_default('end');
@@ -208,23 +201,10 @@ sub init_dirwalk {
 	}
 }
 
-sub select_path {
-	my ($self) = @_;
-
-	my $fs = new Gtk2::FileChooserDialog("Select Path", undef, 'GTK_FILE_CHOOSER_ACTION_OPEN', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
-	$fs->set_filename($self->{path_combo}->get_child->get_text);
-
-	if ($fs->run eq 'ok') {
-		$self->{path_combo}->get_child->set_text($fs->get_filename);
-	}
-
-	$fs->destroy;
-}
-
 sub start_search {
 	my ($self) = @_;
 
-	my $path = $self->{path_combo}->get_child->get_text;
+	my $path = $self->{filechooser_button}->get_filename;
 	$self->{file_name_pattern} = $self->{file_pattern_entry}->get_text;
 	$self->{grep_pattern} = $self->{grep_pattern_entry}->get_text;
 

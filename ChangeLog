@@ -1,3 +1,180 @@
+2005-07-17 16:07  perldude
+
+	* trunk/Filer.pm, trunk/Filer/Bookmarks.pm, trunk/Filer/Config.pm,
+	  trunk/Filer/Copy.pm, trunk/Filer/DND.pm, trunk/Filer/FileInfo.pm,
+	  trunk/Filer/FilePane.pm, trunk/Filer/FileTreePane.pm,
+	  trunk/Filer/Mime.pm, trunk/Filer/Move.pm,
+	  trunk/Filer/Properties.pm, trunk/Filer/Search.pm,
+	  trunk/Filer/SelectDialog.pm, trunk/Makefile, trunk/filer.pl,
+	  trunk/filer.ui: - add OOP API for Filer(.pm). - remove global
+	  variables. - pass Filer instance down to other classes to make use
+	  of it. - remove deprecated ItemFactory. use UIManager instead. -
+	  add filer.ui (menu + toolbar defs). - remove SelectDialog. - add
+	  selection dialog to FilePane.pm. - fix sorting.
+
+2005-07-14 22:52  perldude
+
+	* trunk/lib.pl: - remove lib.pl
+
+2005-07-14 22:51  perldude
+
+	* trunk/Filer.pm, trunk/Filer/Bookmarks.pm, trunk/Filer/Copy.pm,
+	  trunk/Filer/DND.pm, trunk/Filer/Dialog.pm,
+	  trunk/Filer/FileCopy.pm, trunk/Filer/FileInfo.pm,
+	  trunk/Filer/FilePane.pm, trunk/Filer/FileTreePane.pm,
+	  trunk/Filer/Mime.pm, trunk/Filer/Move.pm,
+	  trunk/Filer/Properties.pm, trunk/Filer/SelectDialog.pm,
+	  trunk/Filer/Tools.pm, trunk/Makefile, trunk/filer.pl,
+	  trunk/lib.pl: - too many changes. lots of refactoring. might be
+	  unstable, crash and eat all your files without any warning! -
+	  Filer.pm replaces lib.pm; it will become the baseclass for all
+	  other modules. - Filer::FileInfo - encapsulates file data
+	  (mimetype, stat) and provides methods to access them. -
+	  Filer::Tools - some utility functions. - replace deprecated
+	  Gtk2::Combo with Gtk2::ComboBoxText widgtes. - enable sorting of
+	  listviews by clicking on the column headers.
+
+2005-07-11 22:32  perldude
+
+	* trunk/Filer/FilePane.pm, trunk/lib.pl: - improve sorting. add more
+	  (hidden) columns to treemodel to store lstat() values used for
+	  sorting. - some cleanups.
+
+2005-07-11 21:40  perldude
+
+	* trunk/Filer/Copy.pm, trunk/Filer/FilePane.pm, trunk/lib.pl: - add
+	  column sorting feature! - tweaks.
+
+2005-07-11 13:06  perldude
+
+	* trunk/Filer/Copy.pm, trunk/Filer/Move.pm: - add missing
+	  semicolons.
+
+2005-07-11 12:59  perldude
+
+	* trunk/File-DirWalk/DirWalk.pm, trunk/Filer/Copy.pm,
+	  trunk/Filer/DND.pm, trunk/Filer/Delete.pm, trunk/Filer/Move.pm,
+	  trunk/lib.pl: - more dialog changes. - fix problem with & in
+	  filenames. replace with &amp; for use in set_markup().
+
+2005-07-11 12:27  perldude
+
+	* trunk/Filer/Copy.pm: - changes to file suggest/rename. new
+	  dialogs.
+
+2005-07-10 20:52  perldude
+
+	* trunk/Filer/Copy.pm, trunk/Filer/FileCopy.pm, trunk/lib.pl: -
+	  rework file overwrite dialogs. add option to provide a new
+	  filename to use. - tweak FileCopy. show current percentage
+	  (updated each 1000 ms). - delete single file (without
+	  showing/initializing delete progress dialog).
+
+2005-07-10 16:39  perldude
+
+	* trunk/Filer/Bookmarks.pm, trunk/Filer/Config.pm,
+	  trunk/Filer/Copy.pm, trunk/Filer/Delete.pm, trunk/Filer/Dialog.pm,
+	  trunk/Filer/FilePane.pm, trunk/Filer/FileTreePane.pm,
+	  trunk/Filer/Mime.pm, trunk/Filer/Move.pm, trunk/lib.pl: - use
+	  File::Spec methods/functions for path concatenations and more
+	  portability. - add functions to be tracked by Memoize. - add
+	  dialogs/options to set a default terminal and editor. - remove
+	  trash support remains.
+
+2005-07-09 17:24  perldude
+
+	* trunk/Filer/Copy.pm, trunk/Filer/FileCopy.pm,
+	  trunk/Filer/FilePane.pm, trunk/Filer/Move.pm, trunk/lib.pl: -
+	  rework Overwrite/Replace dialog behaviour. - FileCopy fixes. -
+	  context-menu changes (baze).
+
+2005-07-08 20:33  perldude
+
+	* trunk/lib.pl: - b0rk b0rk b0rk ;)
+
+2005-07-08 16:40  perldude
+
+	* trunk/lib.pl: - commit possible fix (?) for renaming files.
+
+2005-07-07 21:54  perldude
+
+	* trunk/lib.pl: - arrange toolbar buttons.
+
+2005-07-07 20:17  perldude
+
+	* trunk/Filer/FileCopy.pm, trunk/Filer/FilePane.pm,
+	  trunk/Filer/Mime.pm, trunk/lib.pl: - more work on toolbar (icons
+	  disabled). - fix bug in FileCopy (files not being truncated on
+	  overwrite). - cleanups.
+
+2005-07-07 05:18  perldude
+
+	* trunk/lib.pl: - add Cancel button to Select dialog.
+
+2005-07-07 04:59  perldude
+
+	* trunk/Filer/Delete.pm, trunk/Filer/FilePane.pm,
+	  trunk/Filer/Move.pm, trunk/lib.pl: - disable Trash support. -
+	  rework Toolbar. - assorted Tweaks.
+
+2005-07-06 15:57  perldude
+
+	* trunk/Filer/FileCopy.pm: - fix warnings in FileCopy.pm (baze).
+
+2005-07-06 15:55  perldude
+
+	* trunk/Filer/FilePane.pm, trunk/Filer/FileTreePane.pm,
+	  trunk/Filer/Mime.pm, trunk/lib.pl: = add Refresh button to
+	  Toolbar. - fixes
+
+2005-07-06 15:18  perldude
+
+	* trunk/Filer/Copy.pm, trunk/Filer/Dialog.pm,
+	  trunk/Filer/FileCopy.pm, trunk/Filer/FilePane.pm,
+	  trunk/Filer/FileTreePane.pm, trunk/Filer/Move.pm, trunk/lib.pl: -
+	  Replace/Overwrite existing files or not (ask). - add dialog to ak
+	  user to overwrite/replace files. - set Paste menuitem insensitive
+	  (contextmenu).
+
+2005-07-06 12:56  perldude
+
+	* trunk/Filer/Copy.pm, trunk/Filer/DND.pm, trunk/Filer/FileCopy.pm,
+	  trunk/Filer/FilePane.pm, trunk/Filer/FileTreePane.pm,
+	  trunk/lib.pl: - pane refreshing cleanups. - Cut/Copy/Paste. -
+	  append increasing number when creating copies inside same
+	  directory.
+
+2005-07-05 23:41  perldude
+
+	* trunk/Filer/Archive.pm, trunk/Filer/FilePane.pm,
+	  trunk/Filer/FileTreePane.pm, trunk/lib.pl: - Archive.pm: remove
+	  debug messages. - FileTreePane.pm: Add root-level nodes for
+	  Filesystem (root-folder) and Home. - FilePane.pm: add
+	  FileChooser-like navigational buttons. - lib.pl: small tweaks.
+
+2005-07-05 11:53  perldude
+
+	* trunk/Filer/Archive.pm, trunk/Filer/Config.pm, trunk/Filer/DND.pm,
+	  trunk/Filer/FileCopy.pm, trunk/Filer/FilePane.pm,
+	  trunk/Filer/FileTreePane.pm, trunk/Filer/Mime.pm,
+	  trunk/Filer/Move.pm, trunk/lib.pl: - improve refreshing of panes.
+	  - ask before overwriting files (answer 'Yes' skips file). - fix
+	  creating of archives from the tree pane. - make configuration
+	  migration easier by keeping the default Config and Mimetype
+	  settings accessible. - cleanup Mime.pm.
+
+2005-07-02 09:33  perldude
+
+	* trunk/filer.pl: development version: 0.0.13-svn
+
+2005-07-02 09:26  perldude
+
+	* trunk/filer.pl: update version
+
+2005-07-02 09:23  perldude
+
+	* trunk/ChangeLog: update ChangeLog
+
 2005-06-29 14:35  perldude
 
 	* trunk/Filer/Bookmarks.pm, trunk/Filer/FilePane.pm,

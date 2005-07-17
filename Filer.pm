@@ -229,7 +229,7 @@ sub create_main_window {
 	},
 	{
 		name => "about-action",
-		stock_id => "gtk-help",
+		stock_id => "gtk-about",
 		callback => sub { $self->about_cb },
 	},
 
@@ -614,7 +614,7 @@ sub unselect_cb {
 
 sub search_cb {
 	my ($self) = @_;
-	new Filer::Search;
+	new Filer::Search($self);
 }
 
 sub paste_cb {
