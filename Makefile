@@ -11,6 +11,7 @@ install:
 	install -d ${PREFIX}/bin
 	install -m 755 filer.pl ${PREFIX}/bin/filer
 	install -m 644 Filer.pm ${PREFIX}/lib/filer
+	install -m 644 filer.ui ${PREFIX}/lib/filer
 
 uninstall:
 	rm -rf ${PREFIX}/lib/filer

@@ -16,18 +16,17 @@
 
 package Filer::Copy;
 
-# use strict;
-# use warnings;
+use strict;
+use warnings;
 
 use Fcntl;
 use Cwd qw( abs_path );
 use File::Spec::Functions qw(catfile splitdir);
 use File::Basename qw(dirname basename);
 use File::DirWalk;
+use Unicode::String qw(utf8 latin1);
 
-use Filer;
 use Filer::Constants;
-our @ISA = qw(Filer);
 
 Memoize::memoize("abs_path");
 Memoize::memoize("catfile");
@@ -53,8 +52,8 @@ sub new {
 		$self->destroy;
 	});
 
-	$SKIP_ALL = 0;
-	$OVERWRITE_ALL = 0;
+	$self->{SKIPALL} = 0;
+	$self->{OVERWRITEALL} = 0;
 
 	return $self;
 }
@@ -121,8 +120,8 @@ sub copy {
 
 	$dirwalk->onFile(sub {
 		my ($source) = @_;
-		my $my_source = $source;
-		my $my_dest = abs_path(catfile(splitdir($dest), basename($my_source)));
+		my $my_source = utf8($source)->latin1;
+		my $my_dest = utf8(abs_path(catfile(splitdir($dest), basename($my_source))))->latin1;
 
  		$self->{progress_label}->set_text("$my_source\n$my_dest");
 		$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
@@ -131,11 +130,11 @@ sub copy {
 		while (Gtk2->events_pending) { Gtk2->main_iteration; }
 
 		if (-e $my_dest) {
-			if ($SKIP_ALL) {
+			if ($self->{SKIPALL}) {
 				return File::DirWalk::SUCCESS;
 			}
 
-			if (!$OVERWRITE_ALL) {
+			if (!$self->{OVERWRITEALL}) {
 				my ($dialog,$label,$button,$hbox,$entry);
 
 				if (dirname($my_source) eq dirname($my_dest)) {
@@ -240,9 +239,9 @@ sub copy {
 					if ($r eq 'cancel') {
 						return File::DirWalk::ABORTED;
 					} elsif ($r eq 1) {
-						$OVERWRITE_ALL = 1;
+						$self->{OVERWRITEALL} = 1;
 					} elsif ($r eq 2) {
-						$SKIP_ALL = 1;
+						$self->{SKIPALL} = 1;
 						return File::DirWalk::SUCCESS;
 					} elsif ($r eq 3) {
 						$my_dest = catfile(dirname($my_dest), $entry->get_text);

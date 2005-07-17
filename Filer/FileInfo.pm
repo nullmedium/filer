@@ -1,11 +1,10 @@
 package Filer::FileInfo; 
 
+use Memoize;
 use File::Basename;
 use File::MimeInfo;
 use Stat::lsMode qw(format_mode);
-use Unicode::String qw(utf8 latin1 utf16);
-
-use Memoize;
+use Unicode::String qw(utf8 latin1);
 
 Memoize::memoize("format_mode");
 
@@ -15,31 +14,21 @@ sub new {
 	my ($class,$filepath) = @_;
 	my $self = bless {}, $class;
 	
-	$self->{filepath} = $filepath; 
-	$self->{stat} = [ lstat($self->get_path_latin1) ];
-	$self->{type} = (-l $self->get_path_latin1) ? "inode/symlink" : mimetype($self->{filepath});
-	$self->{size} = $self->{stat}->[7];
-	$self->{mtime} = $self->{stat}->[9];
-	$self->{uid} = $self->{stat}->[4];
-	$self->{gid} = $self->{stat}->[5];
-	$self->{mode} = $self->{stat}->[2];
+	$self->{filepath} = utf8($filepath)->latin1; 
+	$self->{stat} = [ lstat($self->{filepath}) ];
+	$self->{type} = (-l $self->{filepath}) ? "inode/symlink" : mimetype($self->{filepath});
 
 	return $self;
 }
 
-sub get_path_latin1 {
-	my ($self) = @_;
-	return utf8($self->{filepath})->latin1;
-}
-
-sub get_path_utf8 {
+sub get_path {
 	my ($self) = @_;
 	return $self->{filepath};
 }
 
 sub get_basename {
 	my ($self) = @_; 
-	return basename($self->get_path_latin1);
+	return basename($self->get_path);
 }
 
 sub get_mimetype {
@@ -59,27 +48,27 @@ sub get_stat {
 
 sub get_raw_size {
 	my ($self) = @_; 
-	return $self->{size};
+	return $self->{stat}->[7];
 }
 
 sub get_raw_mtime {
 	my ($self) = @_; 
-	return $self->{mtime};
+	return $self->{stat}->[9];
 }
 
 sub get_raw_uid {
 	my ($self) = @_; 
-	return $self->{uid};
+	return $self->{stat}->[4];
 }
 
 sub get_raw_gid {
 	my ($self) = @_; 
-	return $self->{uid};
+	return $self->{stat}->[5];
 }
 
 sub get_raw_mode {
 	my ($self) = @_; 
-	return $self->{mode};
+	return $self->{stat}->[2];
 }
 
 sub get_size {
@@ -89,23 +78,23 @@ sub get_size {
 
 sub get_mtime {
 	my ($self) = @_; 
-	my $time = localtime($self->{mtime});
+	my $time = localtime($self->get_raw_mtime);
 	return $time;
 }
 
 sub get_uid {
 	my ($self) = @_; 
-	return getpwuid($self->{uid});
+	return getpwuid($self->get_raw_uid);
 }
 
 sub get_gid {
 	my ($self) = @_; 
-	return getgrgid($self->{gid});
+	return getgrgid($self->get_raw_gid);
 }
 
 sub get_mode {
 	my ($self) = @_; 
-	return format_mode($self->{mode});
+	return format_mode($self->get_raw_mode);
 }
 
 1;

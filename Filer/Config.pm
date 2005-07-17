@@ -35,7 +35,7 @@ $default_config = {
 };
 
 sub new {
-	my ($class,$side) = @_;
+	my ($class) = @_;
 	my $self = bless {}, $class;
 	my $xdg_config_home = (new File::BaseDir)->xdg_config_home;
 	$self->{cfg_home} = File::Spec->catfile(File::Spec->splitdir($xdg_config_home), "filer");

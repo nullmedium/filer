@@ -18,14 +18,15 @@ package Filer::Bookmarks;
 
 use Filer;
 use Filer::Constants;
-our @ISA = qw(Filer);
 
-# use strict;
-# use warnings;
+use strict;
+use warnings;
 
 sub new {
-	my ($class,$side) = @_;
+	my ($class,$filer) = @_;
 	my $self = bless {}, $class;
+
+	$self->{filer} = $filer;
 	$self->{cfg_home} = File::Spec->catfile((new File::BaseDir)->xdg_config_home, "/filer");
 	$self->{bookmarks_store} = File::Spec->catfile(File::Spec->splitdir($self->{cfg_home}), "bookmarks");
 
@@ -80,40 +81,38 @@ sub bookmarks_menu {
 	$menuitem = new Gtk2::MenuItem("Set Bookmark");
 	$menuitem->signal_connect("activate", sub {
 
-		if ($active_pane->count_items > 0) {
-			foreach (@{$active_pane->get_items}) {
+		if ($self->{filer}->{active_pane}->count_items > 0) {
+			foreach (@{$self->{filer}->{active_pane}->get_items}) {
 				if (-d $_) {
 					$self->set_bookmark($_);
 				} else {
-					$self->set_bookmark($active_pane->get_pwd);
+					$self->set_bookmark($self->{filer}->{active_pane}->get_pwd);
 				}
 			}
 		} else {
-			$self->set_bookmark($active_pane->get_pwd);
+			$self->set_bookmark($self->{filer}->{active_pane}->get_pwd);
 		}
 
-		my $menu = $widgets->{item_factory}->get_item("/Bookmarks");
-		$menu->set_submenu($self->bookmarks_menu);
+	  	$self->{filer}->{widgets}->{uimanager}->get_widget("/ui/menubar/bookmarks-menu")->set_submenu($self->bookmarks_menu);
 	});
 	$menuitem->show;
 	$menu->add($menuitem);
 
 	$menuitem = new Gtk2::MenuItem("Remove Bookmark");
 	$menuitem->signal_connect("activate", sub {
-		if ($active_pane->count_items > 0) {
-			foreach (@{$active_pane->get_items}) {
+		if ($self->{filer}->{active_pane}->count_items > 0) {
+			foreach (@{$self->{filer}->{active_pane}->get_items}) {
 				if (-d $_) {
 					$self->remove_bookmark($_);
 				} else {
-					$self->remove_bookmark($active_pane->get_pwd);
+					$self->remove_bookmark($self->{filer}->{active_pane}->get_pwd);
 				}
 			}
 		} else {
-			$self->remove_bookmark($active_pane->get_pwd);
+			$self->remove_bookmark($self->{filer}->{active_pane}->get_pwd);
 		}
 
-		my $menu = $widgets->{item_factory}->get_item("/Bookmarks");
-		$menu->set_submenu($self->bookmarks_menu);
+	  	$self->{filer}->{widgets}->{uimanager}->get_widget("/ui/menubar/bookmarks-menu")->set_submenu($self->bookmarks_menu);
 	});
 	$menuitem->show;
 	$menu->add($menuitem);
@@ -125,7 +124,7 @@ sub bookmarks_menu {
 	foreach ($self->get_bookmarks) {
 		$menuitem = new Gtk2::MenuItem($_);
 		$menuitem->signal_connect("activate", sub {
-			my $p = ($config->get_option("Mode") == NORTON_COMMANDER_MODE) ? $active_pane : $pane->[RIGHT];
+			my $p = ($self->{filer}->{config}->get_option("Mode") == NORTON_COMMANDER_MODE) ? $self->{filer}->{active_pane} : $self->{filer}->{pane}->[RIGHT];
 			$p->open_path_helper($_[1]);
 		},$_);
 		$menuitem->show;

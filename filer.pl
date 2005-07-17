@@ -41,8 +41,9 @@ Glib->install_exception_handler(sub {
 
 Gtk2->init;
 
-&Filer::init_config;
-&Filer::main_window;
+$filer = new Filer; 
+$filer->init_config;
+$filer->create_main_window;
 
 Gtk2->main;
 

@@ -1,21 +1,9 @@
 package Filer;
 
+no utf8;
+
 use strict;
 use warnings;
-
-require Exporter; 
-our @ISA = qw(Exporter);
-our @EXPORT = qw($VERSION $widgets $pane $active_pane $inactive_pane $config $CLIPBOARD_ACTION $SKIP_ALL $OVERWRITE_ALL);
-
-our $VERSION = "0.0.13-svn";
-our $widgets;
-our $pane;
-our $active_pane;
-our $inactive_pane;
-our $config;
-our $CLIPBOARD_ACTION;
-our $SKIP_ALL;
-our $OVERWRITE_ALL;
 
 use Storable;
 use Gtk2;
@@ -33,24 +21,21 @@ use File::Temp;
 use File::DirWalk;
 use Stat::lsMode;
 
+use Unicode::String qw(utf8 latin1);
+
 use Filer::Constants;
 
 require Filer::Config;
 require Filer::Bookmarks;
-
 require Filer::FileInfo;
 require Filer::Tools;
-
 require Filer::Mime;
 require Filer::Archive;
 require Filer::Properties;
 require Filer::Dialog;
 require Filer::ProgressDialog;
-require Filer::SelectDialog;
-
 require Filer::FilePane;
 require Filer::FileTreePane;
-
 require Filer::FileCopy;
 require Filer::Copy;
 require Filer::Move;
@@ -61,184 +46,361 @@ Memoize::memoize("abs_path");
 Memoize::memoize("catfile");
 Memoize::memoize("splitdir");
 
-sub main_window {
+sub new {
+	my ($class) = @_; 
+	my $self = bless {}, $class;
+	
+	$self->{VERSION} = "0.0.13-svn";
+	$self->{widgets} = ();
+	$self->{pane} = [];
+	$self->{active_pane} = ();
+	$self->{inactive_pane} = ();
+	$self->{config} = ();
+
+	return $self;
+}
+
+sub create_main_window {
+	my ($self) = @_;
 	my ($window,$hbox,$button,$accel_group,$toolbar);
 
-	my @menu_items	=
-	(
-	{ path => '/_File/Open Terminal',		accelerator => 'F2',		callback => \&open_terminal_cb, item_type => '<Item>'},
-	{ path => '/_File/Open',			accelerator => 'F3',		callback => \&open_cb,		item_type => '<Item>'},
-	{ path => '/_File/Open With',							callback => \&open_with_cb,	item_type => '<Item>'},
-	{ path => '/_File/sep', 									 		item_type => '<Separator>'},
-	{ path => '/_File/Quit',			accelerator => 'F10',		callback => \&quit_cb, 	 	item_type => '<Item>'},
+	$self->{widgets}->{main_window} = new Gtk2::Window('toplevel');
+	$self->{widgets}->{main_window}->set_title("Filer $self->{VERSION}");
 
-	{ path => '/_Edit/_Copy',			accelerator => '<control>C',	callback => \&copy_cb, 	 	item_type => '<Item>'},
-	{ path => '/_Edit/_Cut',			accelerator => '<control>X',	callback => \&cut_cb, 	 	item_type => '<Item>'},
-	{ path => '/_Edit/_Paste',			accelerator => '<control>V',	callback => \&paste_cb,	 	item_type => '<Item>'},
-
-	{ path => '/_Edit/_Rename',			accelerator => 'F6',		callback => \&rename_cb, 	item_type => '<Item>'},
-	{ path => '/_Edit/M_kDir',			accelerator => 'F7',		callback => \&mkdir_cb,	 	item_type => '<Item>'},
-	{ path => '/_Edit/_Delete',			accelerator => 'F8',		callback => \&delete_cb,	item_type => '<Item>'},
-	{ path => '/_Edit/sep', 											item_type => '<Separator>'},
-	{ path => '/_Edit/_Link',							callback => \&link_cb,		item_type => '<Item>'},
-	{ path => '/_Edit/_Symlink',							callback => \&symlink_cb,	item_type => '<Item>'},
-	{ path => '/_Edit/sep', 											item_type => '<Separator>'},
-	{ path => '/_Edit/Refresh',			accelerator => '<control>R',	callback => \&refresh_cb,	item_type => '<Item>'},
-	{ path => '/_Edit/sep', 									 		item_type => '<Separator>'},
-	{ path => '/_Edit/Search',							callback => \&search_cb,	item_type => '<Item>'},
-	{ path => '/_Edit/sep', 											item_type => '<Separator>'},
-	{ path => '/_Edit/Select',			accelerator => 'KP_Add',	callback => \&select_cb,	item_type => '<Item>'},
-	{ path => '/_Edit/Unselect',			accelerator => 'KP_Subtract',	callback => \&unselect_cb,	item_type => '<Item>'},
-	{ path => '/_Bookmarks',											item_type => '<Item>'},
-	{ path => '/_Options/Mode/Norton Commander Style',				callback => \&ncmc_cb,		item_type => '<RadioItem>'},
-	{ path => '/_Options/Mode/MS Explorer Style',					callback => \&explorer_cb,	item_type => '<RadioItem>'},
-	{ path => '/_Options/sep',											item_type => '<Separator>'},
-	{ path => '/_Options/Ask confirmation for/Copying',				callback => \&ask_copy_cb,	item_type => '<CheckItem>'},
-	{ path => '/_Options/Ask confirmation for/Moving',				callback => \&ask_move_cb,	item_type => '<CheckItem>'},
-	{ path => '/_Options/Ask confirmation for/Deleting',				callback => \&ask_delete_cb,	item_type => '<CheckItem>'},
-	{ path => '/_Options/Show Hidden Files',	accelerator => '<control>H',	callback => \&hidden_cb,	item_type => '<CheckItem>'},
-	{ path => '/_Options/sep',											item_type => '<Separator>'},
-	{ path => '/_Options/Set Terminal',						callback => \&set_terminal_cb,	item_type => '<Item>'},
-	{ path => '/_Options/Set Editor',						callback => \&set_editor_cb,	item_type => '<Item>'},
-	{ path => '/_Options/sep',											item_type => '<Separator>'},
-	{ path => '/_Options/File Associations',					callback => \&file_ass_cb,	item_type => '<Item>'},
-	{ path => '/_Help/About',							callback => \&about_cb,		item_type => '<Item>'},
-	);
-
-	$widgets->{main_window} = new Gtk2::Window('toplevel');
-	$widgets->{main_window}->set_title("Filer $VERSION");
-
-	my $size = $config->get_option("WindowSize");
+	my $size = $self->{config}->get_option("WindowSize");
 	my ($w,$h) = split /:/, $size;
 
- 	$widgets->{main_window}->resize($w,$h);
-#	$widgets->{main_window}->resize(784,606);
+ 	$self->{widgets}->{main_window}->resize($w,$h);
+#	$self->{widgets}->{main_window}->resize(784,606);
 
-	$widgets->{main_window}->signal_connect("event", \&window_event_cb);
-	$widgets->{main_window}->signal_connect("delete-event", \&quit_cb);
-	$widgets->{main_window}->set_icon(Gtk2::Gdk::Pixbuf->new_from_file((new Filer::Mime)->get_icon('inode/directory')));
+	$self->{widgets}->{main_window}->signal_connect("event", sub { $self->window_event_cb(@_) });
+	$self->{widgets}->{main_window}->signal_connect("delete-event", sub { $self->quit_cb });
+	$self->{widgets}->{main_window}->set_icon(Gtk2::Gdk::Pixbuf->new_from_file((new Filer::Mime($self))->get_icon('inode/directory')));
 
-	$widgets->{vbox} = new Gtk2::VBox(0,0);
-	$widgets->{main_window}->add($widgets->{vbox});
+	$self->{widgets}->{vbox} = new Gtk2::VBox(0,0);
+	$self->{widgets}->{main_window}->add($self->{widgets}->{vbox});
 
-	$accel_group = new Gtk2::AccelGroup;
-	$widgets->{main_window}->add_accel_group($accel_group);
+	my $actions = new Gtk2::ActionGroup("Actions");
 
-	$widgets->{item_factory} = new Gtk2::ItemFactory("Gtk2::MenuBar", '<main>', $accel_group);
-	$widgets->{item_factory}->create_items(undef, @menu_items);
-	$widgets->{vbox}->pack_start($widgets->{item_factory}->get_widget('<main>'), 0, 0, 0);
+	my $a_entries = [
+	{
+		name => "FileMenuAction",
+		label => "File",
+	},
+	{
+		name => "open-terminal-action",
+		label => "Open Terminal",
+		callback => sub { $self->open_terminal_cb },
+		accelerator => "F2",
+	},
+	{
+		name => "open-action",
+		stock_id => "gtk-open",
+		label => "Open",
+		callback => sub { $self->open_cb },
+		accelerator => "F3",
+	},
+	{
+		name => "open-with-action",
+		label => "Open With",
+		callback => sub { $self->open_with_cb },
+	},
+	{
+		name => "quit-action",
+		stock_id => "gtk-quit",
+		callback => sub { $self->quit_cb },
+		accelerator => "<control>Q",
+	},
+	{
+		name => "EditMenuAction",
+		label => "Edit",
+	},
+	{
+		name => "cut-action",
+		stock_id => "gtk-cut",
+		callback => sub { $self->cut_cb },
+		tooltip => "Cut Selection", 
+		accelerator => "<control>X",
+	},
+	{
+		name => "copy-action",
+		stock_id => "gtk-copy",
+		callback => sub { $self->copy_cb },
+		tooltip => "Copy Selection", 
+		accelerator => "<control>C",
+	},
+	{
+		name => "paste-action",
+		stock_id => "gtk-paste",
+		callback => sub { $self->paste_cb },
+		tooltip => "Paste Clipboard", 
+		accelerator => "<control>V",
+	},
+	{
+		name => "rename-action",
+		label => "Rename",
+		callback => sub { $self->rename_cb },
+		tooltip => "Rename", 
+		accelerator => "F6",
+	},
+	{
+		name => "mkdir-action",
+		label => "MkDir",
+		callback => sub { $self->mkdir_cb },
+		tooltip => "Make Directory", 
+		accelerator => "F7",
+	},
+	{
+		name => "delete-action",
+		stock_id => "gtk-delete",
+		callback => sub { $self->delete_cb },
+		tooltip => "Delete files", 
+		accelerator => "F8",
+	},
+	{
+		name => "link-action",
+		label => "Link",
+		callback => sub { $self->link_cb },
+	},
+	{
+		name => "symlink-action",
+		label => "SymLink",
+		callback => sub { $self->symlink_cb },
+	},
+	{
+		name => "refresh-action",
+		stock_id => "gtk-refresh",
+		callback => sub { $self->refresh_cb },
+		tooltip => "Refresh", 
+		accelerator => "<control>R",
+	},
+	{
+		name => "search-action",
+		label => "Search",
+		stock_id => "gtk-find",
+		callback => sub { $self->search_cb },
+	},
+	{
+		name => "select-action",
+		label => "Select",
+		callback => sub { $self->select_cb },
+		accelerator => "KP_Add",
+	},
+	{
+		name => "unselect-action",
+		label => "Unselect",
+		callback => sub { $self->unselect_cb },
+		accelerator => "KP_Subtract",
+	},
+	{
+		name => "BookmarksMenuAction",
+		label => "Bookmarks",
+	},
+	{
+		name => "OptionsMenuAction",
+		label => "Options",
+	},
+	{
+		name => "ModeMenuAction",
+		label => "View Mode",
+	},
+	{
+		name => "ConfirmationMenuAction",
+		label => "Ask Confirmation for ...",
+	},
+	{
+		name => "set-terminal-action",
+		label => "Set Terminal",
+		callback => sub { $self->set_terminal_cb },
+	},
+	{
+		name => "set-editor-action",
+		label => "Set Editor",
+		callback => sub { $self->set_terminal_cb },
+	},
+	{
+		name => "file-assoc-action",
+		label => "File Associations",
+		callback => sub { $self->file_ass_cb },
+	},
+	{
+		name => "HelpMenuAction",
+		label => "Help",
+	},
+	{
+		name => "about-action",
+		stock_id => "gtk-help",
+		callback => sub { $self->about_cb },
+	},
 
-	$toolbar = new Gtk2::Toolbar;
-	$toolbar->set_style('GTK_TOOLBAR_TEXT');
+# Toolbar items
+# the other toolbar items are merged into the toolbar. see filer.ui	
 
-	$widgets->{home_button} = Gtk2::ToolButton->new_from_stock('gtk-home');
-	$widgets->{home_button}->signal_connect("clicked", \&go_home_cb);
-	$toolbar->insert($widgets->{home_button}, 0);
+	{
+		name => "home-action",
+		stock_id => "gtk-home",
+		tooltip => "Go Home", 
+		callback => sub { $self->go_home_cb },
+	},
+	{
+		name => "synchronize-action",
+		label => "Synchronize",
+		tooltip => "Synchronize Folders", 
+		callback => sub { $self->synchronize_cb },
+	},
 
-	$widgets->{refresh_button} = Gtk2::ToolButton->new_from_stock('gtk-refresh');
-	$widgets->{refresh_button}->signal_connect("clicked", \&refresh_cb);
-	$toolbar->insert($widgets->{refresh_button}, 1);
+# PopupMenu items 
+# the other menuitems items are merged into the menu. see filer.ui	
 
-	$widgets->{sync_button} = Gtk2::ToolButton->new(undef, "Synchronize");
-	$widgets->{sync_button}->signal_connect("clicked", \&synchronize_cb);
-	$toolbar->insert($widgets->{sync_button}, 2);
+	{
+		name => "OpenPopupMenuAction",
+		stock_id => "gtk-open",
+	},
+	{
+		name => "ArchiveMenuAction",
+		label => "Archive",
+	},
+	{
+		name => "create-tgz-action",
+		label => "Create tar.gz",
+		callback => sub { $self->{active_pane}->create_tar_gz_archive; }
+	},
+	{
+		name => "create-tbz2-action",
+		label => "Create tar.bz2",
+		callback => sub { $self->{active_pane}->create_tar_bz2_archive; }
+	},
+	{
+		name => "extract-action",
+		label => "Extract",
+		callback => sub { $self->{active_pane}->extract_archive; }
+	},
+	{
+		name => "BookmarksPopupMenuAction",
+		label => "Bookmarks",
+	},
+	{
+		name => "properties-action",
+		label => "Properties",
+		callback => sub { $self->{active_pane}->set_properties; }
+	},
+	];
 
-	$toolbar->insert(new Gtk2::SeparatorToolItem, 3);
+	my $a_radio_entries = [
+	{
+		name => "commander-style-action",
+		label => "Norton Commander Style",
+		value => NORTON_COMMANDER_MODE,
+	},
+	{
+		name => "explorer-style-action",
+		label => "MS Explorer View",
+		value => EXPLORER_MODE,
+	},
+	];
 
-	$button = Gtk2::ToolButton->new_from_stock('gtk-copy');
-	$button->signal_connect("clicked", \&copy_cb);
-	$toolbar->insert($button, 4);
+	my $a_toggle_entries = [
+	{
+		name => "ask-copying-action",
+		label => "Copying",
+		callback => sub { $self->ask_copy_cb($_[0]) },
+		is_active => $self->{config}->get_option("ConfirmCopy"),
+	},
+	{
+		name => "ask-moving-action",
+		label => "Moving",
+		callback => sub { $self->ask_move_cb($_[0]) },
+		is_active => $self->{config}->get_option("ConfirmMove"),
+	},
+	{
+		name => "ask-deleting-action",
+		label => "Deleting",
+		callback => sub { $self->ask_delete_cb($_[0]) },
+		is_active => $self->{config}->get_option("ConfirmDelete"),
+	},
+	{
+		name => "show-hidden-action",
+		label => "Show Hidden Files",
+		callback => sub { $self->hidden_cb($_[0]) },
+		accelerator => "<control>H",
+		is_active => $self->{config}->get_option("ShowHiddenFiles"),
+	},
+	];
 
-	$button = Gtk2::ToolButton->new_from_stock('gtk-cut');
-	$button->signal_connect("clicked", \&cut_cb);
-	$toolbar->insert($button, 5);
+	$actions->add_actions($a_entries);
+	$actions->add_radio_actions($a_radio_entries, $self->{config}->get_option("Mode"), sub { 
+		my ($action) = @_; 
+		$self->{config}->set_option('Mode', $action->get_current_value);
+		$self->switch_mode;
+	});
+	$actions->add_toggle_actions($a_toggle_entries);
 
-	$button = Gtk2::ToolButton->new_from_stock('gtk-paste');
-	$button->signal_connect("clicked", \&paste_cb);
-	$toolbar->insert($button, 6);
+	$self->{widgets}->{uimanager} = new Gtk2::UIManager;
+	$self->{widgets}->{uimanager}->insert_action_group($actions, 0);
+	$self->{widgets}->{uimanager}->add_ui_from_file("$main::libpath/filer.ui");
 
-	$toolbar->insert(new Gtk2::SeparatorToolItem, 7);
+	my $accels = $self->{widgets}->{uimanager}->get_accel_group;
+	$self->{widgets}->{main_window}->add_accel_group($accels);
 
-	$button = Gtk2::ToolButton->new(undef, "Rename");
-	$button->signal_connect("clicked", \&rename_cb);
-	$toolbar->insert($button, 8);
+	$self->{widgets}->{menubar} = $self->{widgets}->{uimanager}->get_widget("/ui/menubar");
+ 	$self->{widgets}->{vbox}->pack_start($self->{widgets}->{menubar}, 0, 0, 0);
 
-	$button = Gtk2::ToolButton->new(undef, "Mkdir");
-	$button->signal_connect("clicked", \&mkdir_cb);
-	$toolbar->insert($button, 9);
-	
-	$button = Gtk2::ToolButton->new_from_stock('gtk-delete');
-	$button->signal_connect("clicked", \&delete_cb);
-	$toolbar->insert($button, 10);
+	$self->{widgets}->{toolbar} = $self->{widgets}->{uimanager}->get_widget("/ui/toolbar");
+	$self->{widgets}->{toolbar}->set_style('GTK_TOOLBAR_TEXT');
+	$self->{widgets}->{sync_button} = $self->{widgets}->{uimanager}->get_widget("/ui/toolbar/Synchronize");
+	$self->{widgets}->{vbox}->pack_start($self->{widgets}->{toolbar}, 0, 0, 0);
 
-	$widgets->{vbox}->pack_start($toolbar, 0, 0, 0);
+	$self->{widgets}->{location_bar} = new Gtk2::HBox(0,0);
+	$self->{widgets}->{vbox}->pack_start($self->{widgets}->{location_bar}, 0, 0, 0);
 
-	$widgets->{location_bar} = new Gtk2::HBox(0,0);
-	$widgets->{vbox}->pack_start($widgets->{location_bar}, 0, 0, 0);
+	$self->{widgets}->{hpaned} = new Gtk2::HPaned();
+	$self->{widgets}->{hbox} = new Gtk2::HBox(0,0);
 
-	$pane = [];
-	$widgets->{hpaned} = new Gtk2::HPaned();
-	$widgets->{hbox} = new Gtk2::HBox(0,0);
+	$self->{widgets}->{tree} = new Filer::FileTreePane($self,LEFT);
+	$self->{widgets}->{list1} = new Filer::FilePane($self,LEFT);
+	$self->{widgets}->{list2} = new Filer::FilePane($self,RIGHT);
 
-	$widgets->{tree} = new Filer::FileTreePane(LEFT);
-	$widgets->{list1} = new Filer::FilePane(LEFT);
-	$widgets->{list2} = new Filer::FilePane(RIGHT);
+	$self->{widgets}->{hpaned}->add1($self->{widgets}->{tree}->get_vbox);
+	$self->{widgets}->{hpaned}->add2($self->{widgets}->{hbox});
+	$self->{widgets}->{hbox}->pack_start($self->{widgets}->{list1}->get_vbox,1,1,0);
+	$self->{widgets}->{hbox}->pack_start($self->{widgets}->{list2}->get_vbox,1,1,0);
+	$self->{widgets}->{vbox}->pack_start($self->{widgets}->{hpaned},1,1,0);
 
-	$widgets->{hpaned}->add1($widgets->{tree}->get_vbox);
-	$widgets->{hpaned}->add2($widgets->{hbox});
-	$widgets->{hbox}->pack_start($widgets->{list1}->get_vbox,1,1,0);
-	$widgets->{hbox}->pack_start($widgets->{list2}->get_vbox,1,1,0);
-	$widgets->{vbox}->pack_start($widgets->{hpaned},1,1,0);
+	$self->{widgets}->{statusbar} = new Gtk2::Statusbar;
+	$self->{widgets}->{vbox}->pack_start($self->{widgets}->{statusbar}, 0, 0, 0);
 
-	$widgets->{statusbar} = new Gtk2::Statusbar;
-	$widgets->{vbox}->pack_start($widgets->{statusbar}, 0, 0, 0);
+  	my $bookmarks = new Filer::Bookmarks($self);
+  	$self->{widgets}->{uimanager}->get_widget("/ui/menubar/bookmarks-menu")->set_submenu($bookmarks->bookmarks_menu);
+	$self->{widgets}->{uimanager}->get_widget("/ui/menubar/bookmarks-menu")->show;
 
-	my $bookmarks = $widgets->{item_factory}->get_item("/Bookmarks");
-	$bookmarks->set_submenu((new Filer::Bookmarks)->bookmarks_menu);
+	$self->{widgets}->{list1}->open_path((defined $ARGV[0] and -d $ARGV[0]) ? $ARGV[0] : $self->{config}->get_option('PathLeft'));
+	$self->{widgets}->{list2}->open_path((defined $ARGV[1] and -d $ARGV[1]) ? $ARGV[1] : $self->{config}->get_option('PathRight'));
 
-	my $i1 = $widgets->{item_factory}->get_item("/Options/Mode/Norton Commander Style");
-	my $i2 = $widgets->{item_factory}->get_item("/Options/Mode/MS Explorer Style");
+	$self->{widgets}->{main_window}->show_all;
 
-	$i2->set_group($i1->get_group);
+	$self->{widgets}->{sync_button}->hide;
+	$self->{widgets}->{tree}->get_vbox->hide;
+	$self->{widgets}->{list1}->get_vbox->hide;
+	$self->{widgets}->{list2}->get_vbox->show;
 
-	if ($config->get_option('Mode') == EXPLORER_MODE) {
-		$i1->set_active(0);
-		$i2->set_active(1);
-	} else {
-		$i1->set_active(1);
-		$i2->set_active(0);
-	}
+	$self->{pane}->[LEFT] = undef;
+	$self->{pane}->[RIGHT] = $self->{widgets}->{list2};
 
-	$widgets->{list1}->open_path((defined $ARGV[0] and -d $ARGV[0]) ? $ARGV[0] : $config->get_option('PathLeft'));
-	$widgets->{list2}->open_path((defined $ARGV[1] and -d $ARGV[1]) ? $ARGV[1] : $config->get_option('PathRight'));
+	$self->switch_mode;
 
-	$widgets->{main_window}->show_all;
-
-	$widgets->{sync_button}->hide;
-	$widgets->{tree}->get_vbox->hide;
-	$widgets->{list1}->get_vbox->hide;
-	$widgets->{list2}->get_vbox->show;
-
-	$pane->[LEFT] = undef;
-	$pane->[RIGHT] = $widgets->{list2};
-
-	&switch_mode;
-
-	$widgets->{item_factory}->get_item("/Options/Show Hidden Files")->set_active($config->get_option('ShowHiddenFiles'));
-	$widgets->{item_factory}->get_item("/Options/Ask confirmation for/Copying")->set_active($config->get_option('ConfirmCopy'));
-	$widgets->{item_factory}->get_item("/Options/Ask confirmation for/Moving")->set_active($config->get_option('ConfirmMove'));
-	$widgets->{item_factory}->get_item("/Options/Ask confirmation for/Deleting")->set_active($config->get_option('ConfirmDelete'));
-
-	$pane->[RIGHT]->set_focus;
+	$self->{pane}->[RIGHT]->set_focus;
 }
 
 sub init_config {
-	$config = new Filer::Config;
+	my ($self) = @_;
+	$self->{config} = new Filer::Config;
 }
 
 sub window_event_cb {
-	if (($_[1]->type eq "key-press" and $_[1]->keyval == $Gtk2::Gdk::Keysyms{'Tab'})) {
-		$inactive_pane->set_focus;
+	my ($self,$w,$e,$d) = @_;
+
+	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Tab'})) {
+		$self->{inactive_pane}->set_focus;
 		return 1;
 	}
 
@@ -246,18 +408,22 @@ sub window_event_cb {
 }
 
 sub quit_cb {
-	$config->set_option('PathLeft', $pane->[LEFT]->get_pwd);
-	$config->set_option('PathRight', $pane->[RIGHT]->get_pwd);
-	$config->set_option('WindowSize', join ":", $widgets->{main_window}->get_size());
+	my ($self) = @_;
+
+	$self->{config}->set_option('PathLeft', $self->{pane}->[LEFT]->get_pwd);
+	$self->{config}->set_option('PathRight', $self->{pane}->[RIGHT]->get_pwd);
+	$self->{config}->set_option('WindowSize', join ":", $self->{widgets}->{main_window}->get_size());
 
 	Gtk2->main_quit;
 }
 
 sub about_cb {
+	my ($self) = @_;
+
 	my $dialog = new Gtk2::AboutDialog; 
 	$dialog->set_name("Filer");
-	$dialog->set_version($VERSION);
-	$dialog->set_copyright("&copy; 2004-2005 Jens Luedicke");
+	$dialog->set_version($self->{VERSION});
+	$dialog->set_copyright("Copyright © 2004-2005 Jens Luedicke");
 	$dialog->set_website("http://perldude.de/"); 
 	$dialog->set_website_label("http://perldude.de/");
 	$dialog->set_authors(	"Jens Luedicke <jens.luedicke\@gmail.com>",
@@ -268,367 +434,264 @@ sub about_cb {
 }
 
 sub open_cb {
-	if ($config->get_option('Mode') == NORTON_COMMANDER_MODE) {
-		$active_pane->open_file($active_pane->get_item);
+	my ($self) = @_;
+
+	if ($self->{config}->get_option('Mode') == NORTON_COMMANDER_MODE) {
+		$self->{active_pane}->open_file($self->{active_pane}->get_item);
 	} else {
-		$pane->[RIGHT]->open_file($pane->[RIGHT]->get_item);
+		$self->{pane}->[RIGHT]->open_file($self->{pane}->[RIGHT]->get_item);
 	}
 }
 
 sub open_with_cb {
-	if ($config->get_option('Mode') == NORTON_COMMANDER_MODE) {
-		$active_pane->open_file_with;
+	my ($self) = @_;
+
+	if ($self->{config}->get_option('Mode') == NORTON_COMMANDER_MODE) {
+		$self->{active_pane}->open_file_with;
 	} else {
-		$pane->[RIGHT]->open_file_with;
+		$self->{pane}->[RIGHT]->open_file_with;
 	}
 }
 
 sub open_terminal_cb {
-	my $path = $active_pane->get_pwd;
+	my ($self) = @_;
+
+	my $path = $self->{active_pane}->get_pwd;
 
 	if (-d $path) {
-		my $term = $config->get_option("Terminal");
+		my $term = $self->{config}->get_option("Terminal");
 		system("cd '$path' && $term & exit");
 	}
 }
 
-sub ncmc_cb {
-	# check if item is checked
-	if ($_[2]->get_active) {
-		$config->set_option('Mode', NORTON_COMMANDER_MODE);
-		&switch_mode;
-	}
-
-	return 1;
-}
-
-sub explorer_cb {
-	# check if item is checked
-	if ($_[2]->get_active) {
-		$config->set_option('Mode', EXPLORER_MODE);
-		&switch_mode;
-	}
-	return 1;
-}
-
 sub switch_mode {
-	if ($config->get_option('Mode') == EXPLORER_MODE) {
-		$widgets->{list2}->get_location_bar->hide;
-		$widgets->{list2}->get_location_bar->reparent($widgets->{location_bar});
-		$widgets->{list2}->get_location_bar->show;
+	my ($self) = @_;
 
-		$widgets->{sync_button}->set("visible", 0);
-		$widgets->{tree}->get_vbox->set("visible", 1);
-		$widgets->{list1}->get_vbox->set("visible", 0);
+	if ($self->{config}->get_option('Mode') == EXPLORER_MODE) {
+		$self->{widgets}->{list2}->get_location_bar->hide;
+		$self->{widgets}->{list2}->get_location_bar->reparent($self->{widgets}->{location_bar});
+		$self->{widgets}->{list2}->get_location_bar->show;
 
-		$widgets->{list1}->get_navigation_box->hide;
-		$widgets->{list2}->get_navigation_box->show;
+		$self->{widgets}->{sync_button}->set("visible", 0);
+		$self->{widgets}->{tree}->get_vbox->set("visible", 1);
+		$self->{widgets}->{list1}->get_vbox->set("visible", 0);
 
-		$pane->[LEFT] = $widgets->{tree};
+		$self->{widgets}->{list1}->get_navigation_box->hide;
+		$self->{widgets}->{list2}->get_navigation_box->show;
 
+		$self->{pane}->[LEFT] = $self->{widgets}->{tree};
 	} else {
-		$widgets->{list2}->get_location_bar->hide;
-		$widgets->{list2}->get_location_bar->reparent($widgets->{list2}->get_location_bar_parent);
-		$widgets->{list2}->get_location_bar->show;
+		$self->{widgets}->{list2}->get_location_bar->hide;
+		$self->{widgets}->{list2}->get_location_bar->reparent($self->{widgets}->{list2}->get_location_bar_parent);
+		$self->{widgets}->{list2}->get_location_bar->show;
 
-		$widgets->{sync_button}->set("visible", 1);
-		$widgets->{tree}->get_vbox->set("visible", 0);
-		$widgets->{list1}->get_vbox->set("visible", 1);
+		$self->{widgets}->{sync_button}->set("visible", 1);
+		$self->{widgets}->{tree}->get_vbox->set("visible", 0);
+		$self->{widgets}->{list1}->get_vbox->set("visible", 1);
 
-		$widgets->{list1}->get_navigation_box->hide;
-		$widgets->{list2}->get_navigation_box->hide;
+ 		$self->{widgets}->{list1}->get_navigation_box->hide;
+ 		$self->{widgets}->{list2}->get_navigation_box->hide;
 
-		$pane->[LEFT] = $widgets->{list1};
+		$self->{pane}->[LEFT] = $self->{widgets}->{list1};
 	}
-
-	$widgets->{list1}->refresh;
-	$widgets->{list2}->refresh;
 }
 
 sub hidden_cb {
-	$config->set_option('ShowHiddenFiles', ($_[2]->get_active) ? 1 : 0);
-	$pane->[LEFT]->refresh;
-	$pane->[RIGHT]->refresh;
-	return 1;
-}
-
-sub move_to_trash_cb {
-	$config->set_option('MoveToTrash', ($_[2]->get_active) ? 1 : 0);
+	my ($self,$action) = @_;
+	$self->{config}->set_option('ShowHiddenFiles', ($action->get_active) ? 1 : 0);
+	$self->{pane}->[LEFT]->refresh;
+	$self->{pane}->[RIGHT]->refresh;
 	return 1;
 }
 
 sub ask_copy_cb {
-	$config->set_option('ConfirmCopy', ($_[2]->get_active) ? 1 : 0);
+	my ($self,$action) = @_;
+	$self->{config}->set_option('ConfirmCopy', ($action->get_active) ? 1 : 0);
 }
 
 sub ask_move_cb {
-	$config->set_option('ConfirmMove', ($_[2]->get_active) ? 1 : 0);
+	my ($self,$action) = @_;
+	$self->{config}->set_option('ConfirmMove', ($action->get_active) ? 1 : 0);
 }
 
 sub ask_delete_cb {
-	$config->set_option('ConfirmDelete', ($_[2]->get_active) ? 1 : 0);
+	my ($self,$action) = @_;
+	$self->{config}->set_option('ConfirmDelete', ($action->get_active) ? 1 : 0);
 }
 
 sub set_terminal_cb {
-	my $term = Filer::Dialog->ask_command_dialog("Set Terminal", $config->get_option('Terminal'));
-	$config->set_option('Terminal', $term);	
+	my ($self) = @_;
+	my $term = Filer::Dialog->ask_command_dialog("Set Terminal", $self->{config}->get_option('Terminal'));
+	$self->{config}->set_option('Terminal', $term);	
 }
 
 sub set_editor_cb {
-	my $edit = Filer::Dialog->ask_command_dialog("Set Editor", $config->get_option('Editor'));
-	$config->set_option('Editor', $edit);	
+	my ($self) = @_;
+	my $edit = Filer::Dialog->ask_command_dialog("Set Editor", $self->{config}->get_option('Editor'));
+	$self->{config}->set_option('Editor', $edit);	
 }
 
 sub file_ass_cb {
-	Filer::Mime->file_association_dialog;
+	my ($self) = @_;
+	my $mime = new Filer::Mime($self);
+	$mime->file_association_dialog;
 }
 
 sub refresh_cb {
-	if ($pane->[LEFT]->get_pwd eq $pane->[RIGHT]->get_pwd) {
-		if ($pane->[LEFT]->get_type eq $pane->[RIGHT]->get_type) {
-			$pane->[LEFT]->refresh;
-			$pane->[RIGHT]->set_model($pane->[LEFT]->get_model);
+	my ($self) = @_;
+
+	if ($self->{pane}->[LEFT]->get_pwd eq $self->{pane}->[RIGHT]->get_pwd) {
+		if ($self->{pane}->[LEFT]->get_type eq $self->{pane}->[RIGHT]->get_type) {
+			$self->{pane}->[LEFT]->refresh;
+			$self->{pane}->[RIGHT]->set_model($self->{pane}->[LEFT]->get_model);
 		} else {
-			$pane->[LEFT]->refresh;
-			$pane->[RIGHT]->refresh;
+			$self->{pane}->[LEFT]->refresh;
+			$self->{pane}->[RIGHT]->refresh;
 		}
 	} else {
-		$pane->[LEFT]->refresh;
-		$pane->[RIGHT]->refresh;
+		$self->{pane}->[LEFT]->refresh;
+		$self->{pane}->[RIGHT]->refresh;
 	}
 
 	return 1;
 }
 
 sub refresh_inactive_pane {
-	if ($active_pane->get_pwd eq $inactive_pane->get_pwd) {
-		if ($active_pane->get_type eq $inactive_pane->get_type) {
-			$inactive_pane->set_model($active_pane->get_model);
+	my ($self) = @_;
+
+	if ($self->{active_pane}->get_pwd eq $self->{inactive_pane}->get_pwd) {
+		if ($self->{active_pane}->get_type eq $self->{inactive_pane}->get_type) {
+			$self->{inactive_pane}->set_model($self->{active_pane}->get_model);
 		} else {
-			$inactive_pane->refresh;
+			$self->{inactive_pane}->refresh;
 		}
 	} else {
-		$inactive_pane->refresh;
+		$self->{inactive_pane}->refresh;
 	}
 }
 
 sub go_home_cb {
-	my $opt = $config->get_option('Mode');
+	my ($self) = @_;
+	my $opt = $self->{config}->get_option('Mode');
 
 	if ($opt == NORTON_COMMANDER_MODE) {
-		$active_pane->open_path($ENV{HOME});
+		$self->{active_pane}->open_path($ENV{HOME});
 	} elsif ($opt == EXPLORER_MODE) {
-		$pane->[RIGHT]->open_path($ENV{HOME});
+		$self->{pane}->[RIGHT]->open_path($ENV{HOME});
 	}
 }
 
 sub synchronize_cb {
-	$inactive_pane->open_path($active_pane->get_pwd);
-}
-
-sub unselect_cb {
-	Filer::SelectDialog->new(Filer::SelectDialog->UNSELECT);
+	my ($self) = @_;
+	$self->{inactive_pane}->open_path($self->{active_pane}->get_pwd);
 }
 
 sub select_cb {
-	Filer::SelectDialog->new(Filer::SelectDialog->SELECT);
+	my ($self) = @_;
+	my $p;
+
+	if ($self->{active_pane}->get_type eq "TREE") {
+		$p = $self->{pane}->[RIGHT];
+	} else {
+		$p = $self->{active_pane};
+	}
+
+	$p->select_dialog(Filer::SelectDialog->SELECT);
+}
+
+sub unselect_cb {
+	my ($self) = @_;
+	my $p;
+
+	if ($self->{active_pane}->get_type eq "TREE") {
+		$p = $self->{pane}->[RIGHT];
+	} else {
+		$p = $self->{active_pane};
+	}
+
+	$p->select_dialog(Filer::SelectDialog->UNSELECT);
 }
 
 sub search_cb {
+	my ($self) = @_;
 	new Filer::Search;
 }
 
 sub paste_cb {
-	my $f = sub {
-		my ($files,$target) = @_;
-		my $do;
+	my ($self) = @_;
+	my @files = split /\n\r/, $self->get_clipboard_contents;
+	my $action = pop @files;
+	my $target = ($self->{active_pane}->get_type eq "TREE") ? $self->{active_pane}->get_updir : $self->{active_pane}->get_pwd;
+	my $do;
 
-		if ($CLIPBOARD_ACTION == COPY) {
-			$do = new Filer::Copy;
-		} else {
-			$do = new Filer::Move;
-		}
+	return if (not defined $action);
 
-		$do->set_total(&files_count_paste);
-		$do->show;
-
-		foreach (@{$files}) {
-			return if (! -e $_);
-
-			my $r = $do->action($_, $target);
-
-			if ($CLIPBOARD_ACTION == COPY) {
-				if ($r == File::DirWalk::FAILED) {
-					Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed: $!");
-					last;
-				} elsif ($r == File::DirWalk::ABORTED) {
-					Filer::Dialog->msgbox_info("Copying of $_ to " . $inactive_pane->get_pwd . " aborted!");
-					last;
-				}
-			} else {
-				if ($r == File::DirWalk::FAILED) {
-					Filer::Dialog->msgbox_error("Moving of $_ to " . $inactive_pane->get_pwd . " failed: $!");
-					last;
-				} elsif ($r == File::DirWalk::ABORTED) {
-					Filer::Dialog->msgbox_info("Moving of $_ to " . $inactive_pane->get_pwd . " aborted!");
-					last;
-				}
-			}
-		}
-
-		$do->destroy;
-	};
-
-	my $files = [ split /\n/, &get_clipboard_contents ];
-
-	# copy or cut files
-	my $target = ($active_pane->get_type eq "TREE") ? $active_pane->get_updir : $active_pane->get_pwd;
-	&{$f}($files, $target);
-
-	# refresh panes.
-	$active_pane->refresh;
-	&refresh_inactive_pane;
-
-	# reset clipboard
-	if ($CLIPBOARD_ACTION == CUT) {
-		&set_clipboard_contents("");
+	if ($action eq "copy") {
+		$do = new Filer::Copy;
+	} else {
+		$do = new Filer::Move;
 	}
 
-	# reset Cut property
-	$CLIPBOARD_ACTION = COPY; # reset Cut
+	$do->set_total($self->files_count_paste);
+	$do->show;
+
+	foreach (@files) {
+		return if (! -e $_);
+
+		my $r = $do->action($_, $target);
+
+		if ($action eq "copy") {
+			if ($r == File::DirWalk::FAILED) {
+				Filer::Dialog->msgbox_error("Copying of $_ to " . $self->{inactive_pane}->get_pwd . " failed: $!");
+				last;
+			} elsif ($r == File::DirWalk::ABORTED) {
+				Filer::Dialog->msgbox_info("Copying of $_ to " . $self->{inactive_pane}->get_pwd . " aborted!");
+				last;
+			}
+		} else {
+			if ($r == File::DirWalk::FAILED) {
+				Filer::Dialog->msgbox_error("Moving of $_ to " . $self->{inactive_pane}->get_pwd . " failed: $!");
+				last;
+			} elsif ($r == File::DirWalk::ABORTED) {
+				Filer::Dialog->msgbox_info("Moving of $_ to " . $self->{inactive_pane}->get_pwd . " aborted!");
+				last;
+			}
+		}
+	}
+
+	$do->destroy;
+
+	# refresh panes.
+	$self->{active_pane}->refresh;
+	$self->refresh_inactive_pane;
+
+	# reset clipboard
+	if ($action eq "cut") {
+		$self->set_clipboard_contents("");
+	}
 }
 
 sub cut_cb {
-	&set_clipboard_contents(join "\n", @{$active_pane->get_items});
+	my ($self) = @_;
+	return if ($self->{active_pane}->count_items == 0);
 
-	Gtk2::Gdk::Atom->new('CLIPBOARD_CUT');
-
-	$CLIPBOARD_ACTION = CUT; # Cut (Move) files on Paste
+ 	my @files =  (@{$self->{active_pane}->get_items}, "cut");	
+ 	$self->set_clipboard_contents(join "\n\r", @files);
 }
 
 sub copy_cb {
-	return if (($active_pane->count_items == 0) or (not defined $active_pane->get_item));
+	my ($self) = @_;
+	return if ($self->{active_pane}->count_items == 0);
 
-#	if ($config->get_option("Mode") == EXPLORER_MODE) {
-		&set_clipboard_contents(join "\n", @{$active_pane->get_items});
-
-		$CLIPBOARD_ACTION = COPY;
-# 	} else {
-# 		my $f = sub {
-# 			my ($files,$target) = @_;
-# 			my $copy = new Filer::Copy;
-#
-# 			$copy->set_total(&files_count);
-# 			$copy->show;
-#
-# 			foreach (@{$files}) {
-# 				my $r = $copy->copy($_, $target);
-#
-# 				if ($r == File::DirWalk::FAILED) {
-# 					Filer::Dialog->msgbox_error("Copying of $_ to " . $inactive_pane->get_pwd . " failed: $!");
-# 					last;
-# 				} elsif ($r == File::DirWalk::ABORTED) {
-# 					Filer::Dialog->msgbox_info("Copying of $_ to " . $inactive_pane->get_pwd . " aborted!");
-# 					last;
-# 				}
-# 			}
-#
-# 			$copy->destroy;
-#
-# 			&refresh_inactive_pane;
-# 		};
-#
-# 		if ($active_pane->count_items == 1) {
-# 			if ($config->get_option("ConfirmCopy") == 1) {
-# 				my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
-#
-# 				$dialog->set_title("Copy");
-# 				$source_label->set_markup("<b>Copy: </b>");
-# 				$source_entry->set_text($active_pane->get_item);
-# 				$dest_label->set_markup("<b>to: </b>");
-# 				$dest_entry->set_text($inactive_pane->get_pwd);
-#
-# 				$dialog->show_all;
-#
-# 				if ($dialog->run eq 'ok') {
-# 					&{$f}([$source_entry->get_text], $dest_entry->get_text);
-# 				}
-#
-# 				$dialog->destroy;
-# 			} else {
-# 				&{$f}([$active_pane->get_item], $inactive_pane->get_pwd);
-# 			}
-# 		} else {
-# 			if ($config->get_option("ConfirmCopy") == 1) {
-# 				return if (Filer::Dialog->yesno_dialog(sprintf("Copy %s selected files to %s?", $active_pane->count_items, $inactive_pane->get_pwd)) eq 'no');
-# 			}
-#
-# 			&{$f}($active_pane->get_items, $inactive_pane->get_pwd);
-# 		}
-# 	}
+	my @files =  (@{$self->{active_pane}->get_items}, "copy");
+	$self->set_clipboard_contents(join "\n\r", @files);
 }
 
-# sub move_cb {
-# 	return if (($active_pane->count_items == 0) or (not defined $active_pane->get_item));
-#
-# 	my $f = sub {
-# 		my ($files,$target) = @_;
-# 		my $move = new Filer::Move;
-#
-# 		$move->set_total(&files_count);
-# 		$move->show;
-#
-# 		foreach (@{$files}) {
-# 			my $r = $move->move($_, $target);
-#
-# 			if ($r == File::DirWalk::FAILED) {
-# 				Filer::Dialog->msgbox_error("Moving of $_ to " . $inactive_pane->get_pwd . " failed: $!");
-# 				last;
-# 			} elsif ($r == File::DirWalk::ABORTED) {
-# 				Filer::Dialog->msgbox_info("Moving of $_ to " . $inactive_pane->get_pwd . " aborted!");
-# 				last;
-# 			}
-# 		}
-#
-# 		$move->destroy;
-#
-# 		$active_pane->remove_selected;
-# 		&refresh_inactive_pane;
-# 	};
-#
-# 	if ($active_pane->count_items == 1) {
-# 		if ($config->get_option("ConfirmMove") == 1) {
-# 			my ($dialog,$source_label,$dest_label,$source_entry,$dest_entry) = Filer::Dialog->source_target_dialog;
-#
-# 			$dialog->set_title("Move");
-# 			$source_label->set_markup("<b>Move: </b>");
-# 			$source_entry->set_text($active_pane->get_item);
-# 			$dest_label->set_markup("<b>to: </b>");
-# 			$dest_entry->set_text($inactive_pane->get_pwd);
-#
-# 			$dialog->show_all;
-#
-# 			if ($dialog->run eq 'ok') {
-# 				&{$f}([$source_entry->get_text], $dest_entry->get_text);
-# 			}
-#
-# 			$dialog->destroy;
-# 		} else {
-# 			&{$f}([$active_pane->get_item], $inactive_pane->get_pwd);
-# 		}
-# 	} else {
-# 		if ($config->get_option("ConfirmMove") == 1) {
-# 			return if (Filer::Dialog->yesno_dialog(sprintf("Move %s selected files to %s?", $active_pane->count_items, $inactive_pane->get_pwd)) eq 'no');
-# 		}
-#
-# 		&{$f}($active_pane->get_items, $inactive_pane->get_pwd);
-# 	}
-# }
-
 sub rename_cb {
+	my ($self) = @_;
 	my ($dialog,$hbox,$label,$entry);
 
-	return if (($active_pane->count_items == 0) or (not defined $active_pane->get_item));
+	return if ($self->{active_pane}->count_items == 0);
 
 	$dialog = new Gtk2::Dialog("Rename", undef, 'modal', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
 	$dialog->set_size_request(450,150);
@@ -644,26 +707,26 @@ sub rename_cb {
 	$hbox->pack_start($label, 0,0,2);
 
 	$entry = new Gtk2::Entry;
-	$entry->set_text(File::Basename::basename($active_pane->get_item));
+	$entry->set_text($self->{active_pane}->get_fileinfo->[0]->get_basename);
 	$entry->set_activates_default(1);
 	$hbox->pack_start($entry, 1,1,0);
 
 	$dialog->show_all;
 
 	if ($dialog->run eq 'ok') {
-		my $old_pwd = $active_pane->get_pwd;		
-		my $old = $active_pane->get_item;
+		my $old_pwd = $self->{active_pane}->get_pwd;		
+		my $old = $self->{active_pane}->get_item;
 		my $new;
 		
-		if ($active_pane->get_type eq "TREE") {
+		if ($self->{active_pane}->get_type eq "TREE") {
 			$new = abs_path(catfile(splitdir(dirname($old_pwd)), $entry->get_text));			
 		} else {
 			$new = abs_path(catfile(splitdir($old_pwd), $entry->get_text));			
 		}
 		
 		if (rename($old,$new)) {
-			$active_pane->set_item(new Filer::FileInfo($new)); # updates the selected item to the new name.
-			&refresh_inactive_pane;
+			$self->{active_pane}->set_item(new Filer::FileInfo($new));
+			$self->refresh_inactive_pane;
 		} else {
 			Filer::Dialog->msgbox_error("Rename failed: $!");
 		}
@@ -673,31 +736,33 @@ sub rename_cb {
 }
 
 sub delete_cb {
-	return if (($active_pane->count_items == 0) or (not defined $active_pane->get_item));
+	my ($self) = @_;
 
-	if ($config->get_option("ConfirmDelete") == 1) {
-		if ($active_pane->count_items == 1) {
-			my $f = $active_pane->get_fileinfo->[0]->get_basename; 
+	return if ($self->{active_pane}->count_items == 0);
+
+	if ($self->{config}->get_option("ConfirmDelete") == 1) {
+		if ($self->{active_pane}->count_items == 1) {
+			my $f = $self->{active_pane}->get_fileinfo->[0]->get_basename; 
 			$f =~ s/&/&amp;/g; # sick fix. meh. 
 
-			if (-f $active_pane->get_item) {
+			if (-f $self->{active_pane}->get_item) {
 				return if (Filer::Dialog->yesno_dialog("Delete file \"$f\"?") eq 'no');
-			} elsif (-d $active_pane->get_item) {
+			} elsif (-d $self->{active_pane}->get_item) {
 				return if (Filer::Dialog->yesno_dialog("Delete directory \"$f\"?") eq 'no');
 			}
 		} else {
-			return if (Filer::Dialog->yesno_dialog(sprintf("Delete %s selected files?", $active_pane->count_items)) eq 'no');
+			return if (Filer::Dialog->yesno_dialog(sprintf("Delete %s selected files?", $self->{active_pane}->count_items)) eq 'no');
 		}
 	}
 
 	my $delete = Filer::Delete->new;
 	my $t = &files_count; 
 
-	if (($t > 1) or (-d $active_pane->get_item)) {
+	if (($t > 1) or (-d $self->{active_pane}->get_item)) {
 		$delete->set_total($t);
 		$delete->show;
 
-		foreach (@{$active_pane->get_items}) {
+		foreach (@{$self->{active_pane}->get_items}) {
 			my $r = $delete->delete($_);
 
 			if ($r == File::DirWalk::FAILED) {
@@ -711,20 +776,19 @@ sub delete_cb {
 
 		$delete->destroy;
 	} else {
-		my $f = $active_pane->get_item; 
+		my $f = $self->{active_pane}->get_item; 
 		
 		if (! unlink($f)) {
 			Filer::Dialog->msgbox_info(sprintf("Deleting of \"%s\" failed: $!", $f));
 		}
-
-		$active_pane->update_navigation_buttons($active_pane->get_pwd);
 	}
 
-	$active_pane->remove_selected;
-	&refresh_inactive_pane;
+	$self->{active_pane}->remove_selected;
+	$self->refresh_inactive_pane;
 }
 
 sub mkdir_cb {
+	my ($self) = @_;
 	my ($dialog,$hbox,$label,$entry);
 
 	$dialog = new Gtk2::Dialog("Make directory", undef, 'modal', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
@@ -737,7 +801,7 @@ sub mkdir_cb {
 	$dialog->vbox->pack_start($hbox, 0,0,5);
 
 	$label = new Gtk2::Label;
-	$label->set_text($active_pane->get_pwd . "/");
+	$label->set_text($self->{active_pane}->get_pwd);
 	$hbox->pack_start($label, 0,0,2);
 
 	$entry = new Gtk2::Entry;
@@ -748,11 +812,11 @@ sub mkdir_cb {
 	$dialog->show_all;
 
 	if ($dialog->run eq 'ok') {
-		my $dir = catfile(splitdir($active_pane->get_pwd), $entry->get_text);
+		my $dir = catfile(splitdir($self->{active_pane}->get_pwd), $entry->get_text);
 
 		if (mkdir($dir)) {
-			$active_pane->refresh;
-			&refresh_inactive_pane;
+			$self->{active_pane}->refresh;
+			$self->refresh_inactive_pane;
 		} else {
 			Filer::Dialog->msgbox_error("Make directory $dir failed: $!");
 		}
@@ -762,20 +826,21 @@ sub mkdir_cb {
 }
 
 sub link_cb {
-	my ($dialog,$link_label,$target_label,$link_entry,$target_entry) = Filer::Dialog->source_target_dialog;
+	my ($self) = @_;
+	return if ($self->{active_pane}->count_items == 0);
 
-	return if (! defined $active_pane->get_item);
+	my ($dialog,$link_label,$target_label,$link_entry,$target_entry) = Filer::Dialog->source_target_dialog;
 
 	$dialog->set_title("Link");
 	$dialog->set_size_request(450,150);
 	$dialog->set_default_response('ok');
 
 	$link_label->set_markup("<b>Link: </b>");
-	$link_entry->set_text(catfile(splitdir($active_pane->get_pwd), basename($active_pane->get_item)));
+	$link_entry->set_text(catfile(splitdir($self->{active_pane}->get_pwd), $self->{active_pane}->get_fileinfo->[0]->get_basename));
 	$link_entry->set_activates_default(1);
 
 	$target_label->set_markup("<b>linked object: </b>");
-	$target_entry->set_text($active_pane->get_item);
+	$target_entry->set_text($self->{active_pane}->get_item);
 	$target_entry->set_activates_default(1);
 
 	$dialog->show_all;
@@ -785,11 +850,12 @@ sub link_cb {
 		my $target = $target_entry->get_text;
 
 		if (dirname($link) eq File::Spec->curdir) {
-			$link = catfile(splitdir($active_pane->get_pwd), $link);
+			$link = catfile(splitdir($self->{active_pane}->get_pwd), $link);
 		}
 
 		if (link($target, $link)) {
-			&refresh_inactive_pane;
+			$self->{active_pane}->refresh;
+			$self->refresh_inactive_pane;
 		} else {
 			Filer::Dialog->msgbox_error("Couldn't create link! $!");
 		}
@@ -799,20 +865,21 @@ sub link_cb {
 }
 
 sub symlink_cb {
-	my ($dialog,$symlink_label,$target_label,$symlink_entry,$target_entry) = Filer::Dialog->source_target_dialog;
+	my ($self) = @_;
+	return if ($self->{active_pane}->count_items == 0);
 
-	return if (! defined $active_pane->get_item);
+	my ($dialog,$symlink_label,$target_label,$symlink_entry,$target_entry) = Filer::Dialog->source_target_dialog;
 
 	$dialog->set_title("Symlink");
 	$dialog->set_size_request(450,150);
 	$dialog->set_default_response('ok');
 
 	$symlink_label->set_markup("<b>Symlink: </b>");
-	$symlink_entry->set_text(catfile(splitdir($active_pane->get_pwd), basename($active_pane->get_item)));
+	$symlink_entry->set_text(catfile(splitdir($self->{active_pane}->get_pwd), $self->{active_pane}->get_fileinfo->[0]->get_basename));
 	$symlink_entry->set_activates_default(1);
 
 	$target_label->set_markup("<b>linked object: </b>");
-	$target_entry->set_text($active_pane->get_item);
+	$target_entry->set_text($self->{active_pane}->get_item);
 	$target_entry->set_activates_default(1);
 
 	$dialog->show_all;
@@ -822,11 +889,12 @@ sub symlink_cb {
 		my $target = $target_entry->get_text;
 
 		if (dirname($symlink) eq File::Spec->curdir) {
-			$symlink = catfile(splitdir($active_pane->get_pwd), $symlink);
+			$symlink = catfile(splitdir($self->{active_pane}->get_pwd), $symlink);
 		}
 
 		if (symlink($target, $symlink)) {
-			&refresh_inactive_pane;
+			$self->{active_pane}->refresh;
+			$self->refresh_inactive_pane;
 		} else {
 			Filer::Dialog->msgbox_error("Couldn't create symlink! $!");
 		}
@@ -836,9 +904,10 @@ sub symlink_cb {
 }
 
 sub files_count {
+	my ($self) = @_;
 	my $c = 0;
 
-	if (($active_pane->count_items == 1) and (! -d $active_pane->get_item)) {
+	if (($self->{active_pane}->count_items == 1) and (! -d $self->{active_pane}->get_item)) {
 		$c = 1;
 	} else {
 		my $dialog = new Filer::ProgressDialog;
@@ -851,7 +920,6 @@ sub files_count {
 
 		my $id = Glib::Timeout->add(50, sub {
 			$progressbar->pulse;
-			while (Gtk2->events_pending) { Gtk2->main_iteration }
 			return 1;
 		});
 
@@ -862,7 +930,7 @@ sub files_count {
 			return File::DirWalk::SUCCESS;
 		});
 
-		foreach (@{$active_pane->get_items}) {
+		foreach (@{$self->{active_pane}->get_items}) {
 			if (-d $_) {
 				$dirwalk->walk($_);
 			} else {
@@ -879,6 +947,7 @@ sub files_count {
 }
 
 sub files_count_paste {
+	my ($self) = @_;
 	my $c = 0;
 	my $dirwalk = new File::DirWalk;
 
@@ -902,7 +971,7 @@ sub files_count_paste {
 		return File::DirWalk::SUCCESS;
 	});
 
-	foreach (split /\n/, &get_clipboard_contents) {
+	foreach (split /\n/, $self->get_clipboard_contents) {
 		if (-e $_) {
 			$dirwalk->walk($_);
 		}
@@ -916,13 +985,14 @@ sub files_count_paste {
 }
 
 sub get_clipboard_contents {
-	my $clipboard = Gtk2::Clipboard->get_for_display($widgets->{main_window}->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
+	my ($self) = @_;
+	my $clipboard = Gtk2::Clipboard->get_for_display($self->{widgets}->{main_window}->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
 	my $contents = "";
 
 	$clipboard->request_text(sub {
 		my ($c,$t) = @_;
 		return if (!$t);
-	
+
 		$contents = $t;
 	});
 	
@@ -930,8 +1000,8 @@ sub get_clipboard_contents {
 }
 
 sub set_clipboard_contents {
-	my ($contents) = @_;
-	my $clipboard = Gtk2::Clipboard->get_for_display($widgets->{main_window}->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
+	my ($self,$contents) = @_;
+	my $clipboard = Gtk2::Clipboard->get_for_display($self->{widgets}->{main_window}->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
 	$clipboard->set_text($contents);
 }
 

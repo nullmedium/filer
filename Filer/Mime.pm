@@ -16,12 +16,11 @@
 
 package Filer::Mime;
 
-# use strict;
-# use warnings;
-
 use Filer;
 use Filer::Constants;
-our @ISA = qw(Filer);
+
+use strict;
+use warnings;
 
 use constant ICON => 0;
 use constant COMMANDS => 1;
@@ -75,14 +74,16 @@ $default_mimetypes = {
 };
 
 sub new {
-	my ($class) = @_;
+	my ($class,$filer) = @_;
 	my $self = bless {}, $class;
+	$self->{filer} = $filer;
 	$self->{cfg_home} = File::Spec->catfile((new File::BaseDir)->xdg_config_home, "/filer");
 	$self->{mime_store} = File::Spec->catfile(File::Spec->splitdir($self->{cfg_home}), "mime");
 
 	if (! -e $self->{mime_store}) {
 		$self->store($default_mimetypes);
 	}
+	
 
 	return $self;
 }
@@ -197,7 +198,7 @@ sub set_icon_dialog {
 	$table->attach($frame, 0, 1, 0, 2, [], [], 0, 0);
 
 	$icon_image = new Gtk2::Image;
-	$icon_image->set_from_pixbuf(&Filer::intelligent_scale(Gtk2::Gdk::Pixbuf->new_from_file($self->get_icon($type)),50));
+	$icon_image->set_from_pixbuf(Filer::Tools->intelligent_scale(Gtk2::Gdk::Pixbuf->new_from_file($self->get_icon($type)),50));
 	$icon_image->set_alignment(0.50,0.50);
 	$frame->add($icon_image);
 
@@ -232,7 +233,7 @@ sub set_icon_dialog {
 		if ($fs->run eq 'ok') {
 			my $mimeicon = $fs->get_filename;
 			$icon_entry->set_text($mimeicon);
-			$icon_image->set_from_pixbuf(&Filer::intelligent_scale(Gtk2::Gdk::Pixbuf->new_from_file($mimeicon),50));
+			$icon_image->set_from_pixbuf(Filer::Tools->intelligent_scale(Gtk2::Gdk::Pixbuf->new_from_file($mimeicon),50));
 		}
 
 		$fs->destroy;
@@ -249,11 +250,11 @@ sub set_icon_dialog {
 }
 
 sub file_association_dialog {
+	my ($self) = @_;
 	my ($dialog,$bbox,$hbox,$vbox,$sw,$treeview);
 	my ($types_model,$commands_model,$selection);
 	my ($cell,$col,$button);
 
-	my $mime = new Filer::Mime;
 	my $type = "";
 	my $command = undef;
 	my $command_iter = undef;
@@ -261,9 +262,9 @@ sub file_association_dialog {
 	my $refresh_types = sub {
 		$types_model->clear;
 
-		foreach (sort $mime->get_mimetypes) {
+		foreach (sort $self->get_mimetypes) {
 			next if ($_ eq 'default');
-			$types_model->set($types_model->append, 0, Gtk2::Gdk::Pixbuf->new_from_file($mime->get_icon($_)), 1, $_);
+			$types_model->set($types_model->append, 0, Gtk2::Gdk::Pixbuf->new_from_file($self->get_icon($_)), 1, $_);
 		}
 	};
 
@@ -271,7 +272,7 @@ sub file_association_dialog {
 		my ($type) = @_;
 		$commands_model->clear;
 
-		foreach ($mime->get_commands($type)) {
+		foreach ($self->get_commands($type)) {
 			$commands_model->set($commands_model->append, 0, $_);
 		}
 	};
@@ -284,7 +285,7 @@ sub file_association_dialog {
 			return 0;
 		});
 
-		$mime->set_commands($type,\@commands);
+		$self->set_commands($type,\@commands);
 	};
 
 	$dialog = new Gtk2::Dialog("File Association", undef, 'modal', 'gtk-close' => 'close');
@@ -448,7 +449,7 @@ sub file_association_dialog {
 		$dialog->show_all;
 
 		if ($dialog->run eq 'ok') {
-			$mime->add_mimetype($entry->get_text);
+			$self->add_mimetype($entry->get_text);
 		}
 
 		$dialog->destroy;
@@ -458,14 +459,14 @@ sub file_association_dialog {
 
 	$button = Gtk2::Button->new_from_stock('gtk-remove');
 	$button->signal_connect("clicked", sub {
-		$mime->delete_mimetype($type);
+		$self->delete_mimetype($type);
 		&{$refresh_types};
 	});
 	$bbox->add($button);
 
 	$button = Gtk2::Button->new("Set Icon");
 	$button->signal_connect("clicked", sub {
-		$mime->set_icon_dialog($type);
+		$self->set_icon_dialog($type);
 		&{$refresh_types};
 	});
 	$bbox->add($button);
@@ -543,14 +544,14 @@ sub run_dialog {
 
 	if ($dialog->run eq 'ok') {
 		my $command = $command_combo->get_active_text;
-		my $file = $fileinfo->get_path_latin1;
+		my $file = $fileinfo->get_path;
 
 		if ($remember_checkbutton->get_active) {
 			$self->set_default_command($type, $command);
 		}
 
 		if ($run_terminal_checkbutton->get_active) {
-			my $term = $config->get_option("Terminal");
+			my $term = $self->{filer}->{config}->get_option("Terminal");
 			$command = "$term -x $command";
 		}
 		

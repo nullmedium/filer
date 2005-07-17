@@ -1,0 +1,99 @@
+<ui>
+  <menubar>
+    <menu name="file-menu" action="FileMenuAction">
+      <menuitem name="OpenTerminal" action="open-terminal-action" />
+      <menuitem name="Open" action="open-action" />
+      <menuitem name="OpenWith" action="open-with-action" />
+      <separator/>
+      <menuitem name="Quit" action="quit-action" />
+    </menu>
+
+    <menu name="edit-menu" action="EditMenuAction">
+      <menuitem name="Cut" action="cut-action" />
+      <menuitem name="Copy" action="copy-action" />
+      <menuitem name="Paste" action="paste-action" />
+      <separator/>
+      <menuitem name="Rename" action="rename-action" />
+      <menuitem name="MkDir" action="mkdir-action" />
+      <menuitem name="Delete" action="delete-action" />
+      <separator/>
+      <menuitem name="Link" action="link-action" />
+      <menuitem name="SymLink" action="symlink-action" />
+      <separator/>
+      <menuitem name="Refresh" action="refresh-action" />
+      <separator/>
+      <menuitem name="Search" action="search-action" />
+      <separator/>
+      <menuitem name="Select" action="select-action" />
+      <menuitem name="Unselect" action="unselect-action" />
+    </menu>
+
+    <menu name="bookmarks-menu" action="BookmarksMenuAction">
+    </menu>
+
+    <menu name="options-menu" action="OptionsMenuAction">
+      <menu name="mode-menu" action="ModeMenuAction">
+        <menuitem name="CommanderStyle" action="explorer-style-action" />
+	<menuitem name="ExplorerStyle" action="commander-style-action" />
+      </menu>
+      <separator/>
+      <menu name="confirmation-menu" action="ConfirmationMenuAction">
+        <menuitem name="Copying" action="ask-copying-action" />
+	<menuitem name="Moving" action="ask-moving-action" />
+	<menuitem name="Deleting" action="ask-deleting-action" />
+      </menu>
+      <menuitem name="ShowHidden" action="show-hidden-action" />
+      <separator/>
+      <menuitem name="SetTerminal" action="set-terminal-action" />
+      <menuitem name="SetEditor" action="set-editor-action" />
+      <separator/>
+      <menuitem name="FileAssoc" action="file-assoc-action" />
+    </menu>
+
+    <menu name="help-menu" action="HelpMenuAction">
+      <menuitem name="About" action="about-action" />
+    </menu>
+  </menubar>
+
+  <toolbar> 
+    <toolitem name="Home" action="home-action"/>
+    <toolitem name="Synchronize" action="synchronize-action"/>
+
+    <placeholder name="ToolItems1">
+      <toolitem name="Refresh" action="refresh-action"/>
+      <separator/>
+      <toolitem name="Cut" action="cut-action"/>
+      <toolitem name="Copy" action="copy-action"/>
+      <toolitem name="Paste" action="paste-action"/>
+      <separator/>
+      <toolitem name="Rename" action="rename-action"/>
+      <toolitem name="MkDir" action="mkdir-action"/>
+      <toolitem name="Delete" action="delete-action"/>
+      <separator/>
+      <toolitem name="Quit" action="quit-action"/>
+    </placeholder>
+  </toolbar>
+
+  <popup name="list-popupmenu">
+    <menuitem name="Open" action="OpenPopupMenuAction"/>
+    <placeholder name="PopupItems1">
+      <separator/>
+      <menuitem name="Cut" action="cut-action"/>
+      <menuitem name="Copy" action="copy-action"/>
+      <menuitem name="Paste" action="paste-action"/>
+      <separator/>
+      <menuitem name="Rename" action="rename-action"/>
+      <menuitem name="MkDir" action="mkdir-action"/>
+      <menuitem name="Delete" action="delete-action"/>
+    </placeholder>
+    <separator/>
+    <menu name="archive-menu" action="ArchiveMenuAction">
+      <menuitem name="CreateTGZ" action="create-tgz-action"/>
+      <menuitem name="CreateTBZ2" action="create-tbz2-action"/>
+      <menuitem name="Extract" action="extract-action"/>
+    </menu>
+    <menuitem name="Bookmarks" action="BookmarksPopupMenuAction"/>
+    <separator/>
+    <menuitem name="Properties" action="properties-action"/>
+  </popup>
+</ui>

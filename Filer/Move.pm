@@ -52,9 +52,6 @@ sub new {
 		$self->{progress_dialog}->destroy;
 	});
 
-	$SKIP_ALL = 0;
-	$OVERWRITE_ALL = 0;
-
 	return $self;
 }
 

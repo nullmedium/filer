@@ -16,12 +16,10 @@
 
 package Filer::Properties;
 
-# use strict;
-# use warnings;
-
-use Filer;
 use Filer::Constants;
-our @ISA = qw(Filer);
+
+use strict;
+use warnings;
 
 use constant S_IFMT  => 00170000;
 use constant S_IFSOCK => 0140000;
@@ -51,6 +49,7 @@ use constant S_IWOTH => 00002;
 use constant S_IXOTH => 00001;
 
 sub set_properties_dialog {
+	my ($filer) = pop;
 	my ($dialog,$table,$label,$checkbutton,$entry);
 	my ($frame,$type_label,$icon_image,$icon_entry,$icon_browse_button);
 	my ($button,$alignment,$hbox,$vbox);
@@ -70,11 +69,16 @@ sub set_properties_dialog {
 	my $multiple = 0;
 	
 	my $fileinfo;
-	my $mime = new Filer::Mime; 
+	my $mime = new Filer::Mime($filer); 
 	my $type;
 
-	if ($active_pane->count_items == 1) {
-		$fileinfo = $active_pane->get_fileinfo->[0];
+	if ($filer->{active_pane}->count_items == 1) {
+		if ($filer->{active_pane}->get_type eq "TREE") {
+			$fileinfo = new Filer::FileInfo($filer->{active_pane}->get_item);
+		} else {
+			$fileinfo = $filer->{active_pane}->get_fileinfo->[0];
+		}
+
 		@stat = @{$fileinfo->get_stat};
 		$owner = $fileinfo->get_uid;
 		$group = $fileinfo->get_gid;
@@ -115,7 +119,7 @@ sub set_properties_dialog {
 		$label->set_alignment(0.0,0.0);
 		$table->attach($label, 0, 1, 1, 2, [ "fill" ], [ ], 0, 0);
 
-		$label = new Gtk2::Label($fileinfo->get_path_utf8);
+		$label = new Gtk2::Label($fileinfo->get_path);
 		$label->set_alignment(0.0,0.0);
 		$label->set_ellipsize('PANGO_ELLIPSIZE_MIDDLE');
 		$table->attach($label, 1, 2, 0, 1, [ "fill", "expand" ], [ ], 0, 0);
@@ -344,7 +348,7 @@ sub set_properties_dialog {
 	$vbox->pack_start($owner_combo, 1, 1, 0);
 
 	$group_combo = Gtk2::ComboBoxEntry->new_text;
-	foreach (@users) { $group_combo->append_text($_) }
+	foreach (@groups) { $group_combo->append_text($_) }
 	$group_combo->get_child->set_text($group);
 	$vbox->pack_start($group_combo, 1, 1, 0);
 
@@ -352,7 +356,7 @@ sub set_properties_dialog {
 	my $r = $dialog->run;
 
 	if ($r eq 'ok') {
-		my @files = map { $_->get_path_latin1; } @{$active_pane->get_fileinfo};
+		my @files = map { $_->get_path; } @{$filer->{active_pane}->get_fileinfo};
 		my $mode = oct(($properties_mode * 1000) + ($owner_mode * 100) +  ($group_mode * 10) + ($other_mode));
 
 		my $uid = getpwnam($owner_combo->get_active_text);
@@ -361,7 +365,7 @@ sub set_properties_dialog {
 		chmod($mode, @files) || return Filer::Dialog->msgbox_error("Error: $!");
 		chown($uid, $gid, @files) || return Filer::Dialog->msgbox_error("Error: $!");
 
-		&Filer::refresh_cb; 
+		$filer->refresh_cb;
 	}
 
 	$dialog->destroy;
