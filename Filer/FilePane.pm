@@ -147,6 +147,14 @@ sub new {
 
 	my $sort_func = sub {
 		my ($model,$a,$b,$data) = @_;
+#  		print "sort\n";
+# 
+#  		my ($sort_column_id,$order) = $model->get_sort_column_id; 
+# 		my $s1 = $model->get($a, $sort_column_id); 
+# 		my $s2 = $model->get($b, $sort_column_id); 
+# 
+# 		return ($s1 cmp $s2) if (defined $s1 and defined $s2);
+
 		my ($sort_column_id,$order) = $model->get_sort_column_id; 
 
 		my $fi1 = $model->get($a, COL_FILEINFO);
@@ -156,6 +164,8 @@ sub new {
 		
 		my $fp1 = $fi1->get_path;
 		my $fp2 = $fi2->get_path;
+
+		print "sort\n";
 
 		# 1) sort directories first
 		# 2) then hidden items
@@ -170,52 +180,53 @@ sub new {
 
 			return ($order eq "ascending") ? 1 : -1;
 
+		} elsif ($fi1->is_hidden and !$fi2->is_hidden) {
+
+			return ($order eq "ascending") ? -1 : 1;
+
+		} elsif ($fi2->is_hidden and !$fi1->is_hidden) {
+
+			return ($order eq "ascending") ? 1 : -1;
 		} else {
-			if ($fi1->is_hidden and !$fi2->is_hidden) {
-				return ($order eq "ascending") ? -1 : 1;
-			} elsif ($fi2->is_hidden and !$fi1->is_hidden) {
-				return ($order eq "ascending") ? 1 : -1;
+			my ($s1,$s2,$s);
+
+			if ($sort_column_id == COL_SIZE) { # size
+
+				$s1 = $fi1->get_raw_size;
+				$s2 = $fi2->get_raw_size;
+				$s = $s1 - $s2;
+
+			} elsif ($sort_column_id == COL_MODE) { # mode
+
+				$s1 = $fi1->get_raw_mode;
+				$s2 = $fi2->get_raw_mode;
+				$s = $s1 - $s2;
+
+			} elsif ($sort_column_id == COL_DATE) { # date
+
+				$s1 = $fi1->get_raw_mtime;
+				$s2 = $fi2->get_raw_mtime;
+				$s = $s1 - $s2;
+
 			} else {
-				my ($s1,$s2,$s);
+				$s1 = $model->get($a, $sort_column_id); 
+				$s2 = $model->get($b, $sort_column_id); 
 
-				if ($sort_column_id == COL_SIZE) { # size
-
-					$s1 = $fi1->get_raw_size;
-					$s2 = $fi2->get_raw_size;
-					$s = $s1 - $s2;
-
-				} elsif ($sort_column_id == COL_MODE) { # mode
-
-					$s1 = $fi1->get_raw_mode;
-					$s2 = $fi2->get_raw_mode;
-					$s = $s1 - $s2;
-
-				} elsif ($sort_column_id == COL_DATE) { # date
-
-					$s1 = $fi1->get_raw_mtime;
-					$s2 = $fi2->get_raw_mtime;
-					$s = $s1 - $s2;
-
+				if ($self->[FILER]->{config}->get_option("CaseInsensitiveSort") == 0) {
+					$s = ($s1 cmp $s2);
 				} else {
-					$s1 = $model->get($a, $sort_column_id); 
-					$s2 = $model->get($b, $sort_column_id); 
-
-					if ($self->[FILER]->{config}->get_option("CaseInsensitiveSort") == 0) {
-						$s = ($s1 cmp $s2);
-					} else {
-						$s = (lc($s1) cmp lc($s2));
-					}
+					$s = (lc($s1) cmp lc($s2));
 				}
+			}
 
-				if ($s == 0) {
-					if ($self->[FILER]->{config}->get_option("CaseInsensitiveSort") == 0) {
-						return ($fi1->get_basename cmp $fi2->get_basename);
-					} else {
-						return (lc($fi1->get_basename) cmp lc($fi2->get_basename));
-					}
+			if ($s == 0) {
+				if ($self->[FILER]->{config}->get_option("CaseInsensitiveSort") == 0) {
+					return ($fi1->get_basename cmp $fi2->get_basename);
 				} else {
-					return $s;
+					return (lc($fi1->get_basename) cmp lc($fi2->get_basename));
 				}
+			} else {
+				return $s;
 			}
 		}
 	};
@@ -318,8 +329,10 @@ sub show_popup_menu {
 			my $type = $fi->get_mimetype;
 
 			# Customize archive submenu
-			if (! Filer::Archive::is_supported_archive($type)) {
+			if (Filer::Archive::is_supported_archive($type)) {
 				$uimanager->get_widget('/ui/list-popupmenu/archive-menu/Extract')->set_sensitive(0);
+			} else {
+				$uimanager->get_widget('/ui/list-popupmenu/archive-menu/Extract')->set_sensitive(1);
 			}
 
 			# add and create Open submenu
@@ -669,18 +682,16 @@ sub open_file {
 				$dialog->destroy;
 
 				if ($r eq 1) {
-					system("$filepath & exit");
+					system("'$filepath' & exit");
 				} elsif ($r eq 2) {
- 					system("$command $filepath & exit");
+ 					system("$command '$filepath' & exit");
 				}
 			} else {
-				system("$command $filepath & exit");
+				system("$command '$filepath' & exit");
 			}
 		} else {
 			if (-x $filepath) {
-				$filepath = quotemeta($filepath);
-
-				system("$filepath & exit");
+				system("'$filepath' & exit");
 				return;
 			}
 	
@@ -748,9 +759,7 @@ sub open_path {
 		$filepath = $ENV{HOME};
 	}
 
-	my $opt = $self->[FILER]->{config}->get_option("Mode");
-
-	if ($opt == NORTON_COMMANDER_MODE) {
+	if ($self->[FILER]->{config}->get_option("Mode") == NORTON_COMMANDER_MODE) {
 		if (defined $self->[OVERRIDES]->{$filepath}) {
 			$filepath = $self->[OVERRIDES]->{$filepath};
 		}
@@ -758,7 +767,9 @@ sub open_path {
 
 	opendir (DIR, $filepath) or return Filer::Dialog->msgbox_error("$filepath: $!");
 	my @dir_contents;
-	
+
+	use sort '_mergesort';
+
 	if ($self->[FILER]->{config}->get_option("CaseInsensitiveSort") == 0) {
 		@dir_contents = sort readdir(DIR);
 	} else {
@@ -769,18 +780,20 @@ sub open_path {
 
 	@dir_contents = File::Spec->no_upwards(@dir_contents);
 
-# 	if ($opt == NORTON_COMMANDER_MODE and $filepath ne File::Spec->rootdir) {
+# 	if ($self->[FILER]->{config}->get_option("Mode") == NORTON_COMMANDER_MODE and $filepath ne File::Spec->rootdir) {
 # 		@dir_contents = (File::Spec->updir, @dir_contents); 
 # 	}
 
 	delete $self->[SELECTED_ITEM];
 	delete $self->[SELECTED_ITER];
 
+	print "opendir\n";
+
 	$self->[FILEPATH] = $filepath;
 
 	$self->update_navigation_buttons($filepath);
 	$self->[TREEMODEL]->clear;
-
+	
 	my $show_hidden = $self->[FILER]->{config}->get_option('ShowHiddenFiles');
 	my @dirs = grep { -d "$filepath/$_" } @dir_contents;
 	my @files = grep {! -d "$filepath/$_" } @dir_contents;
@@ -822,6 +835,31 @@ sub open_path {
 		my $size = $fi->get_size;
 		my $mode = $fi->get_mode;
 		my $time = $fi->get_mtime;
+
+# 		if ($file =~ /^\.+\w+/) {
+# 			my $pixels = $mypixbuf->get_pixels;
+# 			my $pixels_new = "";
+# 			
+# 			my $i = 0;
+# 			my @p = ();
+# 
+# 			foreach (split //, $pixels) {
+# 				$p[$i++] = ord($_);
+# 
+# 				if ($i == 4) {
+# 
+# 					use Color::Object;
+# 					my $c = Color::Object->newRGB($p[0],$p[1],$p[2]);
+# 					my $g = $c->asGrey;
+# 
+# 					$pixels_new .= chr($g).chr($g).chr($g).chr($p[3]);
+# 					
+# 					$i = 0;
+# 				}
+# 			}
+# 			
+# 			$mypixbuf = Gtk2::Gdk::Pixbuf->new_from_data($pixels_new, $mypixbuf->get_colorspace, $mypixbuf->get_has_alpha, 8, $mypixbuf->get_width, $mypixbuf->get_height, $mypixbuf->get_rowstride);
+# 		}
 
  		$self->[TREEMODEL]->set($self->[TREEMODEL]->append,
 			COL_ICON, $mypixbuf,
@@ -891,8 +929,6 @@ sub select_dialog {
 			my $model = $_[0];
 			my $iter = $_[2];
 			my $item = $model->get($iter, COL_NAME);
-
-			return 0 if ($item eq "..");
 
 # 			if (-d $mypane->get_path($item)) {
 # 				if ($bx eq '/') {

@@ -15,7 +15,7 @@ sub new {
 	my $self = bless {}, $class;
 	
 	$self->{filepath} = utf8($filepath)->latin1; 
-	$self->{stat} = [ stat($self->{filepath}) ];
+	$self->{stat} = [ lstat($self->{filepath}) ];
 	$self->{type} = (-l $self->{filepath}) ? "inode/symlink" : mimetype($self->{filepath});
 
 	return $self;
