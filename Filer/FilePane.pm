@@ -670,7 +670,7 @@ sub open_file {
 				$button = Filer::Dialog::mixed_button_new('gtk-ok',"_Run");
 				$dialog->add_action_widget($button, 1);
 
-				$button = Filer::Dialog::mixed_button_new('gtk-open',"_Open");
+				$button = Gtk2::Button->new_from_stock('gtk-open');
 				$dialog->add_action_widget($button, 2);
 			
 				$dialog->show_all;

@@ -216,7 +216,7 @@ sub create_main_window {
 	{
 		name => "set-editor-action",
 		label => "Set Editor",
-		callback => sub { $self->set_terminal_cb },
+		callback => sub { $self->set_editor_cb },
 	},
 	{
 		name => "file-assoc-action",
@@ -461,7 +461,7 @@ sub open_with_cb {
 
 sub open_terminal_cb {
 	my ($self) = @_;
-	my $path = $self->{active_pane}->get_item;
+	my $path = $self->{active_pane}->get_pwd;
 
 	if (-d $path) {
 		my $term = $self->{config}->get_option("Terminal");

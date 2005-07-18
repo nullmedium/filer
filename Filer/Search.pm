@@ -71,20 +71,21 @@ sub new {
 	$hbox->set_spacing(5);
 	$table->attach($hbox, 0, 3, 5, 6, [ "fill", "expand" ], [], 0, 0);
 
-	$button = Filer::Dialog::mixed_button_new("gtk-find","Search");
+	$button = Gtk2::Button->new_from_stock("gtk-find");
+	$button->set_label("Search");
 	$button->signal_connect("clicked", sub {
 		$self->init_dirwalk();
 		$self->start_search
 	});
 	$hbox->add($button);
 
-	$button = Filer::Dialog::mixed_button_new("gtk-stop","Stop");
+	$button = Gtk2::Button->new_from_stock("gtk-stop");
 	$button->signal_connect("clicked", sub {
 		$self->{search_stop} = 1;
 	});
 	$hbox->add($button);
 
-	$button = Filer::Dialog::mixed_button_new("gtk-clear","Clear");
+	$button = Gtk2::Button->new_from_stock("gtk-clear");
 	$button->signal_connect("clicked", sub {
 		$self->{treestore}->clear;
 		$self->{searching_label}->set_markup("");

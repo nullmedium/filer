@@ -336,15 +336,19 @@ sub set_properties_dialog {
 	$vbox = new Gtk2::VBox(0,0);
 	$frame->add($vbox);
 
-	$owner_combo = Gtk2::ComboBoxEntry->new_text;
-	foreach (@users) { $owner_combo->append_text($_) }
-	$owner_combo->get_child->set_text($owner);
+	my ($pos,$i);
+	$pos = 0; $i = 0;
+
+	$owner_combo = Gtk2::ComboBox->new_text;
+	foreach (@users) { $owner_combo->append_text($_); $pos = $i if ($_ eq $owner); $i++;}
+	$owner_combo->set_active($pos);
 	$owner_combo->set_sensitive(0) if ($ENV{USER} ne 'root');
 	$vbox->pack_start($owner_combo, 1, 1, 0);
 
-	$group_combo = Gtk2::ComboBoxEntry->new_text;
-	foreach (@groups) { $group_combo->append_text($_) }
-	$group_combo->get_child->set_text($group);
+	$pos = 0; $i = 0;
+	$group_combo = Gtk2::ComboBox->new_text;
+	foreach (@groups) { $group_combo->append_text($_); $pos = $i if ($_ eq $group); $i++; }
+	$group_combo->set_active($pos);
 	$vbox->pack_start($group_combo, 1, 1, 0);
 
 	$dialog->show_all;
