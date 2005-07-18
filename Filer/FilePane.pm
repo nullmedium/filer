@@ -75,6 +75,7 @@ sub new {
 	$self->[FILER] = $filer;
 	$self->[SIDE] = $side;
 	$self->[OVERRIDES] = {};
+	$self->[MOUSE_MOTION_SELECT] = 0;
 
 	$self->[VBOX] = new Gtk2::VBox(0,0);
 
@@ -86,11 +87,7 @@ sub new {
 
 	$button = new Gtk2::Button("Up");
 	$button->signal_connect("clicked", sub {
-		if ($self->[FILER]->{config}->get_option("Mode") == EXPLORER_MODE) {
-			$self->open_path_helper($self->get_updir);
-		} else {
-			$self->open_path($self->get_updir);
-		}
+		$self->open_path_helper($self->get_updir);
 	});
 	$self->[LOCATION_BAR]->pack_start($button, 0, 1, 0);
 
@@ -98,12 +95,7 @@ sub new {
 	$self->[PATH_COMBO]->signal_connect("changed", sub {
 		my ($combo) = @_;
 		return if ($combo->get_active == -1);
-
-		if ($self->[FILER]->{config}->get_option("Mode") == EXPLORER_MODE) {
-			$self->open_path_helper($combo->get_active_text);
-		} else {
-			$self->open_path($combo->get_active_text);
-		}
+		$self->open_path_helper($combo->get_active_text);
 	});
 
 	$self->[PATH_ENTRY] = $self->[PATH_COMBO]->get_child;
@@ -164,7 +156,12 @@ sub new {
 		
 		my $fp1 = $fi1->get_path;
 		my $fp2 = $fi2->get_path;
-	
+
+		# 1) sort directories first
+		# 2) then hidden items
+		# 3) sort by size/mode/date
+		# 4) if both items are equal, subsort by filename
+
 		if ((defined $fp1 and -d $fp1) and (defined $fp2 and -f $fp2)) {
 
 			return ($order eq "ascending") ? -1 : 1;
@@ -174,33 +171,50 @@ sub new {
 			return ($order eq "ascending") ? 1 : -1;
 
 		} else {
-			if ($sort_column_id == COL_SIZE) { # size
-
-				my $s1 = $fi1->get_raw_size;
-				my $s2 = $fi2->get_raw_size;
-
-				return $s1 - $s2;
-
-			} elsif ($sort_column_id == COL_MODE) { # mode
-
-				my $s1 = $fi1->get_raw_mode;
-				my $s2 = $fi2->get_raw_mode;
-				
-				return $s1 - $s2;
-
-			} elsif ($sort_column_id == COL_DATE) { # date
-
-				my $s1 = $fi1->get_raw_mtime;
-				my $s2 = $fi2->get_raw_mtime;
-
-				return $s1 - $s2;
-
+			if ($fi1->is_hidden and !$fi2->is_hidden) {
+				return ($order eq "ascending") ? -1 : 1;
+			} elsif ($fi2->is_hidden and !$fi1->is_hidden) {
+				return ($order eq "ascending") ? 1 : -1;
 			} else {
-				my $s1 = $model->get($a, $sort_column_id); 
-				my $s2 = $model->get($b, $sort_column_id); 
+				my ($s1,$s2,$s);
 
-				if (defined $s1 and defined $s2) {
-					return ($s1 cmp $s2);
+				if ($sort_column_id == COL_SIZE) { # size
+
+					$s1 = $fi1->get_raw_size;
+					$s2 = $fi2->get_raw_size;
+					$s = $s1 - $s2;
+
+				} elsif ($sort_column_id == COL_MODE) { # mode
+
+					$s1 = $fi1->get_raw_mode;
+					$s2 = $fi2->get_raw_mode;
+					$s = $s1 - $s2;
+
+				} elsif ($sort_column_id == COL_DATE) { # date
+
+					$s1 = $fi1->get_raw_mtime;
+					$s2 = $fi2->get_raw_mtime;
+					$s = $s1 - $s2;
+
+				} else {
+					$s1 = $model->get($a, $sort_column_id); 
+					$s2 = $model->get($b, $sort_column_id); 
+
+					if ($self->[FILER]->{config}->get_option("CaseInsensitiveSort") == 0) {
+						$s = ($s1 cmp $s2);
+					} else {
+						$s = (lc($s1) cmp lc($s2));
+					}
+				}
+
+				if ($s == 0) {
+					if ($self->[FILER]->{config}->get_option("CaseInsensitiveSort") == 0) {
+						return ($fi1->get_basename cmp $fi2->get_basename);
+					} else {
+						return (lc($fi1->get_basename) cmp lc($fi2->get_basename));
+					}
+				} else {
+					return $s;
 				}
 			}
 		}
@@ -212,6 +226,7 @@ sub new {
 	$col->set_sort_indicator(1);
 	$col->set_resizable(1);
 	$col->set_title("Name");
+	$col->set_sizing('GTK_TREE_VIEW_COLUMN_AUTOSIZE');
 
 	$cell = new Gtk2::CellRendererPixbuf;
 	$col->pack_start($cell, 0);
@@ -226,25 +241,26 @@ sub new {
 
 	my %cols = (
 		Size => COL_SIZE,
-		Mode => COL_MODE,
 		Type => COL_TYPE,
+		Mode => COL_MODE,
 		Date => COL_DATE,
 	);
 
-	while (my ($name,$n) = each %cols) { 
+	foreach my $name (sort {$cols{$a} <=> $cols{$b}} keys %cols) { 
+		my $n = $cols{$name};
+
 		$cell = new Gtk2::CellRendererText;
 		$col = Gtk2::TreeViewColumn->new_with_attributes($name, $cell, text => $n);
 		$col->set_sort_column_id($n);
 		$col->set_sort_indicator(1);
 		$col->set_resizable(1);
+		$col->set_sizing('GTK_TREE_VIEW_COLUMN_AUTOSIZE');
 
 		$self->[TREEMODEL]->set_sort_func($n, $sort_func); 
 		$self->[TREEVIEW]->append_column($col);
 	}
 
 	$self->init_icons;
-
-	$self->[MOUSE_MOTION_SELECT] = 0;
 
 	return $self;
 }
@@ -580,30 +596,27 @@ sub update_navigation_buttons {
 		$path = catfile(splitdir($path), $_);
 		
 		if (not defined $self->[NAVIGATION_BUTTONS]->{$path}) {
-			$button = new Gtk2::RadioButton($self->[NAVIGATION_BUTTONS]->{$rootdir}, basename($path));
+			$button = new Gtk2::RadioButton($self->[NAVIGATION_BUTTONS]->{$rootdir}, basename($path) || File::Spec->rootdir);
 			$button->set(draw_indicator => 0); # i'm evil
 
 			$button->signal_connect(toggled => sub {
-				my ($widget, $data) = @_;
-				my @w = $widget->get_children;
+				my ($widget,$data) = @_;
 
+		 		my $label = $widget->get_child;
+				my $pc = $label->get_pango_context;
+				my $fd = $pc->get_font_description;
+			
 				if ($widget->get_active) {
-					if ($data eq $rootdir and $] <= 5.008007) {
-						$w[0]->set_markup("<b>$rootdir</b>");
-					} else {
-						$w[0]->set_markup(sprintf("<b>%s</b>", basename($data)));
-					}
+					$fd->set_weight('PANGO_WEIGHT_BOLD');
+					$label->modify_font($fd);
 
 					# avoid an endless loop/recursion. 
 					$self->open_path($data) if ($data ne $self->get_pwd);
 				} else {
-					if ($data eq $rootdir and $] <= 5.008007) {
-						$w[0]->set_text($rootdir);
-					} else {
-						$w[0]->set_text(basename($data));
-					}
+					$fd->set_weight('PANGO_WEIGHT_NORMAL');
+					$label->modify_font($fd);
 				}
-			}, $path);
+			}, abs_path($path));
 
 			$self->[NAVIGATION_BOX]->pack_start($button,0,0,0);
 			$self->[NAVIGATION_BUTTONS]->{$path} = $button;
@@ -727,13 +740,6 @@ sub open_path_helper {
 
 	if (defined $self->[NAVIGATION_BUTTONS]->{$filepath}) {
 		$self->[NAVIGATION_BUTTONS]->{$filepath}->set(active => 1);
-		my @w = $self->[NAVIGATION_BUTTONS]->{$filepath}->get_children();
-
-# 		if ($filepath eq File::Spec->rootdir and $] <= 5.008007) {
-# 			$w[0]->set_markup(sprintf("<b>%s</b>", File::Spec->rootdir));
-# 		} else {
-# 			$w[0]->set_markup(sprintf("<b>%s</b>", basename($filepath)));
-# 		}
 	} else {
 		$self->open_path($filepath);
 	}
@@ -755,7 +761,14 @@ sub open_path {
 	}
 
 	opendir (DIR, $filepath) or return Filer::Dialog->msgbox_error("$filepath: $!");
-	my @dir_contents = sort readdir(DIR);
+	my @dir_contents;
+	
+	if ($self->[FILER]->{config}->get_option("CaseInsensitiveSort") == 0) {
+		@dir_contents = sort readdir(DIR);
+	} else {
+		@dir_contents = sort { lc($a) cmp lc($b) } readdir(DIR);
+	}
+	
 	closedir(DIR);
 
 	@dir_contents = File::Spec->no_upwards(@dir_contents);
@@ -768,9 +781,9 @@ sub open_path {
 	delete $self->[SELECTED_ITER];
 
 	$self->[FILEPATH] = $filepath;
-	$self->[TREEMODEL]->clear;
 
 	$self->update_navigation_buttons($filepath);
+	$self->[TREEMODEL]->clear;
 
 	my $show_hidden = $self->[FILER]->{config}->get_option('ShowHiddenFiles');
 	my @dirs = grep { -d "$filepath/$_" } @dir_contents;
@@ -791,8 +804,6 @@ sub open_path {
 # 	 	use Time::HiRes qw( gettimeofday tv_interval );
 # 	 	$t0 = [gettimeofday];
 # 	}
-
-	use Unicode::String qw(utf8);
 
 	foreach my $file (@dirs,@files) {
 		next if ($file =~ /^\.+\w+/ and !$show_hidden);
@@ -834,9 +845,7 @@ sub open_path {
 # 	}
 
 	$total_size = Filer::Tools->calculate_size($total_size);
-
-	$self->[TREEVIEW]->columns_autosize;
-
+	
 	$self->[PATH_ENTRY]->set_text($self->[FILEPATH]);
 	$self->[PATH_COMBO]->insert_text(0, $self->[FILEPATH]);
 	$self->[FOLDER_STATUS] = "$dirs_count ($dirs_count_total) directories and $files_count ($files_count_total) files: $total_size";

@@ -25,6 +25,7 @@ $default_config = {
 	PathLeft		=> $ENV{HOME},
 	PathRight		=> $ENV{HOME},
 	ShowHiddenFiles 	=> 1,
+	CaseInsensitiveSort 	=> 1,
 	Mode			=> 0,
 	ConfirmCopy		=> 1,
 	ConfirmMove		=> 1,

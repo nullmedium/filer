@@ -15,7 +15,7 @@ sub new {
 	my $self = bless {}, $class;
 	
 	$self->{filepath} = utf8($filepath)->latin1; 
-	$self->{stat} = [ lstat($self->{filepath}) ];
+	$self->{stat} = [ stat($self->{filepath}) ];
 	$self->{type} = (-l $self->{filepath}) ? "inode/symlink" : mimetype($self->{filepath});
 
 	return $self;
@@ -95,6 +95,11 @@ sub get_gid {
 sub get_mode {
 	my ($self) = @_; 
 	return format_mode($self->get_raw_mode);
+}
+
+sub is_hidden {
+	my ($self) = @_;
+	return ($self->get_basename =~ /^\.\w+/);
 }
 
 1;

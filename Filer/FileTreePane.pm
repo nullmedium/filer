@@ -399,7 +399,7 @@ sub DirRead {
 	my $show_hidden = $self->[FILER]->{config}->get_option('ShowHiddenFiles');
 
 	opendir (DIR, $dir) || return Filer::Dialog->msgbox_error("$dir: $!");
-	my @dir_contents = sort readdir(DIR);
+	my @dir_contents = sort { lc($a) cmp lc($b) } readdir(DIR);
 	closedir(DIR);
 	
 	@dir_contents = File::Spec->no_upwards(@dir_contents);

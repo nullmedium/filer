@@ -325,6 +325,12 @@ sub create_main_window {
 		accelerator => "<control>H",
 		is_active => $self->{config}->get_option("ShowHiddenFiles"),
 	},
+	{
+		name => "case-sort-action",
+		label => "Case Insensitive Sort",
+		callback => sub { $self->case_sort_cb($_[0]) },
+		is_active => $self->{config}->get_option("CaseInsensitiveSort"),
+	},
 	];
 
 	$actions->add_actions($a_entries);
@@ -504,6 +510,14 @@ sub hidden_cb {
 	return 1;
 }
 
+sub case_sort_cb {
+	my ($self,$action) = @_;
+	$self->{config}->set_option('CaseInsensitiveSort', ($action->get_active) ? 1 : 0);
+	$self->{pane}->[LEFT]->refresh;
+	$self->{pane}->[RIGHT]->refresh;
+	return 1;
+}
+
 sub ask_copy_cb {
 	my ($self,$action) = @_;
 	$self->{config}->set_option('ConfirmCopy', ($action->get_active) ? 1 : 0);
@@ -596,7 +610,7 @@ sub select_cb {
 		$p = $self->{active_pane};
 	}
 
-	$p->select_dialog(Filer::SelectDialog->SELECT);
+	$p->select_dialog(Filer::FilePane->SELECT);
 }
 
 sub unselect_cb {
@@ -609,7 +623,7 @@ sub unselect_cb {
 		$p = $self->{active_pane};
 	}
 
-	$p->select_dialog(Filer::SelectDialog->UNSELECT);
+	$p->select_dialog(Filer::FilePane->UNSELECT);
 }
 
 sub search_cb {
