@@ -73,12 +73,7 @@ sub set_properties_dialog {
 	my $type;
 
 	if ($filer->{active_pane}->count_items == 1) {
-		if ($filer->{active_pane}->get_type eq "TREE") {
-			$fileinfo = new Filer::FileInfo($filer->{active_pane}->get_item);
-		} else {
-			$fileinfo = $filer->{active_pane}->get_fileinfo->[0];
-		}
-
+		$fileinfo = $filer->{active_pane}->get_fileinfo->[0];
 		@stat = @{$fileinfo->get_stat};
 		$owner = $fileinfo->get_uid;
 		$group = $fileinfo->get_gid;

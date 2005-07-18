@@ -302,6 +302,9 @@ sub show_popup_menu {
 	$uimanager->get_widget('/ui/list-popupmenu/archive-menu')->set_sensitive(1);
 	$uimanager->get_widget('/ui/list-popupmenu/Properties')->set_sensitive(1);
 
+	my $bookmarks = new Filer::Bookmarks($self->[FILER]);
+	$uimanager->get_widget('/ui/list-popupmenu/Bookmarks')->set_submenu($bookmarks->bookmarks_menu);
+
 	my ($p) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
 
 	if (defined $p) {
@@ -310,23 +313,21 @@ sub show_popup_menu {
 			$self->[TREESELECTION]->select_path($p);
 		}
 
-		my $mime = new Filer::Mime;
-		my $fi = $self->[TREEMODEL]->get($self->[SELECTED_ITER], COL_FILEINFO);
-		my $type = $fi->get_mimetype;
-
-		# Customize archive submenu
-		if (! Filer::Archive::is_supported_archive($type)) {
-			$uimanager->get_widget('/ui/list-popupmenu/archive-menu/Extract')->set_sensitive(0);
-		}
-
-		my $bookmarks = new Filer::Bookmarks($self->[FILER]);
-		$uimanager->get_widget('/ui/list-popupmenu/Bookmarks')->set_submenu($bookmarks->bookmarks_menu);
-
 		if ($self->count_items == 1) {
+			my $fi = $self->[TREEMODEL]->get($self->[SELECTED_ITER], COL_FILEINFO);
+			my $type = $fi->get_mimetype;
+
+			# Customize archive submenu
+			if (! Filer::Archive::is_supported_archive($type)) {
+				$uimanager->get_widget('/ui/list-popupmenu/archive-menu/Extract')->set_sensitive(0);
+			}
+
+			# add and create Open submenu
 			my $commands_menu = new Gtk2::Menu;
 			$item = $uimanager->get_widget('/ui/list-popupmenu/Open');
 			$item->set_submenu($commands_menu);
 
+			my $mime = new Filer::Mime;
 			foreach ($mime->get_commands($type)) {
 				$item = new Gtk2::MenuItem(basename($_));
 				$item->signal_connect("activate", sub {
@@ -394,12 +395,7 @@ sub treeview_event_cb {
 	$self->[FILER]->{widgets}->{statusbar}->push(1,$self->[FOLDER_STATUS]);
 
 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'BackSpace'})) {
-		if ($self->[FILER]->{config}->get_option("Mode") == EXPLORER_MODE) {
-			$self->open_path_helper($self->get_updir);
-		} else {
-			$self->open_path($self->get_updir);
-		}
-
+		$self->open_path_helper($self->get_updir);
 		return 1;
 	}
 

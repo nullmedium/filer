@@ -333,6 +333,11 @@ sub get_items {
 	return [ map { $self->[TREEMODEL]->get($_, COL_FILEPATH) } @{$self->get_iters} ];
 }
 
+sub get_fileinfo {
+	my ($self) = @_;
+	return [ map { Filer::FileInfo->new($self->[TREEMODEL]->get($_, COL_FILEPATH)) } @{$self->get_iters} ];
+}
+
 sub set_item {
 	my ($self,$fi) = @_;
 
