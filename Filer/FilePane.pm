@@ -330,9 +330,9 @@ sub show_popup_menu {
 
 			# Customize archive submenu
 			if (Filer::Archive::is_supported_archive($type)) {
-				$uimanager->get_widget('/ui/list-popupmenu/archive-menu/Extract')->set_sensitive(0);
-			} else {
 				$uimanager->get_widget('/ui/list-popupmenu/archive-menu/Extract')->set_sensitive(1);
+			} else {
+				$uimanager->get_widget('/ui/list-popupmenu/archive-menu/Extract')->set_sensitive(0);
 			}
 
 			# add and create Open submenu
