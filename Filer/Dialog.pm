@@ -91,7 +91,7 @@ sub ask_overwrite_dialog {
 }
 
 sub ask_command_dialog {
-	my ($str,$default) = @_;
+	my ($class,$str,$default) = @_;
 	my ($dialog,$label,$entry,$button);
 	my $text;
 

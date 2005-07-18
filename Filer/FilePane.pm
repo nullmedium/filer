@@ -646,11 +646,7 @@ sub open_file {
 	return 0 if ((not defined $filepath) or (not -R $filepath));
 
 	if (-d $filepath) {
-		if ($self->[FILER]->{config}->get_option("Mode") == EXPLORER_MODE) {
-			$self->open_path_helper($filepath);
-		} else {
-			$self->open_path($filepath);
-		}
+		$self->open_path_helper($filepath);
 	} else {
 		my $mime = new Filer::Mime($self->[FILER]);
 		my $type = $fileinfo->get_mimetype;

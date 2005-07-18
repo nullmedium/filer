@@ -461,8 +461,7 @@ sub open_with_cb {
 
 sub open_terminal_cb {
 	my ($self) = @_;
-
-	my $path = $self->{active_pane}->get_pwd;
+	my $path = $self->{active_pane}->get_item;
 
 	if (-d $path) {
 		my $term = $self->{config}->get_option("Terminal");
