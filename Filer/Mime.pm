@@ -161,6 +161,8 @@ sub set_commands {
 	my $mime = $self->get;
 	$mime->{$type}->[COMMANDS] = $commands;
 	$self->store($mime);
+
+	print @{$commands}, "\n";
 }
 
 sub get_default_command {
@@ -272,7 +274,10 @@ sub file_association_dialog {
 		my ($type) = @_;
 		$commands_model->clear;
 
+		print $type, "\n";
+		
 		foreach ($self->get_commands($type)) {
+			print $_, "\n";
 			$commands_model->set($commands_model->append, 0, $_);
 		}
 	};
@@ -324,9 +329,13 @@ sub file_association_dialog {
 	$selection = $treeview->get_selection;
 	$selection->signal_connect("changed", sub {
 		my ($selection) = @_;
-		my $iter = $selection->get;
+		my $iter = $selection->get_selected;
+
 		if (defined $iter) {
 			$type = $types_model->get($iter, 1);
+
+			print $type, "\n";
+
 			&{$refresh_commands}($type);
 		}
 			
@@ -346,7 +355,7 @@ sub file_association_dialog {
 	$selection = $treeview->get_selection;
 	$selection->signal_connect("changed", sub {
 		my ($selection) = @_;
-		$command_iter = $selection->get;
+		$command_iter = $selection->get_selected;
 		$command = undef;
 		
 		if (defined $command_iter) {
