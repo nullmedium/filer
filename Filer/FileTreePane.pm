@@ -222,10 +222,12 @@ sub treeview_event_cb {
 			$self->[TREESELECTION]->select_path($p);
 		}
 
+		$self->set_focus;
 		return 1;
 	}
 
 	if ($e->type eq "button-release" and $e->button == 2) {
+		$self->set_focus;
 		$self->[MOUSE_MOTION_SELECT] = 0;
 		return 1;
 	}
@@ -238,10 +240,13 @@ sub treeview_event_cb {
 			$self->[TREESELECTION]->unselect_all;
 			$self->[TREESELECTION]->select_range($p_old,$p_new);
 		}
+
+		$self->set_focus;
 		return 0;
 	}
 
 	if ($e->type eq "button-press" and $e->button == 3) {
+		$self->set_focus;
 		$self->show_popup_menu($e);
 		return 1;
 	}
