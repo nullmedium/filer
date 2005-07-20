@@ -396,7 +396,8 @@ sub run_dialog {
 		} else {
 			my $term = $self->{filer}->{config}->get_option("Terminal");
 			my @t = split /\s+/, $term;
-			Filer::Tools->start_program(@t, "-x", $command, $file);
+			my @c = split /\s+/, $command;
+			Filer::Tools->start_program(@t, "-x", @c, $file);
 		}
 	}
 
