@@ -96,10 +96,10 @@ sub _walk {
 		}
 
 		opendir(my $dirh, $path) || return FAILED;
+		my @dir_contents = readdir($dirh);
+		@dir_contents = File::Spec->no_upwards(@dir_contents);
 
-		foreach my $f (readdir($dirh)) {
-			next if ($f eq "." or $f eq "..");
-
+		foreach my $f (@dir_contents) {
 			# be portable.
 			my @dirs = File::Spec->splitdir($path);
 			my $path = File::Spec->catfile(@dirs, $f);

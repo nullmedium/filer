@@ -47,7 +47,7 @@ $default_mimetypes = {
 	'audio/x-mpegurl'				=> [ "$main::libpath/icons/mimetypes/sound.png",		[] ],
 	'audio/x-pn-realaudio'				=> [ "$main::libpath/icons/mimetypes/real_doc.png",		[] ],
 	'audio/x-wav'					=> [ "$main::libpath/icons/mimetypes/sound.png",		[] ],
-	'image/gif	'				=> [ "$main::libpath/icons/mimetypes/images.png",		[] ],
+	'image/gif'					=> [ "$main::libpath/icons/mimetypes/images.png",		[] ],
 	'image/jpeg'					=> [ "$main::libpath/icons/mimetypes/images.png",		[] ],
 	'image/png'					=> [ "$main::libpath/icons/mimetypes/images.png",		[] ],
 	'image/svg+xml'					=> [ "$main::libpath/icons/mimetypes/vectorgfx.png",		[] ],
@@ -77,39 +77,79 @@ sub new {
 	my ($class,$filer) = @_;
 	my $self = bless {}, $class;
 	$self->{filer} = $filer;
-	$self->{cfg_home} = File::Spec->catfile((new File::BaseDir)->xdg_config_home, "/filer");
-	$self->{mime_store} = File::Spec->catfile(File::Spec->splitdir($self->{cfg_home}), "mime");
+	$self->{mime_store} = Filer::Tools->catpath((new File::BaseDir)->xdg_config_home, "filer", "mime.cfg");
+	$self->{mime_store_old} = Filer::Tools->catpath((new File::BaseDir)->xdg_config_home, "filer", "mime");
 
+	if (-e $self->{mime_store_old}) {
+		my $stuff = Storable::retrieve($self->{mime_store_old});
+		$self->store($stuff);
+		unlink($self->{mime_store_old});
+	}
+	
 	if (! -e $self->{mime_store}) {
 		$self->store($default_mimetypes);
 	}
-	
 
 	return $self;
 }
 
 sub store {
 	my ($self,$mime) = @_;
-	Storable::store($mime, $self->{mime_store});
+
+	open(my $cfg, ">$self->{mime_store}") || die "$self->{mime_store}: $!\n\n";
+
+	while (my ($key,$value) = each %{$mime}) {
+		my $icon_path = $value->[ICON];
+		my $cmds = join ":", @{$value->[COMMANDS]};
+		print $cfg "$key=$icon_path:$cmds\n";
+	}
+
+	close($cfg);
 }
 
 sub get {
 	my ($self) = @_;
-	return Storable::retrieve($self->{mime_store});
+	my $mime = {};
+
+	open (my $cfg, "$self->{mime_store}") || die "$self->{mime_store}: $!\n\n";
+
+	while (<$cfg>) {
+		chomp $_;
+		my ($key,$value) = split /=/, $_;
+		my ($icon_path,@commands) = split /:/, $value;
+		$mime->{$key} = [ $icon_path, [ @commands ]];
+	}
+
+	close($cfg);
+	
+	return $mime;
 }
 
 sub get_mimetypes {
 	my ($self) = @_;
 	my $mime = $self->get;
-
+	
 	return keys %{$mime};
+}
+
+sub get_mimetype_groups {
+	my ($self) = @_;
+	my $groups;
+
+	foreach ($self->get_mimetypes) {
+		if ($_ =~ /(.+)\/(.+)/) {
+			$groups->{$1} = 1;
+		}
+	}		
+
+	return (sort keys %{$groups});
 }
 
 sub add_mimetype {
 	my ($self,$type) = @_;
 	my $mime = $self->get;
 
-	$mime->{$type} = [ "$main::libpath/icons/default.png", []];
+	$mime->{$type} = [ $self->get_icon("default"), [] ];
 
 	$self->store($mime);
 }
@@ -117,8 +157,6 @@ sub add_mimetype {
 sub delete_mimetype {
 	my ($self,$type) = @_;
 	my $mime = $self->get;
-
-	delete $mime->{$type};
 
 	$self->store($mime);
 }
@@ -128,7 +166,17 @@ sub get_icon {
 	my $mime = $self->get;
 
 	if (defined $mime->{$type}->[ICON]) {
-		return $mime->{$type}->[ICON];
+		my $path = $mime->{$type}->[ICON];
+
+		if (-e $path) {
+			return $path;
+		} else {
+			if (defined $default_mimetypes->{$_}->[ICON]) {
+				return $default_mimetypes->{$_}->[ICON];
+			} else {
+				return $default_mimetypes->{default}->[ICON];
+			}
+		}
 	} else {
 		if (defined $default_mimetypes->{$type}->[ICON]) {
 			return $default_mimetypes->{$type}->[ICON];
@@ -140,8 +188,24 @@ sub get_icon {
 
 sub get_icons {
 	my ($self) = @_;
-	my %icons = map { $_ => Filer::Tools->intelligent_scale(Gtk2::Gdk::Pixbuf->new_from_file($self->get_icon($_)), 22) } $self->get_mimetypes;
-	return \%icons;
+	my $mime = $self->get;	
+	my $icons = {};
+
+	foreach ($self->get_mimetypes) {
+		my $path = $mime->{$_}->[ICON];
+
+		if (! -e $path) {
+			if (defined $default_mimetypes->{$_}->[ICON]) {
+				$path = $default_mimetypes->{$_}->[ICON];
+			} else {
+				$path = $default_mimetypes->{default}->[ICON];
+			}
+		}
+
+		$icons->{$_} = Filer::Tools->intelligent_scale(Gtk2::Gdk::Pixbuf->new_from_file($path), 22);
+	}
+
+	return $icons;
 }
 
 sub set_icon {
@@ -161,8 +225,6 @@ sub set_commands {
 	my $mime = $self->get;
 	$mime->{$type}->[COMMANDS] = $commands;
 	$self->store($mime);
-
-	print @{$commands}, "\n";
 }
 
 sub get_default_command {
@@ -253,239 +315,7 @@ sub set_icon_dialog {
 
 sub file_association_dialog {
 	my ($self) = @_;
-	my ($dialog,$bbox,$hbox,$vbox,$sw,$treeview);
-	my ($types_model,$commands_model,$selection);
-	my ($cell,$col,$button);
-
-	my $type = "";
-	my $command = undef;
-	my $command_iter = undef;
-
-	my $refresh_types = sub {
-		$types_model->clear;
-
-		foreach (sort $self->get_mimetypes) {
-			next if ($_ eq 'default');
-			$types_model->set($types_model->append, 0, Gtk2::Gdk::Pixbuf->new_from_file($self->get_icon($_)), 1, $_);
-		}
-	};
-
-	my $refresh_commands = sub {
-		my ($type) = @_;
-		$commands_model->clear;
-
-		print $type, "\n";
-		
-		foreach ($self->get_commands($type)) {
-			print $_, "\n";
-			$commands_model->set($commands_model->append, 0, $_);
-		}
-	};
-
-	my $set_commands = sub {
-		my @commands = ();
-
-		$commands_model->foreach(sub {
-			push @commands, $_[0]->get($_[2], 0);
-			return 0;
-		});
-
-		$self->set_commands($type,\@commands);
-	};
-
-	$dialog = new Gtk2::Dialog("File Association", undef, 'modal', 'gtk-close' => 'close');
-	$dialog->set_size_request(600,400);
-	$dialog->set_has_separator(1);
-	$dialog->set_position('center');
-	$dialog->set_modal(1);
-
-	$hbox = new Gtk2::HBox(0,0);
-	$dialog->vbox->pack_start($hbox,1,1,0);
-
-	$sw = new Gtk2::ScrolledWindow;
-	$sw->set_policy('automatic','automatic');
-	$sw->set_shadow_type('etched-in');
-	$hbox->pack_start($sw,1,1,0);
-
-	$types_model = new Gtk2::ListStore('Glib::Object','Glib::String');
-	$treeview = Gtk2::TreeView->new_with_model($types_model);
-	$treeview->set_rules_hint(1);
-	$treeview->set_headers_visible(0);
-
-	# a column with a pixbuf renderer and a text renderer
-	$col = Gtk2::TreeViewColumn->new;
-	$col->set_title("Name");
-
-	$cell = Gtk2::CellRendererPixbuf->new;
-	$col->pack_start($cell, 0);
-	$col->add_attribute($cell, pixbuf => 0);
-
-	$cell = Gtk2::CellRendererText->new;
-	$col->pack_start($cell, 1);
-	$col->add_attribute($cell, text => 1);
-
-	$treeview->append_column($col);
-
-	$selection = $treeview->get_selection;
-	$selection->signal_connect("changed", sub {
-		my ($selection) = @_;
-		my $iter = $selection->get_selected;
-
-		if (defined $iter) {
-			$type = $types_model->get($iter, 1);
-
-			print $type, "\n";
-
-			&{$refresh_commands}($type);
-		}
-			
-	});
-	$sw->add($treeview);
-
-	$sw = new Gtk2::ScrolledWindow;
-	$sw->set_policy('automatic','automatic');
-	$sw->set_shadow_type('etched-in');
-	$hbox->pack_start($sw,1,1,0);
-
-	$commands_model = new Gtk2::ListStore('Glib::String');
-
-	$treeview = Gtk2::TreeView->new_with_model($commands_model);
-	$treeview->insert_column_with_attributes(0, "Application Preference Order", Gtk2::CellRendererText->new, text => 0);
-
-	$selection = $treeview->get_selection;
-	$selection->signal_connect("changed", sub {
-		my ($selection) = @_;
-		$command_iter = $selection->get_selected;
-		$command = undef;
-		
-		if (defined $command_iter) {
-			$command = $commands_model->get($command_iter, 0);
-		}
-	});
-	$sw->add($treeview);
-
-	$bbox = new Gtk2::VButtonBox;
-	$bbox->set_layout_default('start');
-	$bbox->set_spacing_default(5);
-	$hbox->pack_start($bbox,0,0,2);
-
-	$button = Gtk2::Button->new_from_stock('gtk-add');
-	$button->signal_connect("clicked", sub {
-		my $fs = new Gtk2::FileChooserDialog("Select Command", undef, 'GTK_FILE_CHOOSER_ACTION_OPEN', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
-
-		if ($fs->run eq 'ok') {
-			$commands_model->set($commands_model->append, 0, $fs->get_filename);
-			&{$set_commands};
-		}
-
-		$fs->destroy;
-	});
-	$bbox->add($button);
-
-	$button = Gtk2::Button->new_from_stock('gtk-edit');
-	$button->signal_connect("clicked", sub {
-		return if (not defined $command_iter);
-
-		my $fs = new Gtk2::FileChooserDialog("Select Command", undef, 'GTK_FILE_CHOOSER_ACTION_OPEN', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
-		$fs->set_filename($command);
-
-		if ($fs->run eq 'ok') {
-			$commands_model->set($command_iter, 0, $fs->get_filename);
-			&{$set_commands};
-		}
-		$fs->destroy;
-	});
-	$bbox->add($button);
-
-	$button = Gtk2::Button->new_from_stock('gtk-remove');
-	$button->signal_connect("clicked", sub {
-		return if (not defined $command_iter);
-		
-		$commands_model->remove($command_iter);
-		&{$set_commands};
-	});
-	$bbox->add($button);
-
-	$button = Gtk2::Button->new_from_stock('gtk-go-up');
-	$button->signal_connect("clicked", sub {
-		my $treepath = $commands_model->get_path($command_iter);
-
-		if ($treepath->prev) {
-			$commands_model->swap($commands_model->get_iter($treepath),$command_iter);
-			&{$set_commands};
-		}
-	});
-	$bbox->add($button);
-
-	$button = Gtk2::Button->new_from_stock('gtk-go-down');
-	$button->signal_connect("clicked", sub {
-		my $treepath = $commands_model->get_path($command_iter);
-		$treepath->next;
-	
-		my $b = $commands_model->get_iter($treepath);
-
-		if ($b) {
-			$commands_model->swap($command_iter,$b);
-			&{$set_commands};
-		}
-	});
-	$bbox->add($button);
-
-	$bbox = new Gtk2::HButtonBox;
-	$bbox->set_layout_default('start');
-	$bbox->set_spacing_default(5);
-	$dialog->vbox->pack_start($bbox, 0,1,0);
-
-	$button = Gtk2::Button->new_from_stock('gtk-add');
-	$button->signal_connect("clicked", sub {
-		my ($dialog,$hbox,$label,$entry);
-
-		$dialog = new Gtk2::Dialog("Add mimetype", undef, 'modal', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
-		$dialog->set_position('center');
-		$dialog->set_modal(1);
-
-		$hbox = new Gtk2::HBox(0,0);
-		$dialog->vbox->pack_start($hbox, 1,1,5);
-
-		$label = new Gtk2::Label;
-		$label->set_text("Mimetype: ");
-		$hbox->pack_start($label, 1,1,2);
-
-		$entry = new Gtk2::Entry;
-		$entry->set_text("");
-		$hbox->pack_start($entry, 1,1,0);
-
-		$dialog->show_all;
-
-		if ($dialog->run eq 'ok') {
-			$self->add_mimetype($entry->get_text);
-		}
-
-		$dialog->destroy;
-		&{$refresh_types};
-	});
-	$bbox->add($button);
-
-	$button = Gtk2::Button->new_from_stock('gtk-remove');
-	$button->signal_connect("clicked", sub {
-		$self->delete_mimetype($type);
-		&{$refresh_types};
-	});
-	$bbox->add($button);
-
-	$button = Gtk2::Button->new("Set Icon");
-	$button->signal_connect("clicked", sub {
-		$self->set_icon_dialog($type);
-		&{$refresh_types};
-	});
-	$bbox->add($button);
-
-	&{$refresh_types};
-
-	$dialog->show_all;
-
-	$dialog->run;
-	$dialog->destroy;
+	new Filer::FileAssociationDialog($self);
 }
 
 sub run_dialog {
@@ -524,7 +354,8 @@ sub run_dialog {
 
 	$command_combo = Gtk2::ComboBoxEntry->new_text;
 	foreach ($self->get_commands($type)) { $command_combo->append_text($_) }
- 	$table->attach($command_combo, 1, 2, 1, 2, [ "expand","fill" ], [], 0, 0);
+	$command_combo->set_active(0);
+	$table->attach($command_combo, 1, 2, 1, 2, [ "expand","fill" ], [], 0, 0);
 
 	$cmd_browse_button = new Gtk2::Button;
 	$cmd_browse_button->add(Gtk2::Image->new_from_stock('gtk-open', 'button'));
@@ -556,15 +387,16 @@ sub run_dialog {
 		my $file = $fileinfo->get_path;
 
 		if ($remember_checkbutton->get_active) {
-			$self->set_default_command($type, $command);
+			$self->set_default_command($type,$command);
 		}
 
-		if ($run_terminal_checkbutton->get_active) {
+		if (! $run_terminal_checkbutton->get_active) {
+			Filer::Tools->start_program($command, $file);
+		} else {
 			my $term = $self->{filer}->{config}->get_option("Terminal");
-			$command = "$term -x $command";
+			my @t = split /\s+/, $term;
+			Filer::Tools->start_program(@t, "-x", $command, $file);
 		}
-		
-		system("$command '$file' & exit");
 	}
 
 	$dialog->destroy;

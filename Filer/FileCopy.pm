@@ -41,7 +41,7 @@ sub new {
 
 sub filecopy {
 	my ($self,$source,$dest) = @_;
-	
+
 	my @stat = stat($source); 
 	my $mode = $stat[2];
 	my $size = $stat[7];

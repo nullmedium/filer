@@ -181,6 +181,7 @@ sub set_properties_dialog {
 
 				$icon_entry->set_text($mimeicon);
 				$icon_image->set_from_pixbuf(Filer::Tools->intelligent_scale($pixbuf,50));
+
 				$mime->set_icon($type, $mimeicon);
 			}
 
@@ -194,9 +195,9 @@ sub set_properties_dialog {
 		$dialog->vbox->pack_start($label,0,0,5);
 	}
 
-	# Properties
+	# Permissions
 
-	$frame = new Gtk2::Frame("<b>Properties</b>");
+	$frame = new Gtk2::Frame("<b>Permissions</b>");
 	$frame->get_label_widget->set_use_markup(1); 
 	$frame->set_label_align(0.0,0.0);
 	$frame->set_shadow_type('none');

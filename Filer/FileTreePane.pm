@@ -17,7 +17,7 @@
 package Filer::FileTreePane;
 
 use Cwd qw(abs_path);
-use File::Spec::Functions qw(catfile splitdir);
+use File::Basename;
 
 use Filer::Constants;
 use Filer::DND;
@@ -41,11 +41,7 @@ use constant MOUSE_MOTION_Y_POS_OLD 	=> $i++;
 
 use constant COL_ICON		=> 0;
 use constant COL_NAME		=> 1;
-use constant COL_FILEPATH	=> 2;
-
-Memoize::memoize("abs_path");
-Memoize::memoize("catfile");
-Memoize::memoize("splitdir");
+use constant COL_FILEINFO	=> 2;
 
 sub new {
 	my ($class,$filer,$side) = @_;
@@ -54,6 +50,7 @@ sub new {
 
 	$self->[FILER] = $filer;
 	$self->[SIDE] = $side;
+	$self->[MOUSE_MOTION_SELECT] = 0;
 
 	$self->[VBOX] = new Gtk2::VBox(0,0);
 	$self->[VBOX]->set_size_request(200,0);
@@ -74,7 +71,7 @@ sub new {
 	$self->[TREEVIEW]->signal_connect("row-expanded", sub { $self->treeview_row_expanded_cb(@_) });
 	$self->[TREEVIEW]->signal_connect("row-collapsed", sub { $self->treeview_row_collapsed_cb(@_) });
 
-	$self->[TREEMODEL] = new Gtk2::TreeStore('Glib::Object','Glib::String','Glib::String');
+	$self->[TREEMODEL] = new Gtk2::TreeStore('Glib::Object','Glib::String','Glib::Scalar');
 	$self->[TREEVIEW]->set_model($self->[TREEMODEL]);
 
 	# Drag and Drop
@@ -104,14 +101,8 @@ sub new {
 
 	$self->[TREEVIEW]->append_column($col);
 
-# 	$cell = new Gtk2::CellRendererText;
-# 	$col = Gtk2::TreeViewColumn->new_with_attributes("Path", $cell, text => COL_FILEPATH);
-# 	$self->[TREEVIEW]->append_column($col);
-
 	$self->init_icons;
 	$self->CreateRootNodes();
-
-	$self->[MOUSE_MOTION_SELECT] = 0;
 
 	return $self;
 }
@@ -213,7 +204,6 @@ sub treeview_event_cb {
 	}
 
 	if ($e->type eq "button-press" and $e->button == 1) {
-		$self->set_focus;
 		my ($p) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
 
 		if (! defined $p) {
@@ -230,8 +220,6 @@ sub treeview_event_cb {
 		if (defined $p) {
 			$self->[TREESELECTION]->unselect_all;
 			$self->[TREESELECTION]->select_path($p);
-		} else {
-			$self->[TREESELECTION]->unselect_all;
 		}
 
 		return 1;
@@ -254,7 +242,6 @@ sub treeview_event_cb {
 	}
 
 	if ($e->type eq "button-press" and $e->button == 3) {
-		$self->set_focus;
 		$self->show_popup_menu($e);
 		return 1;
 	}
@@ -264,9 +251,9 @@ sub treeview_event_cb {
 
 sub treeview_row_expanded_cb {
 	my ($self,$treeview,$iter,$path) = @_;
-	my $dir = $self->[TREEMODEL]->get($iter, COL_FILEPATH);
+	my $fi = $self->[TREEMODEL]->get($iter, COL_FILEINFO);
 
-	$self->DirRead($dir,$iter);
+	$self->DirRead($fi->get_path,$iter);
 
 	return 1;
 }
@@ -306,7 +293,12 @@ sub set_focus {
 
 sub filepath {
 	my ($self) = @_;
-	return abs_path($self->[FILEPATH]);
+	
+	if (defined $self->[FILEPATH]) {
+		return abs_path($self->[FILEPATH]);
+	} else {
+		return undef;
+	}
 }
 
 *get_pwd = \&filepath;
@@ -315,7 +307,7 @@ sub filepath {
 
 sub get_updir { 
 	my ($self) = @_;
-	return abs_path(catfile(splitdir($self->[FILEPATH]), File::Spec->updir));
+	return Filer::Tools->catpath($self->[FILEPATH], File::Spec->updir);
 }
 
 sub get_iter {
@@ -330,12 +322,12 @@ sub get_iters {
 
 sub get_items {
 	my ($self) = @_;
-	return [ map { $self->[TREEMODEL]->get($_, COL_FILEPATH) } @{$self->get_iters} ];
+	return [ map { $self->[TREEMODEL]->get($_, COL_FILEINFO)->get_path } @{$self->get_iters} ];
 }
 
 sub get_fileinfo {
 	my ($self) = @_;
-	return [ map { Filer::FileInfo->new($self->[TREEMODEL]->get($_, COL_FILEPATH)) } @{$self->get_iters} ];
+	return [ map { $self->[TREEMODEL]->get($_, COL_FILEINFO) } @{$self->get_iters} ];
 }
 
 sub set_item {
@@ -344,13 +336,14 @@ sub set_item {
 	$self->[FILEPATH] = $fi->get_path;
 	$self->[TREEMODEL]->set($self->[FILEPATH_ITER], 
 		COL_NAME, $fi->get_basename,
-		COL_FILEPATH, $self->[FILEPATH]
+		COL_FILEINFO, $fi
 	);
 }
 
 sub get_path_by_treepath {
 	my ($self,$p) = @_;
-	return $self->[TREEMODEL]->get($self->[TREEMODEL]->get_iter($p), COL_FILEPATH);
+	my $fi = $self->[TREEMODEL]->get($self->[TREEMODEL]->get_iter($p), COL_FILEINFO);
+	return $fi->get_path;
 }
 
 sub count_items {
@@ -375,9 +368,9 @@ sub remove_selected {
 	my ($self) = @_;
 
 	foreach (@{$self->get_iters}) {
-		my $file = $self->[TREEMODEL]->get($_, COL_FILEPATH);
+		my $fi = $self->[TREEMODEL]->get($_, COL_FILEINFO);
 
-		if (! -e $file) {
+		if (! -e $fi->get_path) {
 			$self->[TREEMODEL]->remove($_);
 		}
 	}
@@ -391,12 +384,16 @@ sub CreateRootNodes {
 	my $iter;
 
 	$iter = $self->[TREEMODEL]->append(undef);
-	$self->[TREEMODEL]->set($iter, COL_ICON, $self->[MIMEICONS]->{'inode/directory'}, COL_NAME, "Filesystem", COL_FILEPATH, File::Spec->rootdir);
+	$self->[TREEMODEL]->set($iter, COL_ICON, $self->[MIMEICONS]->{'inode/directory'}, COL_NAME, "Filesystem", COL_FILEINFO, new Filer::FileInfo(File::Spec->rootdir));
 	$self->[TREEMODEL]->append($iter);
 
 	$iter = $self->[TREEMODEL]->append(undef);
-	$self->[TREEMODEL]->set($iter, COL_ICON, $self->[MIMEICONS]->{'inode/directory'}, COL_NAME, "Home", COL_FILEPATH, $ENV{HOME});
+	$self->[TREEMODEL]->set($iter, COL_ICON, $self->[MIMEICONS]->{'inode/directory'}, COL_NAME, "Home", COL_FILEINFO, new Filer::FileInfo($ENV{HOME}));
 	$self->[TREEMODEL]->append($iter);
+
+# 	$iter = $self->[TREEMODEL]->append(undef);
+# 	$self->[TREEMODEL]->set($iter, COL_ICON, $self->[MIMEICONS]->{'inode/directory'}, COL_NAME, "Desktop", COL_FILEINFO, new Filer::FileInfo("$ENV{HOME}/Desktop"));
+# 	$self->[TREEMODEL]->append($iter);
 }
 
 sub DirRead {
@@ -404,32 +401,25 @@ sub DirRead {
 	my $show_hidden = $self->[FILER]->{config}->get_option('ShowHiddenFiles');
 
 	opendir (DIR, $dir) || return Filer::Dialog->msgbox_error("$dir: $!");
-	my @dir_contents = sort { lc($a) cmp lc($b) } readdir(DIR);
+	my @dir_contents = sort readdir(DIR);
 	closedir(DIR);
 	
-	@dir_contents = File::Spec->no_upwards(@dir_contents);
+	@dir_contents = map { Filer::Tools->catpath($dir, $_) } File::Spec->no_upwards(@dir_contents);
 
-	foreach my $file (@dir_contents) {
-		my $fp = catfile(splitdir($dir), $file);
-
+	foreach my $fp (@dir_contents) {
 		next unless (-d $fp);
-		next if ($file =~ /^\.+\w+/ and !$show_hidden);
+		next if (basename($fp) =~ /^\.+/ and !$show_hidden);
 
 		my $fi = new Filer::FileInfo($fp);
 		my $type = $fi->get_mimetype;
 		my $icon = $self->[MIMEICONS]->{$type};
 
 		my $iter = $self->[TREEMODEL]->append($parent_iter);
-		$self->[TREEMODEL]->set($iter, COL_ICON, $icon, COL_NAME, $fi->get_basename, COL_FILEPATH, $fi->get_path);
+		$self->[TREEMODEL]->set($iter, COL_ICON, $icon, COL_NAME, $fi->get_basename, COL_FILEINFO, $fi);
 		$self->[TREEMODEL]->append($iter) if (-R $fi->get_path);
 	}
 
 	$self->[TREEMODEL]->remove($self->[TREEMODEL]->iter_nth_child($parent_iter, 0)); # remove dummy iter
-}
-
-sub set_properties {
-	my ($self) = @_;
-	Filer::Properties->set_properties_dialog($self->[FILER]);
 }
 
 sub create_tar_gz_archive {

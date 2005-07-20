@@ -18,7 +18,6 @@ package Filer::FilePane;
 
 use Cwd qw(abs_path);
 use File::Basename; 
-use File::Spec::Functions qw(catfile splitdir);
 
 use Filer::Constants;
 use Filer::DND;
@@ -48,7 +47,6 @@ use constant NAVIGATION_BOX		=> $i++;
 use constant NAVIGATION_BUTTONS		=> $i++;
 use constant MOUSE_MOTION_SELECT	=> $i++;
 use constant MOUSE_MOTION_Y_POS_OLD	=> $i++;
-use constant MOUSE_MOTION_TREEPATH_BEGIN => $i++; 
 
 use constant SELECT => 0;
 use constant UNSELECT => 1;
@@ -62,10 +60,6 @@ use constant COL_MODE => $cols++;
 use constant COL_TYPE => $cols++;
 use constant COL_DATE => $cols++;
 use constant COL_FILEINFO => $cols++;
-
-Memoize::memoize("abs_path");
-Memoize::memoize("catfile");
-Memoize::memoize("splitdir");
 
 sub new {
 	my ($class,$filer,$side) = @_;
@@ -165,8 +159,6 @@ sub new {
 		my $fp1 = $fi1->get_path;
 		my $fp2 = $fi2->get_path;
 
-		print "sort\n";
-
 		# 1) sort directories first
 		# 2) then hidden items
 		# 3) sort by size/mode/date
@@ -190,13 +182,28 @@ sub new {
 		} else {
 			my ($s1,$s2,$s);
 
-			if ($sort_column_id == COL_SIZE) { # size
+			# the sort on COL_NAME returns directly as it doesn't
+			# need a sub-sort on itself....
+
+			if ($sort_column_id == COL_NAME) { # size
+
+				$s1 = $model->get($a, COL_NAME);
+				$s2 = $model->get($b, COL_NAME);
+
+				if ($self->[FILER]->{config}->get_option("CaseInsensitiveSort") == 0) {
+					return ($s1 cmp $s2);
+				} else {
+					return (lc($s1) cmp lc($s2));
+				}
+			} elsif ($sort_column_id == COL_SIZE) { # size
 
 				$s1 = $fi1->get_raw_size;
 				$s2 = $fi2->get_raw_size;
 				$s = $s1 - $s2;
 
 			} elsif ($sort_column_id == COL_MODE) { # mode
+			
+				# do we need to use the numeric mode values to sort? 
 
 				$s1 = $fi1->get_raw_mode;
 				$s2 = $fi2->get_raw_mode;
@@ -208,22 +215,22 @@ sub new {
 				$s2 = $fi2->get_raw_mtime;
 				$s = $s1 - $s2;
 
-			} else {
+			} else { # currently this can only be the 'type' column and the type column doesn't need any special treatment:
 				$s1 = $model->get($a, $sort_column_id); 
 				$s2 = $model->get($b, $sort_column_id); 
-
-				if ($self->[FILER]->{config}->get_option("CaseInsensitiveSort") == 0) {
-					$s = ($s1 cmp $s2);
-				} else {
-					$s = (lc($s1) cmp lc($s2));
-				}
+				$s = ($s1 cmp $s2);
 			}
 
+			# sub-sort on the name column if the compared terms are equal:
+
 			if ($s == 0) {
+				$s1 = $model->get($a, COL_NAME);
+				$s2 = $model->get($b, COL_NAME);
+
 				if ($self->[FILER]->{config}->get_option("CaseInsensitiveSort") == 0) {
-					return ($fi1->get_basename cmp $fi2->get_basename);
+					return ($s1 cmp $s2);
 				} else {
-					return (lc($fi1->get_basename) cmp lc($fi2->get_basename));
+					return (lc($s1) cmp lc($s2));
 				}
 			} else {
 				return $s;
@@ -426,7 +433,6 @@ sub treeview_event_cb {
 	if ($e->type eq "button-press" and $e->button == 2) {
 		$self->[MOUSE_MOTION_SELECT] = 1;
 		$self->[MOUSE_MOTION_Y_POS_OLD] = $e->y;
-		($self->[MOUSE_MOTION_TREEPATH_BEGIN]) = $self->[TREEVIEW]->get_path_at_pos($e->x,$self->[MOUSE_MOTION_Y_POS_OLD]);
 
 		my ($p) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
 
@@ -435,7 +441,6 @@ sub treeview_event_cb {
 			$self->[TREESELECTION]->select_path($p);
 		}
 
-		$self->set_focus;
 		return 1;
 	}
 
@@ -445,19 +450,18 @@ sub treeview_event_cb {
 	}
 
 	if (($e->type eq "motion-notify") and ($self->[MOUSE_MOTION_SELECT] == 1)) {
-#		my ($p_old) = $self->[TREEVIEW]->get_path_at_pos($e->x,$self->[MOUSE_MOTION_Y_POS_OLD]);
+		my ($p_old) = $self->[TREEVIEW]->get_path_at_pos($e->x,$self->[MOUSE_MOTION_Y_POS_OLD]);
 		my ($p_new) = $self->[TREEVIEW]->get_path_at_pos($e->x,$e->y);
 
-		if (defined $self->[MOUSE_MOTION_TREEPATH_BEGIN] and defined $p_new) {
+		if (defined $p_old and defined $p_new) {
 			$self->[TREESELECTION]->unselect_all;
-			$self->[TREESELECTION]->select_range($self->[MOUSE_MOTION_TREEPATH_BEGIN],$p_new);
+			$self->[TREESELECTION]->select_range($p_old,$p_new);
 		}
 
 		return 0;
 	}
 
 	if ($e->type eq "button-press" and $e->button == 3) {
-		$self->set_focus;
 		$self->show_popup_menu($e);
 		return 1;
 	}
@@ -520,7 +524,7 @@ sub get_pwd {
 
 sub get_updir { 
 	my ($self) = @_;
-	return abs_path(catfile(splitdir($self->[FILEPATH]), File::Spec->updir));
+	return Filer::Tools->catpath($self->[FILEPATH], File::Spec->updir);
 }
 
 sub get_item {
@@ -601,8 +605,8 @@ sub update_navigation_buttons {
 		}
 	}
 	
-	foreach (splitdir($filepath)) {
-		$path = catfile(splitdir($path), $_);
+	foreach (File::Spec->splitdir($filepath)) {
+		$path = Filer::Tools->catpath($path, $_);
 		
 		if (not defined $self->[NAVIGATION_BUTTONS]->{$path}) {
 			$button = new Gtk2::RadioButton($self->[NAVIGATION_BUTTONS]->{$rootdir}, basename($path) || File::Spec->rootdir);
@@ -678,16 +682,16 @@ sub open_file {
 				$dialog->destroy;
 
 				if ($r eq 1) {
-					system("'$filepath' & exit");
+					Filer::Tools->start_program($filepath);
 				} elsif ($r eq 2) {
- 					system("$command '$filepath' & exit");
+					Filer::Tools->start_program($command,$filepath);
 				}
 			} else {
-				system("$command '$filepath' & exit");
+				Filer::Tools->start_program($command,$filepath);
 			}
 		} else {
 			if (-x $filepath) {
-				system("'$filepath' & exit");
+				Filer::Tools->start_program($filepath);
 				return;
 			}
 	
@@ -750,31 +754,51 @@ sub open_path_helper {
 
 sub open_path {
 	my ($self,$filepath) = @_;
+	my ($t0,$t1,$elapsed);
 
-	if (! -e $filepath) {
-		$filepath = $ENV{HOME};
+# 	if ($ENV{FILER_DEBUG}) {
+# 	 	use Time::HiRes qw(gettimeofday tv_interval);
+# 	 	$t0 = [gettimeofday];
+# 	}
+
+	if (defined $self->[OVERRIDES]->{$filepath}) {
+		$filepath = $self->[OVERRIDES]->{$filepath};
 	}
-
-	if ($self->[FILER]->{config}->get_option("Mode") == NORTON_COMMANDER_MODE) {
-		if (defined $self->[OVERRIDES]->{$filepath}) {
-			$filepath = $self->[OVERRIDES]->{$filepath};
-		}
-	}
-
+	
 	opendir (DIR, $filepath) or return Filer::Dialog->msgbox_error("$filepath: $!");
 	my @dir_contents;
+
+	# from right to left:
+	# 1) readdir
+	# 2) remove . and ..
+	# 3) map (prepend) filepath to filename
+	# 4) sort
 
 	use sort '_mergesort';
 
 	if ($self->[FILER]->{config}->get_option("CaseInsensitiveSort") == 0) {
-		@dir_contents = sort readdir(DIR);
+		@dir_contents = sort {
+			if (-d $a and -f $b) {
+				return -1;
+			} elsif (-f $a and -d $b) {
+				return 1;
+			}
+
+			return ($a cmp $b);
+		} map { Filer::Tools->catpath($filepath, $_) } File::Spec->no_upwards(readdir(DIR));
 	} else {
-		@dir_contents = sort { lc($a) cmp lc($b) } readdir(DIR);
+		@dir_contents = sort {
+			if (-d $a and -f $b) {
+				return -1;
+			} elsif (-f $a and -d $b) {
+				return 1;
+			}
+
+			return (uc($a) cmp uc($b));
+		} map { Filer::Tools->catpath($filepath, $_) } File::Spec->no_upwards(readdir(DIR));
 	}
 	
 	closedir(DIR);
-
-	@dir_contents = File::Spec->no_upwards(@dir_contents);
 
 # 	if ($self->[FILER]->{config}->get_option("Mode") == NORTON_COMMANDER_MODE and $filepath ne File::Spec->rootdir) {
 # 		@dir_contents = (File::Spec->updir, @dir_contents); 
@@ -783,39 +807,39 @@ sub open_path {
 	delete $self->[SELECTED_ITEM];
 	delete $self->[SELECTED_ITER];
 
-	print "opendir\n";
-
 	$self->[FILEPATH] = $filepath;
 
-	$self->update_navigation_buttons($filepath);
-	$self->[TREEMODEL]->clear;
-	
 	my $show_hidden = $self->[FILER]->{config}->get_option('ShowHiddenFiles');
-	my @dirs = grep { -d "$filepath/$_" } @dir_contents;
-	my @files = grep {! -d "$filepath/$_" } @dir_contents;
-
 	my $total_size = 0;
-	my $dirs_count_total = my $dirs_count = scalar @dirs;
-	my $files_count_total = my $files_count = scalar @files;
+ 	my $dirs_count_total = my $dirs_count = 0; 
+ 	my $files_count_total = my $files_count = 0; 
 
-	if (!$show_hidden) {
-		$dirs_count = $dirs_count_total - scalar(grep { $_ =~ /^\.+\w+/ } @dirs);
-		$files_count = $files_count_total - scalar(grep { $_ =~ /^\.+\w+/ } @files);
-	}
+	$self->[TREEMODEL]->clear;
 
-# 	my ($t0,$t1,$elapsed);
-#
-# 	if ($ENV{FILER_DEBUG}) {
-# 	 	use Time::HiRes qw( gettimeofday tv_interval );
-# 	 	$t0 = [gettimeofday];
-# 	}
+	foreach my $fp (@dir_contents) {
 
-	foreach my $file (@dirs,@files) {
-		next if ($file =~ /^\.+\w+/ and !$show_hidden);
+		if (-d $fp) {
+			$dirs_count_total++;
 
-		my $fp = catfile(splitdir($filepath), $file);
+			if (!$show_hidden and basename($fp) =~ /^\./) {
+				next;
+			}
+
+			$dirs_count++;
+		} else {
+			$files_count_total++;
+
+			if (!$show_hidden and basename($fp) =~ /^\./) {
+				next;
+			}
+
+			$files_count++;
+		}
+
+# 		$self->[TREEMODEL]->insert_with_values(-1, COL_FILEINFO, new Filer::FileInfo($fp));
+# 		while (Gtk2->events_pending) { Gtk2->main_iteration; }
+
 		my $fi = new Filer::FileInfo($fp);
-
 		my $type = $fi->get_mimetype;
 		my $mypixbuf = $self->[MIMEICONS]->{'default'};
 
@@ -827,37 +851,14 @@ sub open_path {
 			$self->init_icons();
 		}
 
+		$total_size += $fi->get_raw_size;
+
 		my $basename = $fi->get_basename;
 		my $size = $fi->get_size;
 		my $mode = $fi->get_mode;
 		my $time = $fi->get_mtime;
 
-# 		if ($file =~ /^\.+\w+/) {
-# 			my $pixels = $mypixbuf->get_pixels;
-# 			my $pixels_new = "";
-# 			
-# 			my $i = 0;
-# 			my @p = ();
-# 
-# 			foreach (split //, $pixels) {
-# 				$p[$i++] = ord($_);
-# 
-# 				if ($i == 4) {
-# 
-# 					use Color::Object;
-# 					my $c = Color::Object->newRGB($p[0],$p[1],$p[2]);
-# 					my $g = $c->asGrey;
-# 
-# 					$pixels_new .= chr($g).chr($g).chr($g).chr($p[3]);
-# 					
-# 					$i = 0;
-# 				}
-# 			}
-# 			
-# 			$mypixbuf = Gtk2::Gdk::Pixbuf->new_from_data($pixels_new, $mypixbuf->get_colorspace, $mypixbuf->get_has_alpha, 8, $mypixbuf->get_width, $mypixbuf->get_height, $mypixbuf->get_rowstride);
-# 		}
-
- 		$self->[TREEMODEL]->set($self->[TREEMODEL]->append,
+ 		$self->[TREEMODEL]->insert_with_values(-1,
 			COL_ICON, $mypixbuf,
 			COL_NAME, $basename,
 			COL_SIZE, $size, 
@@ -868,17 +869,20 @@ sub open_path {
 		);
 	}
 
-# 	if ($ENV{FILER_DEBUG}) {
-# 		$t1 = [gettimeofday];
-# 		$elapsed = tv_interval($t0,$t1);
-# 		print "time to load: $elapsed\n";
-# 	}
-
 	$total_size = Filer::Tools->calculate_size($total_size);
 	
 	$self->[PATH_ENTRY]->set_text($self->[FILEPATH]);
 	$self->[PATH_COMBO]->insert_text(0, $self->[FILEPATH]);
 	$self->[FOLDER_STATUS] = "$dirs_count ($dirs_count_total) directories and $files_count ($files_count_total) files: $total_size";
+	$self->update_navigation_buttons($filepath);
+
+# 	if ($ENV{FILER_DEBUG}) {
+# 		$t1 = [gettimeofday];
+# 		$elapsed = tv_interval($t0,$t1);
+# 		print "time to load $filepath: $elapsed\n";
+# 	}
+
+#	$self->treemodel_sort;
 }
 
 sub select_dialog {
@@ -949,11 +953,6 @@ sub select_dialog {
 	$dialog->destroy;
 }
 
-sub set_properties {
-	my ($self) = @_;
-	Filer::Properties->set_properties_dialog($self->[FILER]);
-}
-
 sub create_tar_gz_archive {
 	my ($self) = @_;
 	my $archive = new Filer::Archive($self->[FILEPATH], $self->get_items);
@@ -981,7 +980,7 @@ sub extract_archive {
 sub get_temp_archive_dir {
 	my ($self) = @_;
 	my $dir = File::Temp::tempdir(CLEANUP => 1);
-	my $dir_up = abs_path(catfile(splitdir($dir), File::Spec->updir));
+	my $dir_up = Filer::Tools->catpath($dir, File::Spec->updir);
 
 	# this overrides the path if the user clicks on the .. inside the temp archive directory
 	$self->[OVERRIDES]->{$dir_up} = $self->[FILEPATH];

@@ -20,18 +20,12 @@ use strict;
 use warnings;
 
 use Fcntl;
-use Cwd qw( abs_path );
-use File::Spec::Functions qw(catfile splitdir);
+use Cwd qw(abs_path);
 use File::Basename qw(dirname basename);
 use File::DirWalk;
 use Unicode::String qw(utf8 latin1);
 
 use Filer::Constants;
-
-Memoize::memoize("abs_path");
-Memoize::memoize("catfile");
-Memoize::memoize("splitdir");
-Memoize::memoize("basename");
 
 sub new {
 	my ($class) = @_;
@@ -91,14 +85,14 @@ sub copy {
 		my ($source) = @_;
 		my $target = readlink($source);
 
-		symlink($target, abs_path(catfile(splitdir($dest), basename($source)))) || return File::DirWalk::FAILED;
+		symlink($target, Filer::Tools->catpath($dest, basename($source))) || return File::DirWalk::FAILED;
 
 		return File::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onDirEnter(sub {
 		my ($dir) = @_;
-		$dest = abs_path(catfile(splitdir($dest), basename($dir)));
+		$dest = Filer::Tools->catpath($dest, basename($dir));
 
 		if (! -e $dest) {
 			mkdir($dest) || return File::DirWalk::FAILED;
@@ -114,20 +108,14 @@ sub copy {
 	});
 
 	$dirwalk->onDirLeave(sub {
-		$dest = abs_path(catfile(splitdir($dest), File::Spec->updir));
+		$dest = abs_path(Filer::Tools->catpath($dest, File::Spec->updir));
 		return File::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onFile(sub {
 		my ($source) = @_;
 		my $my_source = utf8($source)->latin1;
-		my $my_dest = utf8(abs_path(catfile(splitdir($dest), basename($my_source))))->latin1;
-
- 		$self->{progress_label}->set_text("$my_source\n$my_dest");
-		$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
-		$self->{progressbar_total}->set_text("Copying file $self->{progress_count} of $self->{progress_total} ...");
-
-		while (Gtk2->events_pending) { Gtk2->main_iteration; }
+		my $my_dest = utf8(Filer::Tools->catpath($dest, basename($my_source)))->latin1;
 
 		if (-e $my_dest) {
 			if ($self->{SKIPALL}) {
@@ -177,7 +165,7 @@ sub copy {
 					$dialog->destroy;
 
 					if ($r eq 'ok') {
-						$my_dest = catfile(dirname($my_dest), $entry->get_text);
+						$my_dest = Filer::Tools->catpath(dirname($my_dest), $entry->get_text);
 					} elsif ($r eq 'cancel') {
 						return File::DirWalk::ABORTED;
 					}
@@ -244,7 +232,7 @@ sub copy {
 						$self->{SKIPALL} = 1;
 						return File::DirWalk::SUCCESS;
 					} elsif ($r eq 3) {
-						$my_dest = catfile(dirname($my_dest), $entry->get_text);
+						$my_dest = Filer::Tools->catpath(dirname($my_dest), $entry->get_text);
 					}
 				}
 
@@ -259,7 +247,7 @@ sub copy {
 		$self->{progressbar_total}->set_fraction($self->{progress_count}/$self->{progress_total});
 		$self->{progressbar_total}->set_text("Copying file $self->{progress_count} of $self->{progress_total} ...");
 
-		if ($my_source ne $dest) {
+		if ($my_source ne $my_dest) {
 			return (new Filer::FileCopy($self->{progressbar_part}, \$self->{progress}))->filecopy($my_source,$my_dest);
 		} else {
 			Filer::Dialog->msgbox_error("Destination and target are the same! Aborting!");

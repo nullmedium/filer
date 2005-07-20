@@ -20,18 +20,10 @@ package Filer::Move;
 # use warnings;
 
 use Fcntl;
-use Cwd qw( abs_path );
-use File::Spec::Functions qw(catfile splitdir);
+use Cwd qw(abs_path);
 use File::Basename qw(dirname basename);
 
-use Filer;
 use Filer::Constants;
-our @ISA = qw(Filer);
-
-Memoize::memoize("abs_path");
-Memoize::memoize("catfile");
-Memoize::memoize("splitdir");
-Memoize::memoize("basename");
 
 sub new {
 	my ($class) = @_;
@@ -76,7 +68,7 @@ sub move {
 
 	return File::DirWalk::FAILED if ($source eq $dest);
 
-	my $my_dest = abs_path(catfile(splitdir($dest), basename($source)));
+	my $my_dest = Filer::Tools->catpath($dest, basename($source));
 
 	if (-e $my_dest) {
 		my ($dialog,$label,$button,$hbox,$entry);
@@ -126,7 +118,7 @@ sub move {
 		$dialog->destroy;
 
 		if ($r eq '2') {
-			$my_dest = catfile(dirname($my_dest), $entry->get_text);
+			$my_dest = Filer::Tools->catpath(dirname($my_dest), $entry->get_text);
 		} else {
 			return File::DirWalk::ABORTED;
 		}
@@ -147,14 +139,14 @@ sub move {
 		$dirwalk->onLink(sub {
 			my ($source) = @_;
 
-			symlink(readlink($source), abs_path(catfile(splitdir($dest), basename($source)))) || return File::DirWalk::FAILED;
+			symlink(readlink($source), Filer::Tools->catpath($dest, basename($source))) || return File::DirWalk::FAILED;
 
 			return File::DirWalk::SUCCESS;
 		});
 
 		$dirwalk->onDirEnter(sub {
 			my ($dir) = @_;
-			$dest = abs_path(catfile(splitdir($dest), basename($dir)));
+			$dest = Filer::Tools->catpath($dest, basename($dir));
 
 			if (! -e $dest) {
 				mkdir($dest) || return File::DirWalk::FAILED;
@@ -165,7 +157,7 @@ sub move {
 
 		$dirwalk->onDirLeave(sub {
 			my ($dir) = @_;
-			$dest = abs_path(catfile(splitdir($dest), File::Spec->updir));
+			$dest = abs_path(Filer::Tools->catpath($dest, File::Spec->updir));
 
 			rmdir($dir) || return File::DirWalk::FAILED;
 
@@ -175,7 +167,7 @@ sub move {
 		$dirwalk->onFile(sub {
 			my ($file) = @_;
 			my $my_source = $file;
-			my $my_dest = abs_path(catfile(splitdir($dest), basename($my_source)));
+			my $my_dest = Filer::Tools->catpath($dest, basename($my_source));
 
 	 		$self->{progress_label}->set_text("$my_source\n$my_dest");
 			$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});

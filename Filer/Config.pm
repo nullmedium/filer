@@ -39,8 +39,15 @@ sub new {
 	my ($class) = @_;
 	my $self = bless {}, $class;
 	my $xdg_config_home = (new File::BaseDir)->xdg_config_home;
-	$self->{cfg_home} = File::Spec->catfile(File::Spec->splitdir($xdg_config_home), "filer");
-	$self->{config_store} = File::Spec->catfile($self->{cfg_home}, "config");
+	$self->{cfg_home} = Filer::Tools->catpath($xdg_config_home, "filer");
+	$self->{config_store} = Filer::Tools->catpath($self->{cfg_home}, "config.cfg");
+	$self->{config_store_old} = Filer::Tools->catpath($self->{cfg_home}, "config");
+
+	if (-e $self->{config_store_old}) {
+		my $stuff = Storable::retrieve($self->{config_store_old});
+		$self->store($stuff);
+		unlink($self->{config_store_old});
+	}
 
 	if (! -e $xdg_config_home) {
 		mkdir($xdg_config_home);
@@ -59,12 +66,34 @@ sub new {
 
 sub store {
 	my ($self,$config) = @_;
-	Storable::store($config, $self->{config_store});
+
+	open (my $cfg, ">$self->{config_store}") || die "$self->{config_store}: $!\n\n";
+
+	while (my ($key,$value) = each %{$config}) {
+		if (defined $key and defined $value) {
+			print $cfg "$key=$value\n";	
+		}
+	}
+
+	close($cfg);
 }
 
 sub get {
 	my ($self) = @_;
-	return Storable::retrieve($self->{config_store});
+	my $config = {};
+
+	open (my $cfg, "$self->{config_store}") || die "$self->{config_store}: $!\n\n";
+
+	while (<$cfg>) {
+		chomp $_;
+		if ($_ =~ /^(\w+)?=(.+)/) {
+			$config->{$1} = $2; 
+		}
+	}
+
+	close($cfg);
+	
+	return $config;
 }
 
 sub set_option {
@@ -78,7 +107,7 @@ sub set_option {
 sub get_option {
 	my ($self,$option) = @_;
 	my $config = $self->get;
-	
+
 	if (defined $config->{$option}) {
 		return $config->{$option};
 	}

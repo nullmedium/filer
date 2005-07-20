@@ -1,6 +1,20 @@
-package Filer;
+#     Copyright (C) 2004-2005 Jens Luedicke <jens.luedicke@gmail.com>
+#
+#     This program is free software; you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation; either version 2 of the License, or
+#     (at your option) any later version.
+#
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program; if not, write to the Free Software
+#     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-no utf8;
+package Filer;
 
 use strict;
 use warnings;
@@ -9,19 +23,15 @@ use Storable;
 use Gtk2;
 use Gtk2::Gdk::Keysyms;
 
-use Cwd qw(abs_path);
 use Fcntl;
 use Memoize;
 use File::Spec;
-use File::Spec::Functions qw(catfile splitdir);
 use File::BaseDir;
 use File::Basename;
 use File::MimeInfo::Magic;
 use File::Temp;
 use File::DirWalk;
 use Stat::lsMode;
-
-use Unicode::String qw(utf8 latin1);
 
 use Filer::Constants;
 
@@ -30,6 +40,7 @@ require Filer::Bookmarks;
 require Filer::FileInfo;
 require Filer::Tools;
 require Filer::Mime;
+require Filer::FileAssociationDialog;
 require Filer::Archive;
 require Filer::Properties;
 require Filer::Dialog;
@@ -41,10 +52,6 @@ require Filer::Copy;
 require Filer::Move;
 require Filer::Delete;
 require Filer::Search;
-
-Memoize::memoize("abs_path");
-Memoize::memoize("catfile");
-Memoize::memoize("splitdir");
 
 sub new {
 	my ($class) = @_; 
@@ -82,256 +89,204 @@ sub create_main_window {
 
 	my $actions = new Gtk2::ActionGroup("Actions");
 
-	my $a_entries = [
-	{
+	my $a_entries = 
+	[{
 		name => "FileMenuAction",
 		label => "File",
-	},
-	{
+	},{
 		name => "open-terminal-action",
 		label => "Open Terminal",
-		callback => sub { $self->open_terminal_cb },
 		accelerator => "F2",
-	},
-	{
+		callback => sub { $self->open_terminal_cb },
+	},{
 		name => "open-action",
 		stock_id => "gtk-open",
-		label => "Open",
 		callback => sub { $self->open_cb },
 		accelerator => "F3",
-	},
-	{
+	},{
 		name => "open-with-action",
 		label => "Open With",
 		callback => sub { $self->open_with_cb },
-	},
-	{
+	},{
 		name => "quit-action",
 		stock_id => "gtk-quit",
-		callback => sub { $self->quit_cb },
 		accelerator => "<control>Q",
-	},
-	{
+		callback => sub { $self->quit_cb },
+	},{
 		name => "EditMenuAction",
 		label => "Edit",
-	},
-	{
+	},{
 		name => "cut-action",
 		stock_id => "gtk-cut",
-		callback => sub { $self->cut_cb },
 		tooltip => "Cut Selection", 
 		accelerator => "<control>X",
-	},
-	{
+		callback => sub { $self->cut_cb },
+	},{
 		name => "copy-action",
 		stock_id => "gtk-copy",
-		callback => sub { $self->copy_cb },
 		tooltip => "Copy Selection", 
 		accelerator => "<control>C",
-	},
-	{
+		callback => sub { $self->copy_cb },
+	},{
 		name => "paste-action",
 		stock_id => "gtk-paste",
-		callback => sub { $self->paste_cb },
 		tooltip => "Paste Clipboard", 
 		accelerator => "<control>V",
-	},
-	{
+		callback => sub { $self->paste_cb },
+	},{
 		name => "rename-action",
 		label => "Rename",
-		callback => sub { $self->rename_cb },
 		tooltip => "Rename", 
 		accelerator => "F6",
-	},
-	{
+		callback => sub { $self->rename_cb },
+	},{
 		name => "mkdir-action",
-		label => "MkDir",
-		callback => sub { $self->mkdir_cb },
+		label => "New folder",
 		tooltip => "Make Directory", 
 		accelerator => "F7",
-	},
-	{
+		callback => sub { $self->mkdir_cb },
+	},{
 		name => "delete-action",
 		stock_id => "gtk-delete",
-		callback => sub { $self->delete_cb },
 		tooltip => "Delete files", 
 		accelerator => "F8",
-	},
-	{
+		callback => sub { $self->delete_cb },
+	},{
 		name => "link-action",
 		label => "Link",
 		callback => sub { $self->link_cb },
-	},
-	{
+	},{
 		name => "symlink-action",
-		label => "SymLink",
+		label => "Symlink",
 		callback => sub { $self->symlink_cb },
-	},
-	{
+	},{
 		name => "refresh-action",
 		stock_id => "gtk-refresh",
-		callback => sub { $self->refresh_cb },
 		tooltip => "Refresh", 
 		accelerator => "<control>R",
-	},
-	{
+		callback => sub { $self->refresh_cb },
+	},{
 		name => "search-action",
-		label => "Search",
 		stock_id => "gtk-find",
+		label => "Search",
 		callback => sub { $self->search_cb },
-	},
-	{
+	},{
 		name => "select-action",
 		label => "Select",
-		callback => sub { $self->select_cb },
 		accelerator => "KP_Add",
-	},
-	{
+		callback => sub { $self->select_cb },
+	},{
 		name => "unselect-action",
 		label => "Unselect",
-		callback => sub { $self->unselect_cb },
 		accelerator => "KP_Subtract",
-	},
-	{
+		callback => sub { $self->unselect_cb },
+	},{
 		name => "BookmarksMenuAction",
 		label => "Bookmarks",
-	},
-	{
+	},{
 		name => "OptionsMenuAction",
 		label => "Options",
-	},
-	{
+	},{
 		name => "ModeMenuAction",
 		label => "View Mode",
-	},
-	{
+	},{
 		name => "ConfirmationMenuAction",
 		label => "Ask Confirmation for ...",
-	},
-	{
+	},{
 		name => "set-terminal-action",
 		label => "Set Terminal",
 		callback => sub { $self->set_terminal_cb },
-	},
-	{
+	},{
 		name => "set-editor-action",
 		label => "Set Editor",
 		callback => sub { $self->set_editor_cb },
-	},
-	{
+	},{
 		name => "file-assoc-action",
 		label => "File Associations",
 		callback => sub { $self->file_ass_cb },
-	},
-	{
+	},{
 		name => "HelpMenuAction",
 		label => "Help",
-	},
-	{
+	},{
 		name => "about-action",
 		stock_id => "gtk-about",
 		callback => sub { $self->about_cb },
-	},
-
-# Toolbar items
-# the other toolbar items are merged into the toolbar. see filer.ui	
-
-	{
+	},{
 		name => "home-action",
 		stock_id => "gtk-home",
 		tooltip => "Go Home", 
 		callback => sub { $self->go_home_cb },
-	},
-	{
+	},{
 		name => "synchronize-action",
 		label => "Synchronize",
 		tooltip => "Synchronize Folders", 
 		callback => sub { $self->synchronize_cb },
-	},
-
-# PopupMenu items 
-# the other menuitems items are merged into the menu. see filer.ui	
-
-	{
+	},{
 		name => "OpenPopupMenuAction",
 		stock_id => "gtk-open",
-	},
-	{
+	},{
 		name => "ArchiveMenuAction",
 		label => "Archive",
-	},
-	{
+	},{
 		name => "create-tgz-action",
 		label => "Create tar.gz",
 		callback => sub { $self->{active_pane}->create_tar_gz_archive; }
-	},
-	{
+	},{
 		name => "create-tbz2-action",
 		label => "Create tar.bz2",
 		callback => sub { $self->{active_pane}->create_tar_bz2_archive; }
-	},
-	{
+	},{
 		name => "extract-action",
 		label => "Extract",
 		callback => sub { $self->{active_pane}->extract_archive; }
-	},
-	{
+	},{
 		name => "BookmarksPopupMenuAction",
 		label => "Bookmarks",
-	},
-	{
+	},{
 		name => "properties-action",
-		label => "Properties",
-		callback => sub { $self->{active_pane}->set_properties; }
-	},
-	];
+		stock_id => "gtk-properties",
+		callback => sub { $self->set_properties; }
+	}];
 
 	my $a_radio_entries = [
 	{
 		name => "commander-style-action",
 		label => "Norton Commander Style",
 		value => NORTON_COMMANDER_MODE,
-	},
-	{
+	},{
 		name => "explorer-style-action",
 		label => "MS Explorer View",
 		value => EXPLORER_MODE,
-	},
-	];
+	}];
 
-	my $a_toggle_entries = [
-	{
+	my $a_toggle_entries = 
+	[{
 		name => "ask-copying-action",
 		label => "Copying",
 		callback => sub { $self->ask_copy_cb($_[0]) },
 		is_active => $self->{config}->get_option("ConfirmCopy"),
-	},
-	{
+	},{
 		name => "ask-moving-action",
 		label => "Moving",
 		callback => sub { $self->ask_move_cb($_[0]) },
 		is_active => $self->{config}->get_option("ConfirmMove"),
-	},
-	{
+	},{
 		name => "ask-deleting-action",
 		label => "Deleting",
 		callback => sub { $self->ask_delete_cb($_[0]) },
 		is_active => $self->{config}->get_option("ConfirmDelete"),
-	},
-	{
+	},{
 		name => "show-hidden-action",
 		label => "Show Hidden Files",
 		callback => sub { $self->hidden_cb($_[0]) },
 		accelerator => "<control>H",
 		is_active => $self->{config}->get_option("ShowHiddenFiles"),
-	},
-	{
+	},{
 		name => "case-sort-action",
 		label => "Case Insensitive Sort",
 		callback => sub { $self->case_sort_cb($_[0]) },
 		is_active => $self->{config}->get_option("CaseInsensitiveSort"),
-	},
-	];
+	}];
 
 	$actions->add_actions($a_entries);
 	$actions->add_radio_actions($a_radio_entries, $self->{config}->get_option("Mode"), sub { 
@@ -430,6 +385,26 @@ sub about_cb {
 	$dialog->set_name("Filer");
 	$dialog->set_version($self->{VERSION});
 	$dialog->set_copyright("Copyright © 2004-2005 Jens Luedicke");
+	$dialog->set_license(
+<<EOF
+Filer $self->{VERSION}
+Copyright (C) 2004-2005 Jens Luedicke <jens.luedicke\@gmail.com>
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+EOF
+	);
 	$dialog->set_website("http://perldude.de/"); 
 	$dialog->set_website_label("http://perldude.de/");
 	$dialog->set_authors(	"Jens Luedicke <jens.luedicke\@gmail.com>",
@@ -550,23 +525,23 @@ sub file_ass_cb {
 	$mime->file_association_dialog;
 }
 
+sub set_properties {
+	my ($self) = @_;
+	Filer::Properties->set_properties_dialog($self);
+}
+
 sub refresh_cb {
 	my ($self) = @_;
 
-	if ($self->{pane}->[LEFT]->get_pwd eq $self->{pane}->[RIGHT]->get_pwd) {
-		if ($self->{pane}->[LEFT]->get_type eq $self->{pane}->[RIGHT]->get_type) {
-			$self->{pane}->[LEFT]->refresh;
-			$self->{pane}->[RIGHT]->set_model($self->{pane}->[LEFT]->get_model);
-		} else {
-			$self->{pane}->[LEFT]->refresh;
-			$self->{pane}->[RIGHT]->refresh;
-		}
-	} else {
-		$self->{pane}->[LEFT]->refresh;
-		$self->{pane}->[RIGHT]->refresh;
-	}
-
+	$self->refresh_active_pane;
+	$self->refresh_inactive_pane;	
+	
 	return 1;
+}
+
+sub refresh_active_pane {
+	my ($self) = @_;
+	$self->{active_pane}->refresh;
 }
 
 sub refresh_inactive_pane {
@@ -634,7 +609,7 @@ sub paste_cb {
 	my ($self) = @_;
 	my @files = split /\n\r/, $self->get_clipboard_contents;
 	my $action = pop @files;
-	my $target = ($self->{active_pane}->get_type eq "TREE") ? $self->{active_pane}->get_updir : $self->{active_pane}->get_pwd;
+	my $target = $self->{active_pane}->get_pwd;
 	my $do;
 
 	return if (not defined $action);
@@ -732,9 +707,9 @@ sub rename_cb {
 		my $new;
 		
 		if ($self->{active_pane}->get_type eq "TREE") {
-			$new = abs_path(catfile(splitdir(dirname($old_pwd)), $entry->get_text));			
+			$new = Filer::Tools->catpath(dirname($old_pwd), $entry->get_text);			
 		} else {
-			$new = abs_path(catfile(splitdir($old_pwd), $entry->get_text));			
+			$new = Filer::Tools->catpath($old_pwd, $entry->get_text);			
 		}
 		
 		if (rename($old,$new)) {
@@ -825,7 +800,7 @@ sub mkdir_cb {
 	$dialog->show_all;
 
 	if ($dialog->run eq 'ok') {
-		my $dir = catfile(splitdir($self->{active_pane}->get_pwd), $entry->get_text);
+		my $dir = Filer::Tools->catpath($self->{active_pane}->get_pwd, $entry->get_text);
 
 		if (mkdir($dir)) {
 			$self->{active_pane}->refresh;
@@ -849,7 +824,7 @@ sub link_cb {
 	$dialog->set_default_response('ok');
 
 	$link_label->set_markup("<b>Link: </b>");
-	$link_entry->set_text(catfile(splitdir($self->{active_pane}->get_pwd), $self->{active_pane}->get_fileinfo->[0]->get_basename));
+	$link_entry->set_text(Filer::Tools->catpath($self->{active_pane}->get_pwd, $self->{active_pane}->get_fileinfo->[0]->get_basename));
 	$link_entry->set_activates_default(1);
 
 	$target_label->set_markup("<b>linked object: </b>");
@@ -863,7 +838,7 @@ sub link_cb {
 		my $target = $target_entry->get_text;
 
 		if (dirname($link) eq File::Spec->curdir) {
-			$link = catfile(splitdir($self->{active_pane}->get_pwd), $link);
+			$link = Filer::Tools->catpath($self->{active_pane}->get_pwd, $link);
 		}
 
 		if (link($target, $link)) {
@@ -888,7 +863,7 @@ sub symlink_cb {
 	$dialog->set_default_response('ok');
 
 	$symlink_label->set_markup("<b>Symlink: </b>");
-	$symlink_entry->set_text(catfile(splitdir($self->{active_pane}->get_pwd), $self->{active_pane}->get_fileinfo->[0]->get_basename));
+	$symlink_entry->set_text(Filer::Tools->catpath($self->{active_pane}->get_pwd, $self->{active_pane}->get_fileinfo->[0]->get_basename));
 	$symlink_entry->set_activates_default(1);
 
 	$target_label->set_markup("<b>linked object: </b>");
@@ -902,7 +877,7 @@ sub symlink_cb {
 		my $target = $target_entry->get_text;
 
 		if (dirname($symlink) eq File::Spec->curdir) {
-			$symlink = catfile(splitdir($self->{active_pane}->get_pwd), $symlink);
+			$symlink = Filer::Tools->catpath($self->{active_pane}->get_pwd, $symlink);
 		}
 
 		if (symlink($target, $symlink)) {

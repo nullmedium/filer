@@ -1,11 +1,25 @@
 package Filer::Tools;
 
+use Cwd qw(abs_path);
 use File::Spec;
 
-sub concat_path {
-	my ($self,$dir,$file) = @_;
+sub start_program {
+	my ($self,$command,@params) = @_;
 
-	return (File::Spec->catfile(File::Spec->splitdir($dir), $file));
+	my $pid = fork();
+	return 0 unless defined $pid;
+
+	if ($pid == 0) { # child
+		exec $command, @params;
+		exit 0;
+	} elsif ($pid > 0) {
+		print "forked $command\n";
+	}
+}
+
+sub catpath {
+	my ($self,$dir,@p) = @_;
+	return File::Spec->catfile(File::Spec->splitdir($dir), @p);
 }
 
 sub calculate_size {
