@@ -688,7 +688,7 @@ sub open_file {
 					Filer::Tools->start_program(@c,$filepath);
 				}
 			} else {
-				my @c = split /\s+/, $command;					
+				my @c = split /\s+/, $command;				
 				Filer::Tools->start_program(@c,$filepath);
 			}
 		} else {

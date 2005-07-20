@@ -391,7 +391,8 @@ sub run_dialog {
 		}
 
 		if (! $run_terminal_checkbutton->get_active) {
-			Filer::Tools->start_program($command, $file);
+			my @c = split /\s+/, $command;			
+			Filer::Tools->start_program(@c, $file);
 		} else {
 			my $term = $self->{filer}->{config}->get_option("Terminal");
 			my @t = split /\s+/, $term;
