@@ -684,10 +684,12 @@ sub open_file {
 				if ($r eq 1) {
 					Filer::Tools->start_program($filepath);
 				} elsif ($r eq 2) {
-					Filer::Tools->start_program($command,$filepath);
+					my @c = split /\s+/, $command;					
+					Filer::Tools->start_program(@c,$filepath);
 				}
 			} else {
-				Filer::Tools->start_program($command,$filepath);
+				my @c = split /\s+/, $command;					
+				Filer::Tools->start_program(@c,$filepath);
 			}
 		} else {
 			if (-x $filepath) {
@@ -807,7 +809,7 @@ sub open_path {
 	delete $self->[SELECTED_ITEM];
 	delete $self->[SELECTED_ITER];
 
-	$self->[FILEPATH] = $filepath;
+	$self->[FILEPATH] = abs_path($filepath);
 
 	my $show_hidden = $self->[FILER]->{config}->get_option('ShowHiddenFiles');
 	my $total_size = 0;
