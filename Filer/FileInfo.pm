@@ -24,7 +24,7 @@ use Unicode::String qw(utf8 latin1);
 
 use Filer::Tools;
 
-Memoize::memoize("format_mode");
+Memoize::memoize("Stat::lsMode::format_mode");
 Memoize::memoize("File::MimeInfo::Magic::mimetype");
 Memoize::memoize("File::MimeInfo::Magic::describe");
 Memoize::memoize("Filer::Tools::calculate_size");
@@ -96,7 +96,7 @@ sub get_size {
 }
 
 sub get_mtime {
-	my ($self) = @_; 
+	my ($self) = @_;
 	my $time = localtime($self->get_raw_mtime);
 	return $time;
 }
@@ -112,8 +112,8 @@ sub get_gid {
 }
 
 sub get_mode {
-	my ($self) = @_; 
-	return format_mode($self->get_raw_mode);
+	my ($self) = @_;
+	return my $r = format_mode($self->get_raw_mode);
 }
 
 sub is_hidden {

@@ -141,14 +141,6 @@ sub new {
 
 	my $sort_func = sub {
 		my ($model,$a,$b,$data) = @_;
-#  		print "sort\n";
-# 
-#  		my ($sort_column_id,$order) = $model->get_sort_column_id; 
-# 		my $s1 = $model->get($a, $sort_column_id); 
-# 		my $s2 = $model->get($b, $sort_column_id); 
-# 
-# 		return ($s1 cmp $s2) if (defined $s1 and defined $s2);
-
 		my ($sort_column_id,$order) = $model->get_sort_column_id; 
 
 		my $fi1 = $model->get($a, COL_FILEINFO);
@@ -311,6 +303,7 @@ sub show_popup_menu {
 	my $popup_menu = $uimanager->get_widget('/ui/list-popupmenu');
 	$popup_menu->show_all;
 
+	$uimanager->get_widget('/ui/list-popupmenu/Open')->show;
 	$uimanager->get_widget('/ui/list-popupmenu/Open')->set_sensitive(1);
 	$uimanager->get_widget('/ui/list-popupmenu/PopupItems1/Rename')->set_sensitive(1);
 	$uimanager->get_widget('/ui/list-popupmenu/PopupItems1/Delete')->set_sensitive(1);
@@ -539,13 +532,19 @@ sub get_item {
 sub set_item {
 	my ($self,$fi) = @_;
 
+	my $basename = $fi->get_basename;
+	my $size = $fi->get_size;
+	my $mode = $fi->get_mode;
+	my $type = $fi->get_mimetype;
+	my $time = $fi->get_mtime;
+
 	$self->[SELECTED_ITEM] = $fi->get_path;
-	$self->[TREEMODEL]->set($self->[SELECTED_ITER], 
-		COL_NAME, $fi->get_basename,
-		COL_SIZE, $fi->get_size,
-		COL_MODE, $fi->get_mode,
-		COL_TYPE, $fi->get_mimetype,
-		COL_DATE, $fi->get_mtime,
+	$self->[TREEMODEL]->set($self->[SELECTED_ITER],
+		COL_NAME, $basename,
+		COL_SIZE, $size,
+		COL_MODE, $mode,
+		COL_TYPE, $type,
+		COL_DATE, $time,
 		COL_FILEINFO, $fi
 	);
 }
@@ -600,12 +599,21 @@ sub update_navigation_buttons {
 	my $path = $rootdir;
 	my $button = undef;
 
-	foreach (reverse sort keys %{$self->[NAVIGATION_BUTTONS]}) {
-		last if ($_ eq $filepath);
-
+	foreach (sort { length($b) <=> length($a) } keys %{$self->[NAVIGATION_BUTTONS]}) {
+		# check if $filepath isn't a parentdir of the current path button path $_
 		if (! /^$filepath/) {
-			$self->[NAVIGATION_BUTTONS]->{$_}->destroy;
-			delete $self->[NAVIGATION_BUTTONS]->{$_};
+			
+			# check if the current path button path $_ isn't a parentdir of $filepath
+			if ($filepath !~ /^$_/) {
+
+				# destroy path button
+# 				$self->[NAVIGATION_BUTTONS]->{$_}->hide;
+	 			$self->[NAVIGATION_BUTTONS]->{$_}->destroy;
+	 			delete $self->[NAVIGATION_BUTTONS]->{$_};
+			} else {
+				# $_ is a parentdir of $filepath, so skip everything else.
+				last;
+			}
 		}
 	}
 	
@@ -638,6 +646,8 @@ sub update_navigation_buttons {
 			$self->[NAVIGATION_BOX]->pack_start($button,0,0,0);
 			$self->[NAVIGATION_BUTTONS]->{$path} = $button;
 			$self->[NAVIGATION_BUTTONS]->{$path}->show;
+# 		} else {
+# 			$self->[NAVIGATION_BUTTONS]->{$path}->show;
 		}
 	}
 
@@ -704,30 +714,51 @@ sub open_file {
 			if ($type =~ /^text\/.+/) {
 
 				my $command = $self->[FILER]->{config}->get_option("Editor");
-	                        system("$command $filepath & exit");
+				my @c = split /\s+/, $command;				
+				Filer::Tools->start_program(@c,$filepath);
 
 			} elsif ($type eq 'application/x-compressed-tar') {
 
 				my $dir = $self->get_temp_archive_dir();
-				system("cd $dir && tar -xzf $filepath");
+				my $pid = Filer::Tools->start_program("tar", "-C", $dir, "-xzf", $filepath);
+
+				$self->[TREEVIEW]->set_sensitive(0);
+				Filer::Tools->wait_for_pid($pid);
+				$self->[TREEVIEW]->set_sensitive(1);
+
 				$self->open_path($dir);
 
 			} elsif ($type eq 'application/x-bzip-compressed-tar') {
 
 				my $dir = $self->get_temp_archive_dir();
-				system("cd $dir && tar -xjf $filepath");
-				$self->open_path($dir);
+				my $pid = Filer::Tools->start_program("tar", "-C", $dir, "-xjf", $filepath);
 
+				$self->[TREEVIEW]->set_sensitive(0);
+				Filer::Tools->wait_for_pid($pid);
+				$self->[TREEVIEW]->set_sensitive(1);
+
+				$self->open_path($dir);
+				
 			} elsif ($type eq 'application/x-tar') {
 
 				my $dir = $self->get_temp_archive_dir();
-				system("cd $dir && tar -xf $filepath");
+				my $pid = Filer::Tools->start_program("tar", "-C", $dir, "-xf", $filepath);
+
+				$self->[TREEVIEW]->set_sensitive(0);
+				Filer::Tools->wait_for_pid($pid);
+				$self->[TREEVIEW]->set_sensitive(1);
+
 				$self->open_path($dir);
 
 			} elsif ($type eq 'application/zip') {
 
 				my $dir = $self->get_temp_archive_dir();
-				system("cd $dir && unzip $filepath");
+				my $pid = Filer::Tools->start_program("unzip", "-d", $dir, $filepath);
+
+				$self->[TREEVIEW]->set_sensitive(0);
+				Filer::Tools->wait_for_pid($pid);
+				$self->[TREEVIEW]->set_sensitive(1);
+
 				$self->open_path($dir);
 
 			} else {
@@ -887,8 +918,6 @@ sub open_path {
 # 		$elapsed = tv_interval($t0,$t1);
 # 		print "time to load $filepath: $elapsed\n";
 # 	}
-
-#	$self->treemodel_sort;
 }
 
 sub select_dialog {

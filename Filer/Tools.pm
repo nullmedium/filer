@@ -1,7 +1,31 @@
 package Filer::Tools;
 
+use strict;
+use warnings;
+
 use Cwd qw(abs_path);
 use File::Spec;
+
+# REAPER  - taken from 'man perlipc'
+
+use POSIX ":sys_wait_h";
+
+sub REAPER {
+	my $child;
+	my %Kid_Status;
+
+	# If a second child dies while in the signal handler caused by the
+	# first death, we won't get another signal. So must loop here else
+	# we will leave the unreaped child as a zombie. And the next time
+	# two children die we get another zombie. And so on.
+	while (($child = waitpid(-1,WNOHANG)) > 0) {
+	   $Kid_Status{$child} = $?;
+	}
+
+	$SIG{CHLD} = \&REAPER;  # still loathe sysV
+}
+
+$SIG{CHLD} = \&REAPER;
 
 sub start_program {
 	my ($self,$command,@params) = @_;
@@ -15,7 +39,19 @@ sub start_program {
 	} elsif ($pid > 0) {
 		print "forked $command\n";
 	}
+
+	return $pid;
 }
+
+sub wait_for_pid {
+	my $pid = pop;
+
+	while (kill 0, $pid) {
+		while (Gtk2->events_pending) { Gtk2->main_iteration }
+	}
+}
+
+####
 
 sub catpath {
 	my ($self,$dir,@p) = @_;

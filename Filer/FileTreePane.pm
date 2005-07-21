@@ -128,6 +128,7 @@ sub show_popup_menu {
 		my $popup_menu = $uimanager->get_widget('/ui/list-popupmenu');
 		$popup_menu->show_all;
 
+		$uimanager->get_widget('/ui/list-popupmenu/Open')->show;
 		$uimanager->get_widget('/ui/list-popupmenu/Open')->set_sensitive(1);
 		$uimanager->get_widget('/ui/list-popupmenu/PopupItems1/Rename')->set_sensitive(1);
 		$uimanager->get_widget('/ui/list-popupmenu/PopupItems1/Delete')->set_sensitive(1);
