@@ -407,22 +407,23 @@ sub DirRead {
 	my $show_hidden = $self->[FILER]->{config}->get_option('ShowHiddenFiles');
 
 	opendir (DIR, $dir) || return Filer::Dialog->msgbox_error("$dir: $!");
-	my @dir_contents = sort readdir(DIR);
+	my @dir_contents = 
+			map { Filer::FileInfo->new($_) }
+			grep { -d $_ }
+			map { Filer::Tools->catpath($dir, $_) }
+			sort File::Spec->no_upwards(readdir(DIR));
+
 	closedir(DIR);
-	
-	@dir_contents = map { Filer::Tools->catpath($dir, $_) } File::Spec->no_upwards(@dir_contents);
 
-	foreach my $fp (@dir_contents) {
-		next unless (-d $fp);
-		next if (basename($fp) =~ /^\.+/ and !$show_hidden);
+	foreach my $fi (@dir_contents) {
+		next if (!$show_hidden and $fi->is_hidden);
 
-		my $fi = new Filer::FileInfo($fp);
 		my $type = $fi->get_mimetype;
 		my $icon = $self->[MIMEICONS]->{$type};
 
-		my $iter = $self->[TREEMODEL]->append($parent_iter);
+		my $iter = $self->[TREEMODEL]->insert($parent_iter, -1);
 		$self->[TREEMODEL]->set($iter, COL_ICON, $icon, COL_NAME, $fi->get_basename, COL_FILEINFO, $fi);
-		$self->[TREEMODEL]->append($iter) if (-R $fi->get_path);
+		$self->[TREEMODEL]->insert($iter, -1) if (-R $fi->get_path);
 	}
 
 	$self->[TREEMODEL]->remove($self->[TREEMODEL]->iter_nth_child($parent_iter, 0)); # remove dummy iter
@@ -432,7 +433,10 @@ sub create_tar_gz_archive {
 	my ($self) = @_;
 
 	my $archive = new Filer::Archive($self->get_updir, $self->get_items);
+
+	$self->[TREEVIEW]->set_sensitive(0);
 	$archive->create_tar_gz_archive;
+	$self->[TREEVIEW]->set_sensitive(1);
 
 	$self->[FILER]->refresh_inactive_pane;
 }
@@ -441,7 +445,10 @@ sub create_tar_bz2_archive {
 	my ($self) = @_;
 
 	my $archive = new Filer::Archive($self->get_updir, $self->get_items);
+
+	$self->[TREEVIEW]->set_sensitive(0);
 	$archive->create_tar_bz2_archive;
+	$self->[TREEVIEW]->set_sensitive(1);
 
 	$self->[FILER]->Filer::refresh_inactive_pane;
 }

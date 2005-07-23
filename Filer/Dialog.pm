@@ -131,7 +131,7 @@ sub ask_command_dialog {
 	$dialog->show_all;
 
 	if ($dialog->run eq 'ok') {
-		$text = $entry->get_text;				
+		$text = $button->get_filename;				
 	} else {
 		$text = $default;
 	}

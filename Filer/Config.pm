@@ -49,27 +49,35 @@ sub new {
 		unlink($self->{config_store_old});
 	}
 
-	if (! -e $xdg_config_home) {
-		mkdir($xdg_config_home);
-	}
-
 	if (! -e $self->{cfg_home}) {
+		if (! -e $xdg_config_home) {
+			mkdir($xdg_config_home);
+		}
+
 		mkdir($self->{cfg_home});
 	}
 
 	if (! -e $self->{config_store}) {
+		$self->{config} = $default_config;
 		$self->store($default_config);
 	}
+
+	$self->get;
 
 	return $self;
 }
 
+sub DESTROY {
+	my ($self) = @_;
+	$self->store;
+}
+
 sub store {
-	my ($self,$config) = @_;
+	my ($self) = @_;
 
 	open (my $cfg, ">$self->{config_store}") || die "$self->{config_store}: $!\n\n";
 
-	while (my ($key,$value) = each %{$config}) {
+	while (my ($key,$value) = each %{$self->{config}}) {
 		if (defined $key and defined $value) {
 			print $cfg "$key=$value\n";	
 		}
@@ -80,39 +88,28 @@ sub store {
 
 sub get {
 	my ($self) = @_;
-	my $config = {};
+	$self->{config} = {};
 
 	open (my $cfg, "$self->{config_store}") || die "$self->{config_store}: $!\n\n";
 
 	while (<$cfg>) {
 		chomp $_;
 		if ($_ =~ /^(\w+)?=(.+)/) {
-			$config->{$1} = $2; 
+			$self->{config}->{$1} = $2; 
 		}
 	}
 
 	close($cfg);
-	
-	return $config;
 }
 
 sub set_option {
 	my ($self,$option,$value) = @_;
-	my $config = $self->get;
-
-	$config->{$option} = $value;
-	$self->store($config);
+	$self->{config}->{$option} = $value;
 }
 
 sub get_option {
 	my ($self,$option) = @_;
-	my $config = $self->get;
-
-	if (defined $config->{$option}) {
-		return $config->{$option};
-	}
-
-	return $default_config->{$option};
+	return $self->{config}->{$option};
 }
 
 1;

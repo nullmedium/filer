@@ -24,11 +24,6 @@ sub new {
 	my ($dialog,$bbox,$hbox,$vbox,$sw,$treeview,$selection);
 	my ($cell,$col,$button);
 
-	$self->{selected_type} = undef;
-	$self->{selected_type_iter} = undef;
-	$self->{selected_command} = undef;
-	$self->{selected_command_iter} = undef;
-
 	$dialog = new Gtk2::Dialog("File Association", undef, 'modal', 'gtk-close' => 'close');
 	$dialog->set_size_request(600,400);
 	$dialog->set_has_separator(1);
@@ -44,9 +39,9 @@ sub new {
 	$hbox->pack_start($sw,1,1,0);
 
 	$self->{types_model} = new Gtk2::TreeStore('Glib::Object','Glib::String','Glib::String');
-	$treeview = Gtk2::TreeView->new_with_model($self->{types_model});
-	$treeview->set_rules_hint(1);
-	$treeview->set_headers_visible(0);
+	$self->{types_treeview} = Gtk2::TreeView->new_with_model($self->{types_model});
+	$self->{types_treeview}->set_rules_hint(1);
+	$self->{types_treeview}->set_headers_visible(0);
 
 	# a column with a pixbuf renderer and a text renderer
 	$col = Gtk2::TreeViewColumn->new;
@@ -60,7 +55,7 @@ sub new {
 	$col->pack_start($cell, 1);
 	$col->add_attribute($cell, text => 1);
 
-	$treeview->append_column($col);
+	$self->{types_treeview}->append_column($col);
 
 	$col = Gtk2::TreeViewColumn->new;
 	$col->set_title("Name");
@@ -69,23 +64,21 @@ sub new {
 	$col->pack_start($cell, 0);
 	$col->add_attribute($cell, text => 2);
 
-	$treeview->append_column($col);
+	$self->{types_treeview}->append_column($col);
 
-	$selection = $treeview->get_selection;
+	$selection = $self->{types_treeview}->get_selection;
 	$selection->signal_connect("changed", sub {
 		my ($selection) = @_;
-		$self->{selected_type_iter} = $selection->get_selected;
-		$self->{selected_type} = undef;
+		my $type = $self->get_selected_type;
+		$self->{commands_model}->clear;
 
-		if (defined $self->{selected_type_iter}) {
-			$self->{selected_type} = $self->{types_model}->get($self->{selected_type_iter}, 2);
-
-			if (defined $self->{selected_type}) {
-				$self->refresh_commands($self->{selected_type});
-			}
+		if (defined $type) {
+			$self->refresh_commands($type);
 		}
+
+		return 1;
 	});
-	$sw->add($treeview);
+	$sw->add($self->{types_treeview});
 
 	$sw = new Gtk2::ScrolledWindow;
 	$sw->set_policy('automatic','automatic');
@@ -93,21 +86,9 @@ sub new {
 	$hbox->pack_start($sw,1,1,0);
 
 	$self->{commands_model} = new Gtk2::ListStore('Glib::String');
-
-	$treeview = Gtk2::TreeView->new_with_model($self->{commands_model});
-	$treeview->insert_column_with_attributes(0, "Application Preference Order", Gtk2::CellRendererText->new, text => 0);
-
-	$selection = $treeview->get_selection;
-	$selection->signal_connect("changed", sub {
-		my ($selection) = @_;
-		$self->{selected_command_iter} = $selection->get_selected;
-		$self->{selected_command} = undef;
-		
-		if (defined $self->{selected_command_iter}) {
-			$self->{selected_command} = $self->{commands_model}->get($self->{selected_command_iter}, 0);
-		}
-	});
-	$sw->add($treeview);
+	$self->{commands_treeview} = Gtk2::TreeView->new_with_model($self->{commands_model});
+	$self->{commands_treeview}->insert_column_with_attributes(0, "Application Preference Order", Gtk2::CellRendererText->new, text => 0);
+	$sw->add($self->{commands_treeview});
 
 	$bbox = new Gtk2::VButtonBox;
 	$bbox->set_layout_default('start');
@@ -129,13 +110,12 @@ sub new {
 
 	$button = Gtk2::Button->new_from_stock('gtk-edit');
 	$button->signal_connect("clicked", sub {
-		return if (not defined $self->{selected_command_iter});
-
 		my $fs = new Gtk2::FileChooserDialog("Select Command", undef, 'GTK_FILE_CHOOSER_ACTION_OPEN', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
-		$fs->set_filename($self->{selected_command});
+		my ($iter,$command) = $self->get_selected_command;
+		$fs->set_filename($command);
 
 		if ($fs->run eq 'ok') {
-			$self->{commands_model}->set($self->{selected_command_iter}, 0, $fs->get_filename);
+			$self->{commands_model}->set($iter, 0, $fs->get_filename);
 			$self->set_commands;
 		}
 		$fs->destroy;
@@ -144,34 +124,44 @@ sub new {
 
 	$button = Gtk2::Button->new_from_stock('gtk-remove');
 	$button->signal_connect("clicked", sub {
-		return if (not defined $self->{selected_command_iter});
+		my $iter = $self->{commands_treeview}->get_selection->get_selected;
 		
-		$self->{commands_model}->remove($self->{selected_command_iter});
-		$self->set_commands;
+		if (defined $iter) {
+			$self->{commands_model}->remove($iter);
+			$self->set_commands;
+		}
 	});
 	$bbox->add($button);
 
 	$button = Gtk2::Button->new_from_stock('gtk-go-up');
 	$button->signal_connect("clicked", sub {
-		my $treepath = $self->{commands_model}->get_path($self->{selected_command_iter});
+		my $iter = $self->{commands_treeview}->get_selection->get_selected;
+		
+		if (defined $iter) {
+			my $treepath = $self->{commands_model}->get_path($iter);
 
-		if ($treepath->prev) {
-			$self->{commands_model}->swap($self->{commands_model}->get_iter($treepath),$self->{selected_command_iter});
-			$self->set_commands;
+			if ($treepath->prev) {
+				$self->{commands_model}->swap($self->{commands_model}->get_iter($treepath),$iter);
+				$self->set_commands;
+			}
 		}
 	});
 	$bbox->add($button);
 
 	$button = Gtk2::Button->new_from_stock('gtk-go-down');
 	$button->signal_connect("clicked", sub {
-		my $treepath = $self->{commands_model}->get_path($self->{selected_command_iter});
-		$treepath->next;
-	
-		my $b = $self->{commands_model}->get_iter($treepath);
+		my $iter = $self->{commands_treeview}->get_selection->get_selected;
 
-		if ($b) {
-			$self->{commands_model}->swap($self->{selected_command_iter},$b);
-			$self->set_commands;
+		if (defined $iter) {
+			my $treepath = $self->{commands_model}->get_path($iter);
+			$treepath->next;
+	
+			my $b = $self->{commands_model}->get_iter($treepath);
+
+			if ($b) {
+				$self->{commands_model}->swap($iter,$b);
+				$self->set_commands;
+			}
 		}
 	});
 	$bbox->add($button);
@@ -223,18 +213,25 @@ sub new {
 
 	$button = Gtk2::Button->new_from_stock('gtk-remove');
 	$button->signal_connect("clicked", sub {
-		if (defined $self->{selected_type} and defined $self->{selected_type_iter}) {
-			$self->{types_model}->remove($self->{selected_type_iter});		
+		my ($iter,$type) = $self->get_selected_type;
+
+		if (defined $type) {
+			$self->{mime}->delete_mimetype($type);
+			$self->{types_model}->remove($iter);
 			$self->{commands_model}->clear;
-			$self->{mime}->delete_mimetype($self->{selected_type});
 		}
+		return 1;
 	});
 	$bbox->add($button);
 
 	$button = Gtk2::Button->new("Set Icon");
 	$button->signal_connect("clicked", sub {
-		$self->set_icon_dialog($self->{selected_type});
-		$self->refresh_types;
+		my $type = $self->get_selected_type;
+
+		if (defined $type) {
+			$self->{mime}->set_icon_dialog($type);
+			$self->refresh_types;
+		}
 	});
 	$bbox->add($button);
 
@@ -244,6 +241,40 @@ sub new {
 	$dialog->destroy;
 
 	return $self;
+}
+
+sub get_selected_type {
+	my ($self) = @_;
+	my $iter = $self->{types_treeview}->get_selection->get_selected;
+
+	if (defined $iter) {
+		my $type = $self->{types_model}->get($iter,2);
+
+		if (wantarray) {
+			return ($iter,$type);		
+		} else {
+			return $type;
+		}
+	} else {
+		return undef;
+	}
+}
+
+sub get_selected_command {
+	my ($self) = @_;
+	my $iter = $self->{commands_treeview}->get_selection->get_selected;
+	
+	if (defined $iter) {
+		my $command = $self->{commands_model}->get($iter,0);
+
+		if (wantarray) {
+			return ($iter,$command);
+		} else {
+			return $command;
+		}
+	} else {
+		return undef;
+	}
 }
 
 sub refresh_types {
@@ -287,7 +318,10 @@ sub set_commands {
 		return 0;
 	});
 
-	$self->{mime}->set_commands($self->{selected_type},\@commands);
+	my $type = $self->get_selected_type;
+	if (defined $type) {
+		$self->{mime}->set_commands($type,\@commands);
+	}
 };
 
 1;

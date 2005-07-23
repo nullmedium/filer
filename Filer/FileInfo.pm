@@ -28,6 +28,7 @@ Memoize::memoize("Stat::lsMode::format_mode");
 Memoize::memoize("File::MimeInfo::Magic::mimetype");
 Memoize::memoize("File::MimeInfo::Magic::describe");
 Memoize::memoize("Filer::Tools::calculate_size");
+# Memoize::memoize("Filer::Tools::format_mode");
 
 sub new {
 	my ($class,$filepath) = @_;
@@ -35,7 +36,6 @@ sub new {
 
 	$self->{filepath} = utf8($filepath)->latin1; 
 	$self->{stat} = [ lstat($self->{filepath}) ];
-	$self->{type} = (-l $self->{filepath}) ? "inode/symlink" : mimetype($self->{filepath});
 
 	return $self;
 }
@@ -52,7 +52,7 @@ sub get_basename {
 
 sub get_mimetype {
 	my ($self) = @_; 
-	return $self->{type};
+	return (-l $self->{filepath}) ? "inode/symlink" : mimetype($self->{filepath});
 }
 
 sub get_mimetype_description {
@@ -113,7 +113,7 @@ sub get_gid {
 
 sub get_mode {
 	my ($self) = @_;
-	return my $r = format_mode($self->get_raw_mode);
+	return format_mode($self->get_raw_mode);
 }
 
 sub is_hidden {

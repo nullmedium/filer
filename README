@@ -10,11 +10,15 @@ Filer has a few dependencies (mainly Perl modules):
 
 * shared-mime-info (http://freedesktop.org/)
 
+* File::BaseDir
+
 * File::MimeInfo
 
 * Stat::lsMode
 
 * File::DirWalk
+
+* Unicode::String
 
 * Gtk2-Perl 1.080 (http://gtk2-perl.sf.net/)
 

@@ -125,69 +125,69 @@ sub set_properties_dialog {
 
 		# Icon
 
-		$frame = new Gtk2::Frame("<b>Mimetype Icon</b>");
-		$frame->get_label_widget->set_use_markup(1); 
-		$frame->set_label_align(0.0,0.0);
-		$frame->set_shadow_type('none');
-		$dialog->vbox->pack_start($frame,0,0,0);
-
-		$table = new Gtk2::Table(2,4);
-		$table->set_homogeneous(0);
-		$table->set_col_spacings(5);
-		$table->set_row_spacings(1);
-		$frame->add($table);
-
-		$frame = new Gtk2::Frame;
-		$frame->set_size_request(50, 50);
-		$frame->set_shadow_type('out');
-		$table->attach($frame, 0, 1, 0, 2, [], [], 0, 0);
-
-		$icon_image = new Gtk2::Image;
-		$icon_image->set_from_pixbuf(Filer::Tools->intelligent_scale(Gtk2::Gdk::Pixbuf->new_from_file($mime->get_icon($type)),50));
-		$icon_image->set_alignment(0.50,0.50);
-		$frame->add($icon_image);
-
-		$label = new Gtk2::Label;
-		$label->set_justify('left');
-		$label->set_text("Type: ");
-		$label->set_alignment(0.0,0.0);
-		$table->attach($label, 1, 2, 0, 1, [ "fill" ], [], 0, 0);
-
-		$type_label = new Gtk2::Label;
-		$type_label->set_justify('right');
-		$type_label->set_text($type);
-		$type_label->set_alignment(0.0,0.0);
-		$table->attach($type_label, 2, 4, 0, 1, [ "expand","fill" ], [], 0, 0);
-
-		$label = new Gtk2::Label;
-		$label->set_justify('left');
-		$label->set_text("Icon:");
-		$label->set_alignment(0.0,0.0);
-		$table->attach($label, 1, 2, 1, 2, [ "fill" ], [], 0, 0);
-
-		$icon_entry = new Gtk2::Entry;
-		$icon_entry->set_text($mime->get_icon($type));
-		$table->attach($icon_entry, 2, 3, 1, 2, [ "expand","fill" ], [], 0, 0);
-
-		$icon_browse_button = new Gtk2::Button;
-		$icon_browse_button->add(Gtk2::Image->new_from_stock('gtk-open', 'button'));
-		$icon_browse_button->signal_connect("clicked", sub {
-			my $fs = Filer::Dialog->preview_file_selection;
-			$fs->set_filename($mime->get_icon($type));
-
-			if ($fs->run eq 'ok') {
-				my $mimeicon = $fs->get_filename;
-				my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($mimeicon) || return;
-
-				$icon_entry->set_text($mimeicon);
-				$icon_image->set_from_pixbuf(Filer::Tools->intelligent_scale($pixbuf,50));
-
-				$mime->set_icon($type, $mimeicon);
-			}
-
-			$fs->destroy;
-		});
-		$table->attach($icon_browse_button, 3, 4, 1, 2, [ "fill" ], [], 0, 0);
+# 		$frame = new Gtk2::Frame("<b>Mimetype Icon</b>");
+# 		$frame->get_label_widget->set_use_markup(1); 
+# 		$frame->set_label_align(0.0,0.0);
+# 		$frame->set_shadow_type('none');
+# 		$dialog->vbox->pack_start($frame,0,0,0);
+# 
+# 		$table = new Gtk2::Table(2,4);
+# 		$table->set_homogeneous(0);
+# 		$table->set_col_spacings(5);
+# 		$table->set_row_spacings(1);
+# 		$frame->add($table);
+# 
+# 		$frame = new Gtk2::Frame;
+# 		$frame->set_size_request(50, 50);
+# 		$frame->set_shadow_type('out');
+# 		$table->attach($frame, 0, 1, 0, 2, [], [], 0, 0);
+# 
+# 		$icon_image = new Gtk2::Image;
+# 		$icon_image->set_from_pixbuf(Filer::Tools->intelligent_scale(Gtk2::Gdk::Pixbuf->new_from_file($mime->get_icon($type)),50));
+# 		$icon_image->set_alignment(0.50,0.50);
+# 		$frame->add($icon_image);
+# 
+# 		$label = new Gtk2::Label;
+# 		$label->set_justify('left');
+# 		$label->set_text("Type: ");
+# 		$label->set_alignment(0.0,0.0);
+# 		$table->attach($label, 1, 2, 0, 1, [ "fill" ], [], 0, 0);
+# 
+# 		$type_label = new Gtk2::Label;
+# 		$type_label->set_justify('right');
+# 		$type_label->set_text($type);
+# 		$type_label->set_alignment(0.0,0.0);
+# 		$table->attach($type_label, 2, 4, 0, 1, [ "expand","fill" ], [], 0, 0);
+# 
+# 		$label = new Gtk2::Label;
+# 		$label->set_justify('left');
+# 		$label->set_text("Icon:");
+# 		$label->set_alignment(0.0,0.0);
+# 		$table->attach($label, 1, 2, 1, 2, [ "fill" ], [], 0, 0);
+# 
+# 		$icon_entry = new Gtk2::Entry;
+# 		$icon_entry->set_text($mime->get_icon($type));
+# 		$table->attach($icon_entry, 2, 3, 1, 2, [ "expand","fill" ], [], 0, 0);
+# 
+# 		$icon_browse_button = new Gtk2::Button;
+# 		$icon_browse_button->add(Gtk2::Image->new_from_stock('gtk-open', 'button'));
+# 		$icon_browse_button->signal_connect("clicked", sub {
+# 			my $fs = Filer::Dialog->preview_file_selection;
+# 			$fs->set_filename($mime->get_icon($type));
+# 
+# 			if ($fs->run eq 'ok') {
+# 				my $mimeicon = $fs->get_filename;
+# 				my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($mimeicon) || return;
+# 
+# 				$icon_entry->set_text($mimeicon);
+# 				$icon_image->set_from_pixbuf(Filer::Tools->intelligent_scale($pixbuf,50));
+# 
+# 				$mime->set_icon($type, $mimeicon);
+# 			}
+# 
+# 			$fs->destroy;
+# 		});
+# 		$table->attach($icon_browse_button, 3, 4, 1, 2, [ "fill" ], [], 0, 0);
 	} else {
 		$label = new Gtk2::Label("<b>Set permissions for multiple files</b>");
 		$label->set_use_markup(1);
@@ -229,7 +229,7 @@ sub set_properties_dialog {
 	$checkbutton = new Gtk2::CheckButton("Set UID");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
-		&{$mode_clicked}($w,\$properties_mode,4);
+		$mode_clicked->($w,\$properties_mode,4);
 	});
 	$checkbutton->set_active(S_ISUID & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 0, 1, 1, 2, [ "fill" ], [], 0, 0);
@@ -237,7 +237,7 @@ sub set_properties_dialog {
 	$checkbutton = new Gtk2::CheckButton("Set GID");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
-		&{$mode_clicked}($w,\$properties_mode,2);
+		$mode_clicked->($w,\$properties_mode,2);
 	});
 	$checkbutton->set_active(S_ISGID & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 0, 1, 2, 3, [ "fill" ], [], 0, 0);
@@ -245,7 +245,7 @@ sub set_properties_dialog {
 	$checkbutton = new Gtk2::CheckButton("Sticky Bit");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
-		&{$mode_clicked}($w,\$properties_mode,1);
+		$mode_clicked->($w,\$properties_mode,1);
 	});
 	$checkbutton->set_active(S_ISVTX & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 0, 1, 3, 4, [ "fill" ], [], 0, 0);
@@ -255,7 +255,7 @@ sub set_properties_dialog {
 	$checkbutton = new Gtk2::CheckButton("Read");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
-		&{$mode_clicked}($w,\$owner_mode,4);
+		$mode_clicked->($w,\$owner_mode,4);
 	});
 	$checkbutton->set_active(S_IRUSR & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 1, 2, 1, 2, [ "fill" ], [], 0, 0);
@@ -263,7 +263,7 @@ sub set_properties_dialog {
 	$checkbutton = new Gtk2::CheckButton("Write");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
-		&{$mode_clicked}($w,\$owner_mode,2);
+		$mode_clicked->($w,\$owner_mode,2);
 	});
 	$checkbutton->set_active(S_IWUSR & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 1, 2, 2, 3, [ "fill" ], [], 0, 0);
@@ -271,7 +271,7 @@ sub set_properties_dialog {
 	$checkbutton = new Gtk2::CheckButton("Execute");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
-		&{$mode_clicked}($w,\$owner_mode,1);
+		$mode_clicked->($w,\$owner_mode,1);
 	});
 	$checkbutton->set_active(S_IXUSR & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 1, 2, 3, 4, [ "fill" ], [], 0, 0);
@@ -281,7 +281,7 @@ sub set_properties_dialog {
 	$checkbutton = new Gtk2::CheckButton("Read");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
-		&{$mode_clicked}($w,\$group_mode,4);
+		$mode_clicked->($w,\$group_mode,4);
 	});
 	$checkbutton->set_active(S_IRGRP & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 2, 3, 1, 2, [ "fill" ], [], 0, 0);
@@ -289,7 +289,7 @@ sub set_properties_dialog {
 	$checkbutton = new Gtk2::CheckButton("Write");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
-		&{$mode_clicked}($w,\$group_mode,2);
+		$mode_clicked->($w,\$group_mode,2);
 	});
 	$checkbutton->set_active(S_IWGRP & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 2, 3, 2, 3, [ "fill" ], [], 0, 0);
@@ -297,7 +297,7 @@ sub set_properties_dialog {
 	$checkbutton = new Gtk2::CheckButton("Execute");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
-		&{$mode_clicked}($w,\$group_mode,1);
+		$mode_clicked->($w,\$group_mode,1);
 	});
 	$checkbutton->set_active(S_IXGRP & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 2, 3, 3, 4, [ "fill" ], [], 0, 0);
@@ -307,7 +307,7 @@ sub set_properties_dialog {
 	$checkbutton = new Gtk2::CheckButton("Read");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
-		&{$mode_clicked}($w,\$other_mode,4);
+		$mode_clicked->($w,\$other_mode,4);
 	});
 	$checkbutton->set_active(S_IROTH & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 3, 4, 1, 2, [ "fill" ], [], 0, 0);
@@ -315,7 +315,7 @@ sub set_properties_dialog {
 	$checkbutton = new Gtk2::CheckButton("Write");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
-		&{$mode_clicked}($w,\$other_mode,2);
+		$mode_clicked->($w,\$other_mode,2);
 	});
 	$checkbutton->set_active(S_IWOTH & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 3, 4, 2, 3, [ "fill" ], [], 0, 0);
@@ -323,7 +323,7 @@ sub set_properties_dialog {
 	$checkbutton = new Gtk2::CheckButton("Execute");
 	$checkbutton->signal_connect("clicked", sub {
 		my ($w,$e) = @_;
-		&{$mode_clicked}($w,\$other_mode,1);
+		$mode_clicked->($w,\$other_mode,1);
 	});
 	$checkbutton->set_active(S_IXOTH & $stat[2]) if (!$multiple);
 	$table->attach($checkbutton, 3, 4, 3, 4, [ "fill" ], [], 0, 0);

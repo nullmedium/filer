@@ -53,6 +53,32 @@ sub wait_for_pid {
 
 ####
 
+# sub format_mode {
+# 	my $mode = pop;
+# 
+# 	my @perms = qw(--- --x -w- -wx r-- r-x rw- rwx);
+# 	my @ftype = qw(. p c ? d ? b ? - ? l ? s ? ? ?);
+# 	$ftype[0] = '';
+# 
+# 	my $setids = ($mode & 07000) >> 9;
+# 	my @permstrs = @perms[($mode & 0700) >> 6, ($mode & 0070) >> 3, $mode & 0007];
+# 	my $ftype = $ftype[($mode & 0170000) >> 12];
+# 
+# 	if ($setids) {
+# 		if ($setids & 01) {         # Sticky bit
+# 			$permstrs[2] =~ s/([-x])$/$1 eq 'x' ? 't' : 'T'/e;
+# 		}
+# 		if ($setids & 04) {         # Setuid bit
+# 			$permstrs[0] =~ s/([-x])$/$1 eq 'x' ? 's' : 'S'/e;
+# 		}
+# 		if ($setids & 02) {         # Setgid bit
+# 			$permstrs[1] =~ s/([-x])$/$1 eq 'x' ? 's' : 'S'/e;
+# 		}
+# 	}
+# 
+# 	join '', $ftype, @permstrs;
+# }
+
 sub catpath {
 	my ($self,$dir,@p) = @_;
 	return File::Spec->catfile(File::Spec->splitdir($dir), @p);

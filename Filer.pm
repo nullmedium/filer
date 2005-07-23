@@ -74,15 +74,12 @@ sub create_main_window {
 	$self->{widgets}->{main_window} = new Gtk2::Window('toplevel');
 	$self->{widgets}->{main_window}->set_title("Filer $self->{VERSION}");
 
-	my $size = $self->{config}->get_option("WindowSize");
-	my ($w,$h) = split /:/, $size;
-
- 	$self->{widgets}->{main_window}->resize($w,$h);
+	$self->{widgets}->{main_window}->resize(split /:/, $self->{config}->get_option("WindowSize"));
 #	$self->{widgets}->{main_window}->resize(784,606);
 
 	$self->{widgets}->{main_window}->signal_connect("event", sub { $self->window_event_cb(@_) });
 	$self->{widgets}->{main_window}->signal_connect("delete-event", sub { $self->quit_cb });
-	$self->{widgets}->{main_window}->set_icon(Gtk2::Gdk::Pixbuf->new_from_file((new Filer::Mime($self))->get_icon('inode/directory')));
+	$self->{widgets}->{main_window}->set_icon(Gtk2::Gdk::Pixbuf->new_from_file("$main::libpath/icons/folder.png"));
 
 	$self->{widgets}->{vbox} = new Gtk2::VBox(0,0);
 	$self->{widgets}->{main_window}->add($self->{widgets}->{vbox});
@@ -334,8 +331,8 @@ sub create_main_window {
   	$self->{widgets}->{uimanager}->get_widget("/ui/menubar/bookmarks-menu")->set_submenu($bookmarks->bookmarks_menu);
 	$self->{widgets}->{uimanager}->get_widget("/ui/menubar/bookmarks-menu")->show;
 
-	$self->{widgets}->{list1}->open_path((defined $ARGV[0] and -d $ARGV[0]) ? $ARGV[0] : $self->{config}->get_option('PathLeft'));
-	$self->{widgets}->{list2}->open_path((defined $ARGV[1] and -d $ARGV[1]) ? $ARGV[1] : $self->{config}->get_option('PathRight'));
+	$self->{widgets}->{list1}->open_path_helper((defined $ARGV[0] and -d $ARGV[0]) ? $ARGV[0] : $self->{config}->get_option('PathLeft'));
+	$self->{widgets}->{list2}->open_path_helper((defined $ARGV[1] and -d $ARGV[1]) ? $ARGV[1] : $self->{config}->get_option('PathRight'));
 
 	$self->{widgets}->{main_window}->show_all;
 
@@ -411,6 +408,8 @@ EOF
 				"Bjoern Martensen <bjoern.martensen\@gmail.com>"
 	);
 
+	$dialog->set_artists("Crystal SVG 16x16 mimetype icons by Everaldo (http://www.everaldo.com)");
+
 	$dialog->show;
 }
 
@@ -440,7 +439,8 @@ sub open_terminal_cb {
 
 	if (-d $path) {
 		my $term = $self->{config}->get_option("Terminal");
-		system("cd '$path' && $term & exit");
+		my @c = split /\s+/, $term;
+		Filer::Tools->start_program(@c, "--working-directory", $path);
 	}
 }
 
@@ -487,8 +487,13 @@ sub hidden_cb {
 sub case_sort_cb {
 	my ($self,$action) = @_;
 	$self->{config}->set_option('CaseInsensitiveSort', ($action->get_active) ? 1 : 0);
-	$self->{pane}->[LEFT]->refresh;
-	$self->{pane}->[RIGHT]->refresh;
+
+	if ($self->{pane}->[LEFT]->get_type ne "TREE") {
+		$self->{pane}->[LEFT]->get_model->set_sort_column_id($self->{pane}->[LEFT]->get_model->get_sort_column_id); 
+	}
+
+	$self->{pane}->[RIGHT]->get_model->set_sort_column_id($self->{pane}->[RIGHT]->get_model->get_sort_column_id); 
+
 	return 1;
 }
 

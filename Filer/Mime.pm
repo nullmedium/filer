@@ -87,18 +87,28 @@ sub new {
 	}
 	
 	if (! -e $self->{mime_store}) {
-		$self->store($default_mimetypes);
+		$self->{mime} = $default_mimetypes;
+		$self->store;
 	}
+
+	$self->get;
 
 	return $self;
 }
 
+sub DESTROY {
+	my ($self) = @_;
+	$self->store;
+}
+
 sub store {
-	my ($self,$mime) = @_;
+	my ($self) = @_;
 
 	open(my $cfg, ">$self->{mime_store}") || die "$self->{mime_store}: $!\n\n";
 
-	while (my ($key,$value) = each %{$mime}) {
+	foreach my $key (sort keys %{$self->{mime}}) {
+		my $value = $self->{mime}->{$key};	
+
 		my $icon_path = $value->[ICON];
 		my $cmds = join ":", @{$value->[COMMANDS]};
 		print $cfg "$key=$icon_path:$cmds\n";
@@ -109,7 +119,7 @@ sub store {
 
 sub get {
 	my ($self) = @_;
-	my $mime = {};
+	$self->{mime} = {};
 
 	open (my $cfg, "$self->{mime_store}") || die "$self->{mime_store}: $!\n\n";
 
@@ -117,19 +127,15 @@ sub get {
 		chomp $_;
 		my ($key,$value) = split /=/, $_;
 		my ($icon_path,@commands) = split /:/, $value;
-		$mime->{$key} = [ $icon_path, [ @commands ]];
+		$self->{mime}->{$key} = [ $icon_path, [ @commands ]];
 	}
 
 	close($cfg);
-	
-	return $mime;
 }
 
 sub get_mimetypes {
 	my ($self) = @_;
-	my $mime = $self->get;
-	
-	return keys %{$mime};
+	return keys %{$self->{mime}};
 }
 
 sub get_mimetype_groups {
@@ -147,32 +153,25 @@ sub get_mimetype_groups {
 
 sub add_mimetype {
 	my ($self,$type) = @_;
-	my $mime = $self->get;
-
-	$mime->{$type} = [ $self->get_icon("default"), [] ];
-
-	$self->store($mime);
+	$self->{mime}->{$type} = [ $self->{mime}->{default}->[ICON], [] ];
 }
 
 sub delete_mimetype {
 	my ($self,$type) = @_;
-	my $mime = $self->get;
-
-	$self->store($mime);
+	delete $self->{mime}->{$type};
 }
 
 sub get_icon {
 	my ($self,$type) = @_;
-	my $mime = $self->get;
 
-	if (defined $mime->{$type}->[ICON]) {
-		my $path = $mime->{$type}->[ICON];
+	if (defined $self->{mime}->{$type}->[ICON]) {
+		my $path = $self->{mime}->{$type}->[ICON];
 
 		if (-e $path) {
 			return $path;
 		} else {
-			if (defined $default_mimetypes->{$_}->[ICON]) {
-				return $default_mimetypes->{$_}->[ICON];
+			if (defined $default_mimetypes->{$type}->[ICON]) {
+				return $default_mimetypes->{$type}->[ICON];
 			} else {
 				return $default_mimetypes->{default}->[ICON];
 			}
@@ -188,11 +187,10 @@ sub get_icon {
 
 sub get_icons {
 	my ($self) = @_;
-	my $mime = $self->get;	
 	my $icons = {};
 
 	foreach ($self->get_mimetypes) {
-		my $path = $mime->{$_}->[ICON];
+		my $path = $self->{mime}->{$_}->[ICON];
 
 		if (! -e $path) {
 			if (defined $default_mimetypes->{$_}->[ICON]) {
@@ -210,33 +208,27 @@ sub get_icons {
 
 sub set_icon {
 	my ($self,$type,$icon) = @_;
-	my $mime = $self->get;
-	$mime->{$type}->[ICON] = $icon;
-	$self->store($mime);
+	$self->{mime}->{$type}->[ICON] = $icon;
 }
 
 sub get_commands {
 	my ($self,$type) = @_;
-	return @{$self->get->{$type}->[COMMANDS]};
+	return @{$self->{mime}->{$type}->[COMMANDS]};
 }
 
 sub set_commands {
 	my ($self,$type,$commands) = @_;
-	my $mime = $self->get;
-	$mime->{$type}->[COMMANDS] = $commands;
-	$self->store($mime);
+	$self->{mime}->{$type}->[COMMANDS] = $commands;
 }
 
 sub get_default_command {
 	my ($self,$type) = @_;
-	return ($self->get_commands($type))[0];
+	return $self->{mime}->{$type}->[COMMANDS]->[0];
 }
 
 sub set_default_command {
 	my ($self,$type,$command) = @_;
-	my $mime = $self->get;
-	$mime->{$type}->[COMMANDS]->[0] = $command;
-	$self->store($mime);
+	$self->{mime}->{$type}->[COMMANDS]->[0] = $command;
 }
 
 sub set_icon_dialog {

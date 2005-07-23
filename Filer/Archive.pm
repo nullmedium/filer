@@ -19,72 +19,73 @@ package Filer::Archive;
 use strict;
 use warnings;
 
-my %supported_archives = (
-	'application/x-gzip' =>			{ extension => 'gz',		create => 'gzip -c',	extract => 'gzip -d'},
-	'application/x-bzip' =>			{ extension => 'bz2',		create => 'bzip2 -c',	extract => 'bzip2 -d'},
-	'application/zip' =>			{ extension => 'zip',		create => 'zip',	extract => 'unzip'},
-	'application/x-tar' =>			{ extension => 'tar',		create => 'tar -cf',	extract => 'tar -xf'},
-	'application/x-compressed-tar' =>	{ extension => 'tar.gz',	create => 'tar -czf',	extract => 'tar -xzf'},
-	'application/x-bzip-compressed-tar' =>	{ extension => 'tar.bz2',	create => 'tar -cjf',	extract => 'tar -xjf'},
-	'application/x-rar' =>			{ extension => 'rar',		create => 'rar a',	extract => 'unrar x'}
-);
+use File::Basename;
+use File::MimeInfo;
 
 sub new {
 	my ($class,$filepath,$files) = @_;
 	my $self = bless {}, $class;
 
-	$self->{path} = quotemeta($filepath);
+	$self->{path} = $filepath;
 	$self->{files} = $files;
+
+	$self->{supported_archives} = {
+		'application/x-gzip' 			=> { extension => 'gz',		create => 'gzip -c',	extract => 'gzip -d'},
+		'application/x-bzip' 			=> { extension => 'bz2',	create => 'bzip2 -c',	extract => 'bzip2 -d'},
+		'application/zip' 			=> { extension => 'zip',	create => 'zip',	extract => 'unzip'},
+		'application/x-tar' 			=> { extension => 'tar',	create => 'tar -c',	extract => 'tar -x'},
+		'application/x-compressed-tar'		=> { extension => 'tar.gz',	create => 'tar -cz',	extract => 'tar -xz'},
+		'application/x-bzip-compressed-tar' 	=> { extension => 'tar.bz2',	create => 'tar -cj',	extract => 'tar -xj'},
+		'application/x-rar' 			=> { extension => 'rar',	create => 'rar a',	extract => 'unrar x'}
+	};
 
 	return $self;
 }
 
 sub create_tar_bz2_archive {
 	my ($self) = @_;
-	$self->{requested_archivetype} = 'application/x-bzip-compressed-tar';
-
-	$self->create_archive;
+	$self->create_archive('application/x-bzip-compressed-tar');
 }
 
 sub create_tar_gz_archive {
 	my ($self) = @_;
-	$self->{requested_archivetype} = 'application/x-compressed-tar';
-
-	$self->create_archive;
+	$self->create_archive('application/x-compressed-tar');
 }
 
 sub create_archive {
-	my ($self) = @_;
-	my ($path,$type) = ($self->{path}, $self->{requested_archivetype});
+	my ($self,$type) = @_;
+	my $path = $self->{path};
 
-	my $archive_command = $supported_archives{$type}{create};
-	my $archive_file = quotemeta(sprintf("%s.%s", $self->{files}->[0], $supported_archives{$type}{extension}));
+	my $archive_command = $self->{supported_archives}->{$type}->{create};
+	my $archive_file = sprintf("%s.%s", $self->{files}->[0], $self->{supported_archives}->{$type}->{extension});
 	
 	# create a space delimited list of files and escape it properly to make shell happy
-	my $f = join " ", map { "./" . File::Basename::basename(quotemeta($_)) } @{$self->{files}};
+	my @f = map { Filer::Tools->catpath(File::Spec->curdir, basename($_)) } @{$self->{files}};
 
-	system("cd $path && $archive_command $archive_file $f");
+	my @c = split /\s+/, $archive_command;
+	my $pid = Filer::Tools->start_program(@c, "-C", $path, "-f", $archive_file, @f);
+	Filer::Tools->wait_for_pid($pid);
 }
 
 sub extract_archive {
 	my ($self) = @_;
 	my $path = $self->{path};
 
-	foreach (@{$self->{files}}) {
-		my $type = File::MimeInfo::mimetype($_);
-		my $archive_extract_command = $supported_archives{$type}{extract};
-		my $f = quotemeta($_);
+	foreach my $f (@{$self->{files}}) {
+		my $type = mimetype($f);
+		my $archive_extract_command = $self->{supported_archives}->{$type}->{extract};
 
 		if ($archive_extract_command) {
-			system("cd $path && $archive_extract_command $f");
+			my @c = split /\s+/, $archive_extract_command;
+			my $pid = Filer::Tools->start_program(@c, "-C", $path, "-f", $f);
+			Filer::Tools->wait_for_pid($pid);
 		}
 	}
 }
 
 sub is_supported_archive {
-	my ($type) = @_;
-
-	return (defined $supported_archives{$type});
+	my ($self,$type) = @_;
+	return (defined $self->{supported_archives}->{$type});
 }
 
 1;
