@@ -43,7 +43,7 @@
 	<menuitem name="Deleting" action="ask-deleting-action" />
       </menu>
       <menuitem name="ShowHidden" action="show-hidden-action" />
-      <menuitem name="CaseSort" action="case-sort-action" />
+<!--      <menuitem name="CaseSort" action="case-sort-action" /> -->
       <separator/>
       <menuitem name="SetTerminal" action="set-terminal-action" />
       <menuitem name="SetEditor" action="set-editor-action" />

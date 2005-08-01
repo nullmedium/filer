@@ -16,50 +16,39 @@
 
 package Filer::FilePane;
 
+use strict;
+use warnings;
+
 use Cwd qw(abs_path);
-use File::Basename; 
+use File::Basename;
 
 use Filer::Constants;
 use Filer::DND;
 
-use strict;
-use warnings;
+use enum qw(
+	FILER
+	SIDE
+	FILEPATH
+	OVERRIDES
+	VBOX
+	TREEVIEW
+	TREEMODEL
+	TREESELECTION
+	PATH_COMBO
+	MIME
+	MIMEICONS
+	LOCATION_BAR_PARENT
+	LOCATION_BAR
+	NAVIGATION_BOX
+	NAVIGATION_BUTTONS
+	STATUS
+	MOUSE_MOTION_SELECT
+	MOUSE_MOTION_Y_POS_OLD
+	SELECT
+	UNSELECT
+);
 
-my $i = 0;
-
-use constant FILER			=> $i++; # important. must be -> 0 <- !!!
-use constant SIDE			=> $i++;
-use constant FILEPATH			=> $i++;
-use constant VBOX			=> $i++;
-use constant TREEVIEW			=> $i++;
-use constant TREEMODEL			=> $i++;
-use constant TREESELECTION		=> $i++;
-use constant PATH_COMBO			=> $i++;
-use constant PATH_ENTRY			=> $i++;
-use constant SELECTED_ITEM		=> $i++;
-use constant SELECTED_ITER		=> $i++;
-use constant OVERRIDES			=> $i++;
-use constant MIMEICONS			=> $i++;
-use constant FOLDER_STATUS		=> $i++;
-use constant LOCATION_BAR_PARENT	=> $i++;
-use constant LOCATION_BAR		=> $i++;
-use constant NAVIGATION_BOX		=> $i++;
-use constant NAVIGATION_BUTTONS		=> $i++;
-use constant MOUSE_MOTION_SELECT	=> $i++;
-use constant MOUSE_MOTION_Y_POS_OLD	=> $i++;
-
-use constant SELECT => 0;
-use constant UNSELECT => 1;
-
-my $cols = 0; 
-
-use constant COL_ICON => $cols++;
-use constant COL_NAME => $cols++;
-use constant COL_SIZE => $cols++;
-use constant COL_MODE => $cols++;
-use constant COL_TYPE => $cols++;
-use constant COL_DATE => $cols++;
-use constant COL_FILEINFO => $cols++;
+use enum qw(:COL_ ICON NAME SIZE MODE TYPE DATE FILEINFO N);
 
 sub new {
 	my ($class,$filer,$side) = @_;
@@ -68,8 +57,10 @@ sub new {
 
 	$self->[FILER] = $filer;
 	$self->[SIDE] = $side;
+	$self->[MIME] = $self->[FILER]->{mime};
+	$self->[MIMEICONS] = $self->[FILER]->{mimeicons};
 	$self->[OVERRIDES] = {};
-	$self->[MOUSE_MOTION_SELECT] = 0;
+	$self->[MOUSE_MOTION_SELECT] = FALSE;
 
 	$self->[VBOX] = new Gtk2::VBox(0,0);
 
@@ -86,19 +77,11 @@ sub new {
 	$self->[LOCATION_BAR]->pack_start($button, 0, 1, 0);
 
 	$self->[PATH_COMBO] = Gtk2::ComboBoxEntry->new_text;
-	$self->[PATH_COMBO]->signal_connect("changed", sub {
-		my ($combo) = @_;
-		return if ($combo->get_active == -1);
-		$self->open_path_helper($combo->get_active_text);
-	});
-
-	$self->[PATH_ENTRY] = $self->[PATH_COMBO]->get_child;
-
 	$self->[LOCATION_BAR]->pack_start($self->[PATH_COMBO], 1, 1, 0);
 
 	$button = new Gtk2::Button("Go");
 	$button->signal_connect("clicked", sub {
-		$self->open_file($self->[PATH_COMBO]->get_active_text)
+		$self->open_file(new Filer::FileInfo($self->[PATH_COMBO]->get_active_text));
 	});
 	$self->[LOCATION_BAR]->pack_start($button, 0, 1, 0);
 
@@ -119,11 +102,7 @@ sub new {
  	$self->[TREEVIEW]->signal_connect("button-release-event", sub { $self->treeview_event_cb(@_) });
  	$self->[TREEVIEW]->signal_connect("motion-notify-event", sub { $self->treeview_event_cb(@_) });
 
-	$self->[TREEMODEL] = new Gtk2::ListStore(
-	'Glib::Object','Glib::String','Glib::String','Glib::String','Glib::String','Glib::String',
-	'Glib::Scalar' # the Filer::FileInfo object
-	);
-
+	$self->[TREEMODEL] = new Gtk2::ListStore(qw(Glib::Object Glib::String Glib::String Glib::String Glib::String Glib::String Glib::Scalar));
 	$self->[TREEVIEW]->set_model($self->[TREEMODEL]);
 
 	# Drag and Drop
@@ -132,83 +111,63 @@ sub new {
 	$self->[TREEVIEW]->drag_source_set(['button1_mask','shift-mask'], ['move','copy'], $dnd->target_table);
 	$self->[TREEVIEW]->signal_connect("drag_data_get", sub { $dnd->filepane_treeview_drag_data_get(@_) });
 	$self->[TREEVIEW]->signal_connect("drag_data_received", sub { $dnd->filepane_treeview_drag_data_received(@_) });
-
 	$self->[TREESELECTION] = $self->[TREEVIEW]->get_selection;
 	$self->[TREESELECTION]->set_mode("multiple");
-	$self->[TREESELECTION]->signal_connect("changed", sub { $self->selection_changed_cb(@_) });
 
 	$scrolled_window->add($self->[TREEVIEW]);
 
-	my %c; # case cache
 	my %s; # size
 	my %m; # mode
 	my %t; # time
 
 	my $sort_func = sub {
 		my ($model,$a,$b) = @_;
-		my ($sort_column_id,$order) = $model->get_sort_column_id; 
+		my ($sort_column_id,$order) = $model->get_sort_column_id;
 
 		my $fi1 = $model->get($a, COL_FILEINFO);
 		my $fi2 = $model->get($b, COL_FILEINFO);
+
+		return 0 if (not ($fi1 && $fi2));
+
 		my $fp1 = $fi1->get_path;
 		my $fp2 = $fi2->get_path;
-		
-		if ((-d $fp1) and !( -d $fp2)) {
 
+		if ((-d $fp1) and !( -d $fp2)) {
 			return ($order eq "ascending") ? -1 : 1;
 
 		} elsif (!( -d $fp1) and (-d $fp2)) {
-
 			return ($order eq "ascending") ? 1 : -1;
+		}
 
-		} elsif ($fi1->is_hidden and !$fi2->is_hidden) {
+		my $name_sort = sub {
+			return ($model->get($a, COL_NAME) cmp $model->get($b, COL_NAME));
+		};
 
- 			return ($order eq "ascending") ? -1 : 1;
+		if ($sort_column_id == COL_NAME) { # size
 
-		} elsif ($fi2->is_hidden and !$fi1->is_hidden) {
+			return $name_sort->();
 
-			return ($order eq "ascending") ? 1 : -1;
+		} elsif ($sort_column_id == COL_SIZE) { # size
+
+			my $s = (($s{$fp1} ||= $fi1->get_raw_size) - ($s{$fp2} ||= $fi2->get_raw_size));
+			return ($s == 0) ? $name_sort->() : $s;
+
+		} elsif ($sort_column_id == COL_MODE) { # mode
+
+			# do we need to use the numeric mode values to sort?
+
+			my $s = (($m{$fp1} ||= $fi1->get_raw_mode) - ($m{$fp2} ||= $fi2->get_raw_mode));
+			return ($s == 0) ? $name_sort->() : $s;
+
+		} elsif ($sort_column_id == COL_DATE) { # date
+
+			my $s = (($t{$fp1} ||= $fi1->get_raw_mtime) - ($t{$fp2} ||= $fi2->get_raw_mtime));
+			return ($s == 0) ? $name_sort->() : $s;
 
 		} else {
-			my $name_sort = sub {
-				my $s1 = $model->get($a, COL_NAME);
-				my $s2 = $model->get($b, COL_NAME);
-
-				if ($self->[FILER]->{config}->get_option("CaseInsensitiveSort") == 0) {
-					return ($s1 cmp $s2);
-				} else {
-					return (($c{$s1} ||= uc($s1)) cmp ($c{$s2} ||= uc($s2)));
-				}
-			};
-
-			if ($sort_column_id == COL_NAME) { # size
-
-				return $name_sort->();
-
-			} elsif ($sort_column_id == COL_SIZE) { # size
-
-				my $s = (($s{$fp1} ||= $fi1->get_raw_size) - ($s{$fp2} ||= $fi2->get_raw_size));
-				return ($s == 0) ? $name_sort->() : $s;
-
-			} elsif ($sort_column_id == COL_MODE) { # mode
-			
-				# do we need to use the numeric mode values to sort? 
-
-				my $s = (($m{$fp1} ||= $fi1->get_raw_mode) - ($m{$fp2} ||= $fi2->get_raw_mode));
-				return ($s == 0) ? $name_sort->() : $s;
-
-			} elsif ($sort_column_id == COL_DATE) { # date
-
-				my $s = (($t{$fp1} ||= $fi1->get_raw_mtime) - ($t{$fp2} ||= $fi2->get_raw_mtime));
-				return ($s == 0) ? $name_sort->() : $s;
-
-			} else {
-				# currently this can only be the 'type' column and the type column doesn't need any special treatment:
-				my $s1 = $model->get($a, $sort_column_id); 
-				my $s2 = $model->get($b, $sort_column_id); 
-				my $s = ($s1 cmp $s2);
-				return ($s == 0) ? $name_sort->() : $s;
-			}
+			# currently this can only be the 'type' column and the type column doesn't need any special treatment:
+			my $s = ($model->get($a, $sort_column_id) cmp $model->get($b, $sort_column_id));
+			return ($s == 0) ? $name_sort->() : $s;
 		}
 	};
 
@@ -216,7 +175,6 @@ sub new {
 	$col = new Gtk2::TreeViewColumn;
 	$col->set_sort_column_id(COL_NAME);
 	$col->set_sort_indicator(1);
-	$col->set_resizable(1);
 	$col->set_title("Name");
 	$col->set_sizing('GTK_TREE_VIEW_COLUMN_AUTOSIZE');
 
@@ -226,35 +184,33 @@ sub new {
 
 	$cell = new Gtk2::CellRendererText;
 #	$cell->set("width-chars" => 20, 'ellipsize-set' => 0, ellipsize => 'PANGO_ELLIPSIZE_MIDDLE');
-#	$cell->set("width-chars" => 20);
 	$col->pack_start($cell, 1);
 	$col->add_attribute($cell, text => COL_NAME);
 
-	$self->[TREEMODEL]->set_sort_func(COL_NAME, $sort_func); 
+	$self->[TREEMODEL]->set_sort_func(COL_NAME, $sort_func);
 	$self->[TREEVIEW]->append_column($col);
 
-	my %cols = (
-		Size => COL_SIZE,
-		Type => COL_TYPE,
-		Mode => COL_MODE,
-		Date => COL_DATE,
-	);
+	my @cols = ();
+	$cols[COL_SIZE] = "Size";
+	$cols[COL_TYPE] = "Type";
+	$cols[COL_MODE] = "Mode";
+	$cols[COL_DATE] = "Date";
 
-	foreach my $name (sort {$cols{$a} <=> $cols{$b}} keys %cols) { 
-		my $n = $cols{$name};
-
+	for (my $n = 2; $n <= $#cols; $n++) {
 		$cell = new Gtk2::CellRendererText;
-		$col = Gtk2::TreeViewColumn->new_with_attributes($name, $cell, text => $n);
+		$col = Gtk2::TreeViewColumn->new_with_attributes($cols[$n], $cell, text => $n);
 		$col->set_sort_column_id($n);
 		$col->set_sort_indicator(1);
 		$col->set_sizing('GTK_TREE_VIEW_COLUMN_AUTOSIZE');
-		$self->[TREEMODEL]->set_sort_func($n, $sort_func); 
+		$self->[TREEMODEL]->set_sort_func($n, $sort_func);
 		$self->[TREEVIEW]->append_column($col);
 	}
 
-	$self->[TREEMODEL]->set_sort_column_id(COL_NAME,'ascending'); 
+	$self->[TREEMODEL]->set_sort_column_id(COL_NAME,'ascending');
 
-	$self->init_icons;
+	$self->[STATUS] = new Gtk2::Label;
+	$self->[STATUS]->set_alignment(0.0,0.5);
+	$self->[VBOX]->pack_start($self->[STATUS], 0, 1, 2);
 
 	return $self;
 }
@@ -309,11 +265,11 @@ sub show_popup_menu {
 		}
 
 		if ($self->count_items == 1) {
-			my $fi = $self->[TREEMODEL]->get($self->[SELECTED_ITER], COL_FILEINFO);
+			my $fi = $self->get_fileinfo->[0];
 			my $type = $fi->get_mimetype;
 
 			# Customize archive submenu
-			if ((new Filer::Archive(undef,undef))->is_supported_archive($type)) {
+			if ((new Filer::Archive)->is_supported_archive($type)) {
 				$uimanager->get_widget('/ui/list-popupmenu/archive-menu/Extract')->set_sensitive(1);
 			} else {
 				$uimanager->get_widget('/ui/list-popupmenu/archive-menu/Extract')->set_sensitive(0);
@@ -324,12 +280,11 @@ sub show_popup_menu {
 			$item = $uimanager->get_widget('/ui/list-popupmenu/Open');
 			$item->set_submenu($commands_menu);
 
-			my $mime = new Filer::Mime;
-			foreach ($mime->get_commands($type)) {
+			foreach ($self->[MIME]->get_commands($type)) {
 				$item = new Gtk2::MenuItem(basename($_));
 				$item->signal_connect("activate", sub {
 					my @c = split /\s+/, $_[1];
-					Filer::Tools->start_program(@c,$self->[SELECTED_ITEM]);				
+					Filer::Tools->start_program(@c,$self->get_item);
 				}, $_);
 				$commands_menu->add($item);
 			}
@@ -337,13 +292,13 @@ sub show_popup_menu {
 			$item = new Gtk2::MenuItem('Other ...');
 			$item->signal_connect("activate", sub { $self->open_file_with });
 			$commands_menu->add($item);
-	
+
 			$commands_menu->show_all;
-		} else {		
+		} else {
 			$uimanager->get_widget('/ui/list-popupmenu/Open')->set_sensitive(0);
 			$uimanager->get_widget('/ui/list-popupmenu/PopupItems1/Rename')->set_sensitive(0);
 		}
-	} else {		
+	} else {
 		$uimanager->get_widget('/ui/list-popupmenu/Open')->set_sensitive(0);
 		$uimanager->get_widget('/ui/list-popupmenu/PopupItems1/Rename')->set_sensitive(0);
 		$uimanager->get_widget('/ui/list-popupmenu/PopupItems1/Delete')->set_sensitive(0);
@@ -353,7 +308,7 @@ sub show_popup_menu {
 		$uimanager->get_widget('/ui/list-popupmenu/Properties')->set_sensitive(0);
 	}
 
-	foreach (split /\n\r/, $self->[FILER]->get_clipboard_contents) { 
+	foreach (split /\n\r/, $self->[FILER]->get_clipboard_contents) {
 		if (-e $_) {
 			$uimanager->get_widget('/ui/list-popupmenu/PopupItems1/Paste')->set_sensitive(1);
 			last;
@@ -362,20 +317,6 @@ sub show_popup_menu {
 
 	$popup_menu->show_all;
 	$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
-}
-
-sub selection_changed_cb {
-	my ($self,$selection) = @_;
-	my $c = $selection->count_selected_rows;
-
-	$self->[SELECTED_ITER] = $self->get_iters->[0];
-	$self->[SELECTED_ITEM] = $self->get_items->[0];
-
-	if ($c > 1) {
-		$self->[FILER]->{widgets}->{statusbar}->push(1, "$c files selected");
-	}
-
-	return 1;
 }
 
 sub treeview_grab_focus_cb {
@@ -389,8 +330,6 @@ sub treeview_grab_focus_cb {
 sub treeview_event_cb {
 	my ($self,$w,$e) = @_;
 
-	$self->[FILER]->{widgets}->{statusbar}->push(1,$self->[FOLDER_STATUS]);
-
 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'BackSpace'})) {
 		$self->open_path_helper($self->get_updir);
 		return 1;
@@ -403,7 +342,7 @@ sub treeview_event_cb {
 
 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Return'})
 	 or ($e->type eq "2button-press" and $e->button == 1)) {
-		$self->open_file($self->[SELECTED_ITEM]);
+		$self->open_file($self->get_fileinfo->[0]);
 		return 1;
 	}
 
@@ -450,12 +389,6 @@ sub treeview_event_cb {
 	return 0;
 }
 
-sub init_icons {
-	my ($self) = @_;
-	my $mime = new Filer::Mime($self->[FILER]);
-	$self->[MIMEICONS] = $mime->get_icons;
-}
-
 sub get_vbox {
 	my ($self) = @_;
 	return $self->[VBOX];
@@ -481,9 +414,9 @@ sub set_model {
 		my $iter_new = $self->[TREEMODEL]->append;
 
 		for (0 .. 6) {
-			$self->[TREEMODEL]->set($iter_new, $_, $model->get($iter,$_));			
-		}	
-		
+			$self->[TREEMODEL]->set($iter_new, $_, $model->get($iter,$_));
+		}
+
 		return 0;
 	});
 }
@@ -503,14 +436,14 @@ sub get_pwd {
 	}
 }
 
-sub get_updir { 
+sub get_updir {
 	my ($self) = @_;
-	return abs_path(Filer::Tools->catpath($self->[FILEPATH], File::Spec->updir));
+	return abs_path(Filer::Tools->catpath($self->[FILEPATH], UPDIR));
 }
 
 sub get_item {
 	my ($self) = @_;
-	return $self->[SELECTED_ITEM];
+	return $self->get_items->[0];
 }
 
 sub set_item {
@@ -522,8 +455,7 @@ sub set_item {
 	my $type = $fi->get_mimetype;
 	my $time = $fi->get_mtime;
 
-	$self->[SELECTED_ITEM] = $fi->get_path;
-	$self->[TREEMODEL]->set($self->[SELECTED_ITER],
+	$self->[TREEMODEL]->set($self->get_iter,
 		COL_NAME, $basename,
 		COL_SIZE, $size,
 		COL_MODE, $mode,
@@ -535,7 +467,7 @@ sub set_item {
 
 sub get_iter {
 	my ($self) = @_;
-	return $self->[SELECTED_ITER];
+	return $self->get_iters->[0];
 }
 
 sub get_iters {
@@ -543,14 +475,14 @@ sub get_iters {
 	return [ map { $self->[TREEMODEL]->get_iter($_) } $self->[TREESELECTION]->get_selected_rows ];
 }
 
-sub get_items {
-	my ($self) = @_;
-	return [ map { ($self->[TREEMODEL]->get($_, COL_FILEINFO))->get_path } @{$self->get_iters} ];
-}
-
 sub get_fileinfo {
 	my ($self) = @_;
 	return [ map { $self->[TREEMODEL]->get($_, COL_FILEINFO) } @{$self->get_iters} ];
+}
+
+sub get_items {
+	my ($self) = @_;
+	return [ map { $_->get_path } @{$self->get_fileinfo} ];
 }
 
 sub get_path_by_treepath {
@@ -565,7 +497,6 @@ sub count_items {
 
 sub refresh {
 	my ($self) = @_;
-	$self->init_icons;
 	$self->open_path($self->[FILEPATH]);
 }
 
@@ -579,14 +510,14 @@ sub remove_selected {
 
 sub update_navigation_buttons {
 	my ($self) = @_;
-	my $rootdir = File::Spec->rootdir; 
+	my $rootdir = File::Spec->rootdir;
 	my $path = $rootdir;
 	my $button = undef;
 
 	foreach (sort { length($b) <=> length($a) } keys %{$self->[NAVIGATION_BUTTONS]}) {
 		# check if $filepath isn't a parentdir of the current path button path $_
 		if (! /^$self->[FILEPATH]/) {
-			
+
 			# check if the current path button path $_ isn't a parentdir of $filepath
 			if ($self->[FILEPATH] !~ /^$_/) {
 
@@ -599,10 +530,10 @@ sub update_navigation_buttons {
 			}
 		}
 	}
-	
+
 	foreach (File::Spec->splitdir($self->[FILEPATH])) {
 		$path = Filer::Tools->catpath($path, $_);
-		
+
 		if (not defined $self->[NAVIGATION_BUTTONS]->{$path}) {
 			$button = new Gtk2::RadioButton($self->[NAVIGATION_BUTTONS]->{$rootdir}, basename($path) || File::Spec->rootdir);
 			$button->set(draw_indicator => 0); # i'm evil
@@ -613,11 +544,11 @@ sub update_navigation_buttons {
 		 		my $label = $widget->get_child;
 				my $pc = $label->get_pango_context;
 				my $fd = $pc->get_font_description;
-			
+
 				if ($widget->get_active) {
 					$fd->set_weight('PANGO_WEIGHT_BOLD');
 
-					# avoid an endless loop/recursion. 
+					# avoid an endless loop/recursion.
 					$self->open_path($data) if ($data ne $self->get_pwd);
 				} else {
 					$fd->set_weight('PANGO_WEIGHT_NORMAL');
@@ -637,19 +568,16 @@ sub update_navigation_buttons {
 }
 
 sub open_file {
-	my ($self,$filepath) = @_;
-	my $fileinfo = new Filer::FileInfo($filepath);
-
-	$filepath = abs_path($fileinfo->get_path);
+	my ($self,$fileinfo) = @_;
+	my $filepath = abs_path($fileinfo->get_path);
 
 	return 0 if ((not defined $filepath) or (not -R $filepath));
 
 	if (-d $filepath) {
 		$self->open_path_helper($filepath);
 	} else {
-		my $mime = new Filer::Mime($self->[FILER]);
 		my $type = $fileinfo->get_mimetype;
-		my $command = $mime->get_default_command($type); 
+		my $command = $self->[MIME]->get_default_command($type);
 
                if (defined $command) {
 			if (-x $filepath) {
@@ -665,9 +593,12 @@ sub open_file {
 				$label->set_alignment(0.0,0.0);
 				$dialog->vbox->pack_start($label, 1,1,5);
 
+				$button = Gtk2::Button->new_from_stock('gtk-cancel');
+				$dialog->add_action_widget($button, 'cancel');
+
 				$button = Gtk2::Button->new_from_stock('gtk-open');
 				$dialog->add_action_widget($button, 2);
-			
+
 				$button = Filer::Dialog::mixed_button_new('gtk-ok',"_Run");
 				$dialog->add_action_widget($button, 1);
 
@@ -675,14 +606,16 @@ sub open_file {
 				my $r = $dialog->run;
 				$dialog->destroy;
 
-				if ($r eq 1) {
+				if ($r eq 'cancel') {
+					return;
+				} elsif ($r eq 1) {
 					Filer::Tools->start_program($filepath);
 				} elsif ($r eq 2) {
-					my @c = split /\s+/, $command;					
+					my @c = split /\s+/, $command;
 					Filer::Tools->start_program(@c,$filepath);
 				}
 			} else {
-				my @c = split /\s+/, $command;				
+				my @c = split /\s+/, $command;
 				Filer::Tools->start_program(@c,$filepath);
 			}
 		} else {
@@ -690,11 +623,11 @@ sub open_file {
 				Filer::Tools->start_program($filepath);
 				return;
 			}
-	
+
 			if ($type =~ /^text\/.+/) {
 
 				my $command = $self->[FILER]->{config}->get_option("Editor");
-				my @c = split /\s+/, $command;				
+				my @c = split /\s+/, $command;
 				Filer::Tools->start_program(@c,$filepath);
 
 			} elsif ($type eq 'application/x-compressed-tar') {
@@ -718,7 +651,7 @@ sub open_file {
 				$self->[VBOX]->set_sensitive(1);
 
 				$self->open_path($dir);
-				
+
 			} elsif ($type eq 'application/x-tar') {
 
 				my $dir = $self->get_temp_archive_dir();
@@ -742,7 +675,7 @@ sub open_file {
 				$self->open_path($dir);
 
 			} else {
-				$mime->run_dialog($self->get_fileinfo->[0]);
+				$self->[MIME]->run_dialog($self->get_fileinfo->[0]);
 			}
 		}
 	}
@@ -751,12 +684,9 @@ sub open_file {
 sub open_file_with {
 	my ($self) = @_;
 
-	return 0 if (not defined $self->[SELECTED_ITER]);
+	return 0 if (not defined $self->get_iter);
 
-	my $mime = new Filer::Mime($self->[FILER]);
-	my $fileinfo = $self->[TREEMODEL]->get($self->[SELECTED_ITER], 6);
-
-	$mime->run_dialog($fileinfo);
+	$self->[MIME]->run_dialog($self->get_fileinfo->[0]);
 }
 
 sub open_path_helper {
@@ -772,61 +702,41 @@ sub open_path_helper {
 
 sub open_path {
 	my ($self,$filepath) = @_;
-	my ($t0,$t1,$elapsed);
 
-# 	if ($ENV{FILER_DEBUG}) {
-# 	 	use Time::HiRes qw(gettimeofday tv_interval);
-# 	 	$t0 = [gettimeofday];
-# 	}
+# 	my ($t0,$t1,$elapsed);
+#  	use Time::HiRes qw(gettimeofday tv_interval);
+#  	$t0 = [gettimeofday];
 
 	if (defined $self->[OVERRIDES]->{$filepath}) {
 		$filepath = $self->[OVERRIDES]->{$filepath};
+		$self->[OVERRIDES]->{$filepath} = 0;
 	}
 
-	unless (defined $filepath) {
+	unless (-d $filepath) {
 		$filepath = $ENV{HOME};
 	}
-	
+
 	opendir (DIR, $filepath) or return Filer::Dialog->msgbox_error("$filepath: $!");
 	my @dir_contents = map { Filer::FileInfo->new(Filer::Tools->catpath($filepath, $_)) } File::Spec->no_upwards(readdir(DIR));
 	closedir(DIR);
-
-	delete $self->[SELECTED_ITEM];
-	delete $self->[SELECTED_ITER];
 
 	$self->[FILEPATH] = $filepath;
 
 	my $show_hidden = $self->[FILER]->{config}->get_option('ShowHiddenFiles');
 	my $total_size = 0;
- 	my $dirs_count_total = my $dirs_count = 0; 
- 	my $files_count_total = my $files_count = 0; 
+	my $dirs_count = 0;
+	my $files_count = 0;
 
 	$self->[TREEMODEL]->clear;
 
 	foreach my $fi (@dir_contents) {
-		if (($fi->get_mode)[0] eq "d") {
-			$dirs_count_total++;
-
-			next if (!$show_hidden and $fi->is_hidden);
-
-			$dirs_count++;
-		} else {
-			$files_count_total++;
-
-			next if (!$show_hidden and $fi->is_hidden);
-
-			$files_count++;
-		}
+		next if (!$show_hidden and $fi->is_hidden);
 
 		my $type = $fi->get_mimetype;
-		my $mypixbuf = $self->[MIMEICONS]->{'default'};
+		my $mypixbuf = $self->[MIMEICONS]->{'application/default'};
 
 		if (defined $self->[MIMEICONS]->{$type}) {
 			$mypixbuf = $self->[MIMEICONS]->{$type};
-		} else {
-			my $mime = new Filer::Mime($self->[FILER]);
-			$mime->add_mimetype($type);
-			$self->init_icons();
 		}
 
 		my $basename = $fi->get_basename;
@@ -834,29 +744,32 @@ sub open_path {
 		my $mode = $fi->get_mode;
 		my $time = $fi->get_mtime;
 
- 		$self->[TREEMODEL]->insert_with_values(-1,
+ 		my $iter= $self->[TREEMODEL]->insert_with_values(-1,
 			COL_ICON, $mypixbuf,
 			COL_NAME, $basename,
-			COL_SIZE, $size, 
+			COL_SIZE, $size,
 			COL_MODE, $mode,
 			COL_TYPE, $type,
 			COL_DATE, $time,
 			COL_FILEINFO, $fi
 		);
+
+		if (-d $fi->get_path) {
+			$dirs_count++;
+		} else {
+			$files_count++;
+		}
 	}
 
-	$total_size = Filer::Tools->calculate_size($total_size);
-	
-	$self->[PATH_ENTRY]->set_text($self->[FILEPATH]);
 	$self->[PATH_COMBO]->insert_text(0, $self->[FILEPATH]);
-	$self->[FOLDER_STATUS] = "$dirs_count ($dirs_count_total) directories and $files_count ($files_count_total) files: $total_size";
+	$self->[PATH_COMBO]->set_active(0);
+	$self->[STATUS]->set_text("$dirs_count directories and $files_count files: " . Filer::Tools->calculate_size($total_size));
+
 	$self->[FILER]->{widgets}->{main_window}->set_title("$self->[FILEPATH] - Filer $self->[FILER]->{VERSION}");
 
-# 	if ($ENV{FILER_DEBUG}) {
-# 		$t1 = [gettimeofday];
-# 		$elapsed = tv_interval($t0,$t1);
-# 		print "time to load $filepath: $elapsed\n";
-# 	}
+# 	$t1 = [gettimeofday];
+# 	$elapsed = tv_interval($t0,$t1);
+# 	print "time to load $filepath: $elapsed\n";
 }
 
 sub select_dialog {
@@ -920,44 +833,43 @@ sub select_dialog {
 
 sub create_tar_gz_archive {
 	my ($self) = @_;
-	my $archive = new Filer::Archive($self->[FILEPATH], $self->get_items);
+	my $archive = new Filer::Archive;
 
 	$self->[VBOX]->set_sensitive(0);
-	$archive->create_tar_gz_archive;
+	$archive->create_tar_gz_archive($self->[FILEPATH], $self->get_items);
 	$self->[VBOX]->set_sensitive(1);
 
-	$self->[FILER]->refresh_cb; 
+	$self->[FILER]->refresh_cb;
 }
 
 sub create_tar_bz2_archive {
 	my ($self) = @_;
-	my $archive = new Filer::Archive($self->[FILEPATH], $self->get_items);
+	my $archive = new Filer::Archive;
 
 	$self->[VBOX]->set_sensitive(0);
-	$archive->create_tar_bz2_archive;
+	$archive->create_tar_bz2_archive($self->[FILEPATH], $self->get_items);
 	$self->[VBOX]->set_sensitive(1);
 
-	$self->[FILER]->refresh_cb; 
+	$self->[FILER]->refresh_cb;
 }
 
 sub extract_archive {
 	my ($self) = @_;
-	my $archive = new Filer::Archive($self->[FILEPATH], $self->get_items);
+	my $archive = new Filer::Archive;
 
 	$self->[VBOX]->set_sensitive(0);
-	$archive->extract_archive;
+	$archive->extract_archive($self->[FILEPATH], $self->get_items);
 	$self->[VBOX]->set_sensitive(1);
 
-	$self->[FILER]->refresh_cb; 
+	$self->[FILER]->refresh_cb;
 }
 
 sub get_temp_archive_dir {
 	my ($self) = @_;
 	my $dir = File::Temp::tempdir(CLEANUP => 1);
-	my $dir_up = Filer::Tools->catpath($dir, File::Spec->updir);
+	my $tmp = File::Spec->tmpdir;
 
-	# this overrides the path if the user clicks on the .. inside the temp archive directory
-	$self->[OVERRIDES]->{$dir_up} = $self->[FILEPATH];
+	$self->[OVERRIDES]->{$tmp} = $self->[FILEPATH];
 
 	return $dir;
 }

@@ -16,121 +16,81 @@
 
 package Filer::Mime;
 
-use Filer;
-use Filer::Constants;
-
 use strict;
 use warnings;
 
-use constant ICON => 0;
-use constant COMMANDS => 1;
-use constant MIME => 2;
+use YAML qw(LoadFile DumpFile Dump);
+
+use Filer;
+use Filer::Constants;
+
+use enum qw(ICON COMMANDS);
 
 our ($default_mimetypes);
 
 $default_mimetypes = {
-	'default'					=> [ "$main::libpath/icons/default.png",			[] ],
-	'application/ogg'				=> [ "$main::libpath/icons/mimetypes/audio.png",		[] ],
-	'application/pdf'				=> [ "$main::libpath/icons/mimetypes/pdf.png",			[] ],
-	'application/postscript'			=> [ "$main::libpath/icons/mimetypes/postscript.png",		[] ],
-	'application/x-bzip-compressed-tar'		=> [ "$main::libpath/icons/mimetypes/bz2.png",			[] ],
-	'application/x-compressed-tar'			=> [ "$main::libpath/icons/mimetypes/tgz.png",			[] ],
-	'application/x-deb'				=> [ "$main::libpath/icons/mimetypes/deb.png",			[] ],
-	'application/x-executable'			=> [ "$main::libpath/icons/exec.png",				[] ],
-	'application/x-object'				=> [ "$main::libpath/icons/mimetypes/source_o.png",		[] ],
-	'application/x-perl'				=> [ "$main::libpath/icons/mimetypes/source_pl.png",		[] ],
-	'application/x-shellscript'			=> [ "$main::libpath/icons/mimetypes/shellscript.png",		[] ],
-	'application/x-trash'				=> [ "$main::libpath/icons/mimetypes/trash.png",		[] ],
-	'application/zip'				=> [ "$main::libpath/icons/mimetypes/zip.png",			[] ],
-	'audio/mpeg'					=> [ "$main::libpath/icons/mimetypes/audio.png",		[] ],
-	'audio/x-mp3'					=> [ "$main::libpath/icons/mimetypes/audio.png",		[] ],
-	'audio/x-mpegurl'				=> [ "$main::libpath/icons/mimetypes/sound.png",		[] ],
-	'audio/x-pn-realaudio'				=> [ "$main::libpath/icons/mimetypes/real_doc.png",		[] ],
-	'audio/x-wav'					=> [ "$main::libpath/icons/mimetypes/sound.png",		[] ],
-	'image/gif'					=> [ "$main::libpath/icons/mimetypes/images.png",		[] ],
-	'image/jpeg'					=> [ "$main::libpath/icons/mimetypes/images.png",		[] ],
-	'image/png'					=> [ "$main::libpath/icons/mimetypes/images.png",		[] ],
-	'image/svg+xml'					=> [ "$main::libpath/icons/mimetypes/vectorgfx.png",		[] ],
-	'inode/blockdevice'				=> [ "$main::libpath/icons/blockdevice.png",			[] ],
-	'inode/chardevice'				=> [ "$main::libpath/icons/chardevice.png",			[] ],
-	'inode/directory'				=> [ "$main::libpath/icons/folder.png",				[] ],
-	'inode/fifo'					=> [ "$main::libpath/icons/pipe.png",				[] ],
-	'inode/socket'					=> [ "$main::libpath/icons/socket.png",				[] ],
-	'inode/symlink'					=> [ "$main::libpath/icons/symlink.png",			[] ],
-	'text/html'					=> [ "$main::libpath/icons/mimetypes/html.png",			[] ],
-	'text/plain'					=> [ "$main::libpath/icons/mimetypes/wordprocessing.png",	[] ],
-	'text/x-c++src'					=> [ "$main::libpath/icons/mimetypes/source_cpp.png",		[] ],
-	'text/x-chdr'					=> [ "$main::libpath/icons/mimetypes/source_h.png",		[] ],
-	'text/x-csrc'					=> [ "$main::libpath/icons/mimetypes/source_c.png",		[] ],
-	'text/x-log'					=> [ "$main::libpath/icons/mimetypes/log.png",			[] ],
-	'text/x-makefile'				=> [ "$main::libpath/icons/mimetypes/make.png",			[] ],
-	'text/x-readme'					=> [ "$main::libpath/icons/mimetypes/readme.png",		[] ],
-	'text/x-uri'					=> [ "$main::libpath/icons/mimetypes/html.png",			[] ],
-	'text/xml'					=> [ "$main::libpath/icons/mimetypes/html.png",			[] ],
-	'video/mpeg'					=> [ "$main::libpath/icons/mimetypes/video.png",		[] ],
-	'video/quicktime'				=> [ "$main::libpath/icons/mimetypes/quicktime.png",		[] ],
-	'video/x-ms-wmv'				=> [ "$main::libpath/icons/mimetypes/video.png",		[] ],
-	'video/x-msvideo'				=> [ "$main::libpath/icons/mimetypes/video.png",		[] ],
+	'application/default'			=> [ "$main::libpath/icons/default.png",			[] ],
+	'application/ogg'			=> [ "$main::libpath/icons/mimetypes/audio.png",		[] ],
+	'application/pdf'			=> [ "$main::libpath/icons/mimetypes/pdf.png",			[] ],
+	'application/postscript'		=> [ "$main::libpath/icons/mimetypes/postscript.png",		[] ],
+	'application/x-bzip-compressed-tar'	=> [ "$main::libpath/icons/mimetypes/bz2.png",			[] ],
+	'application/x-compressed-tar'		=> [ "$main::libpath/icons/mimetypes/tgz.png",			[] ],
+	'application/x-deb'			=> [ "$main::libpath/icons/mimetypes/deb.png",			[] ],
+	'application/x-executable'		=> [ "$main::libpath/icons/exec.png",				[] ],
+	'application/x-object'			=> [ "$main::libpath/icons/mimetypes/source_o.png",		[] ],
+	'application/x-perl'			=> [ "$main::libpath/icons/mimetypes/source_pl.png",		[] ],
+	'application/x-shellscript'		=> [ "$main::libpath/icons/mimetypes/shellscript.png",		[] ],
+	'application/x-trash'			=> [ "$main::libpath/icons/mimetypes/trash.png",		[] ],
+	'application/zip'			=> [ "$main::libpath/icons/mimetypes/zip.png",			[] ],
+	'audio/mpeg'				=> [ "$main::libpath/icons/mimetypes/audio.png",		[] ],
+	'audio/x-mp3'				=> [ "$main::libpath/icons/mimetypes/audio.png",		[] ],
+	'audio/x-mpegurl'			=> [ "$main::libpath/icons/mimetypes/sound.png",		[] ],
+	'audio/x-pn-realaudio'			=> [ "$main::libpath/icons/mimetypes/real_doc.png",		[] ],
+	'audio/x-wav'				=> [ "$main::libpath/icons/mimetypes/sound.png",		[] ],
+	'image/gif'				=> [ "$main::libpath/icons/mimetypes/images.png",		[] ],
+	'image/jpeg'				=> [ "$main::libpath/icons/mimetypes/images.png",		[] ],
+	'image/png'				=> [ "$main::libpath/icons/mimetypes/images.png",		[] ],
+	'image/svg+xml'				=> [ "$main::libpath/icons/mimetypes/vectorgfx.png",		[] ],
+	'inode/blockdevice'			=> [ "$main::libpath/icons/blockdevice.png",			[] ],
+	'inode/chardevice'			=> [ "$main::libpath/icons/chardevice.png",			[] ],
+	'inode/directory'			=> [ "$main::libpath/icons/folder.png",				[] ],
+	'inode/fifo'				=> [ "$main::libpath/icons/pipe.png",				[] ],
+	'inode/socket'				=> [ "$main::libpath/icons/socket.png",				[] ],
+	'inode/symlink'				=> [ "$main::libpath/icons/symlink.png",			[] ],
+	'text/html'				=> [ "$main::libpath/icons/mimetypes/html.png",			[] ],
+	'text/plain'				=> [ "$main::libpath/icons/mimetypes/wordprocessing.png",	[] ],
+	'text/x-c++src'				=> [ "$main::libpath/icons/mimetypes/source_cpp.png",		[] ],
+	'text/x-chdr'				=> [ "$main::libpath/icons/mimetypes/source_h.png",		[] ],
+	'text/x-csrc'				=> [ "$main::libpath/icons/mimetypes/source_c.png",		[] ],
+	'text/x-log'				=> [ "$main::libpath/icons/mimetypes/log.png",			[] ],
+	'text/x-makefile'			=> [ "$main::libpath/icons/mimetypes/make.png",			[] ],
+	'text/x-readme'				=> [ "$main::libpath/icons/mimetypes/readme.png",		[] ],
+	'text/x-uri'				=> [ "$main::libpath/icons/mimetypes/html.png",			[] ],
+	'text/xml'				=> [ "$main::libpath/icons/mimetypes/html.png",			[] ],
+	'video/mpeg'				=> [ "$main::libpath/icons/mimetypes/video.png",		[] ],
+	'video/quicktime'			=> [ "$main::libpath/icons/mimetypes/quicktime.png",		[] ],
+	'video/x-ms-wmv'			=> [ "$main::libpath/icons/mimetypes/video.png",		[] ],
+	'video/x-msvideo'			=> [ "$main::libpath/icons/mimetypes/video.png",		[] ],
 };
 
 sub new {
 	my ($class,$filer) = @_;
 	my $self = bless {}, $class;
 	$self->{filer} = $filer;
-	$self->{mime_store} = Filer::Tools->catpath((new File::BaseDir)->xdg_config_home, "filer", "mime.cfg");
-	$self->{mime_store_old} = Filer::Tools->catpath((new File::BaseDir)->xdg_config_home, "filer", "mime");
+	$self->{mime_store} = Filer::Tools->catpath((new File::BaseDir)->xdg_config_home, "filer", "mime.yml");
 
-	if (-e $self->{mime_store_old}) {
-		my $stuff = Storable::retrieve($self->{mime_store_old});
-		$self->store($stuff);
-		unlink($self->{mime_store_old});
-	}
-	
 	if (! -e $self->{mime_store}) {
 		$self->{mime} = $default_mimetypes;
-		$self->store;
+	} else {
+		$self->{mime} = LoadFile($self->{mime_store});
 	}
-
-	$self->get;
 
 	return $self;
 }
 
 sub DESTROY {
 	my ($self) = @_;
-	$self->store;
-}
-
-sub store {
-	my ($self) = @_;
-
-	open(my $cfg, ">$self->{mime_store}") || die "$self->{mime_store}: $!\n\n";
-
-	foreach my $key (sort keys %{$self->{mime}}) {
-		my $value = $self->{mime}->{$key};	
-
-		my $icon_path = $value->[ICON];
-		my $cmds = join ":", @{$value->[COMMANDS]};
-		print $cfg "$key=$icon_path:$cmds\n";
-	}
-
-	close($cfg);
-}
-
-sub get {
-	my ($self) = @_;
-	$self->{mime} = {};
-
-	open (my $cfg, "$self->{mime_store}") || die "$self->{mime_store}: $!\n\n";
-
-	while (<$cfg>) {
-		chomp $_;
-		my ($key,$value) = split /=/, $_;
-		my ($icon_path,@commands) = split /:/, $value;
-		$self->{mime}->{$key} = [ $icon_path, [ @commands ]];
-	}
-
-	close($cfg);
+	DumpFile($self->{mime_store}, $self->{mime});
 }
 
 sub get_mimetypes {
@@ -140,20 +100,19 @@ sub get_mimetypes {
 
 sub get_mimetype_groups {
 	my ($self) = @_;
-	my $groups;
+	my %groups = ();
 
 	foreach ($self->get_mimetypes) {
-		if ($_ =~ /(.+)\/(.+)/) {
-			$groups->{$1} = 1;
-		}
-	}		
+		my ($group) = split /\//, $_;
+		$groups{$group}++;
+	}
 
-	return (sort keys %{$groups});
+	return sort keys %groups;
 }
 
 sub add_mimetype {
 	my ($self,$type) = @_;
-	$self->{mime}->{$type} = [ $self->{mime}->{default}->[ICON], [] ];
+	$self->{mime}->{$type} = [ $self->{mime}->{'application/default'}->[ICON], [] ];
 }
 
 sub delete_mimetype {
@@ -163,47 +122,13 @@ sub delete_mimetype {
 
 sub get_icon {
 	my ($self,$type) = @_;
-
-	if (defined $self->{mime}->{$type}->[ICON]) {
-		my $path = $self->{mime}->{$type}->[ICON];
-
-		if (-e $path) {
-			return $path;
-		} else {
-			if (defined $default_mimetypes->{$type}->[ICON]) {
-				return $default_mimetypes->{$type}->[ICON];
-			} else {
-				return $default_mimetypes->{default}->[ICON];
-			}
-		}
-	} else {
-		if (defined $default_mimetypes->{$type}->[ICON]) {
-			return $default_mimetypes->{$type}->[ICON];
-		} else {
-			return $default_mimetypes->{default}->[ICON];
-		}
-	}
+	return $self->{mime}->{$type}->[ICON];
 }
 
 sub get_icons {
 	my ($self) = @_;
-	my $icons = {};
-
-	foreach ($self->get_mimetypes) {
-		my $path = $self->{mime}->{$_}->[ICON];
-
-		if (! -e $path) {
-			if (defined $default_mimetypes->{$_}->[ICON]) {
-				$path = $default_mimetypes->{$_}->[ICON];
-			} else {
-				$path = $default_mimetypes->{default}->[ICON];
-			}
-		}
-
-		$icons->{$_} = Filer::Tools->intelligent_scale(Gtk2::Gdk::Pixbuf->new_from_file($path), 22);
-	}
-
-	return $icons;
+	my %icons = map { $_ => $self->get_icon($_) } $self->get_mimetypes;
+	return \%icons;
 }
 
 sub set_icon {
@@ -276,30 +201,41 @@ sub set_icon_dialog {
 	$label->set_alignment(0.0,0.0);
 	$table->attach($label, 1, 2, 1, 2, [ "fill" ], [], 0, 0);
 
-	$icon_entry = new Gtk2::Entry;
-	$icon_entry->set_text($self->get_icon($type));
-	$table->attach($icon_entry, 2, 3, 1, 2, [ "expand","fill" ], [], 0, 0);
+	my $frame = new Gtk2::Frame("Preview");
+	my $preview = new Gtk2::Image;
+	$frame->add($preview);
+	$frame->show_all;
 
-	$icon_browse_button = new Gtk2::Button;
-	$icon_browse_button->add(Gtk2::Image->new_from_stock('gtk-open', 'button'));
-	$icon_browse_button->signal_connect("clicked", sub {
-		my $fs = Filer::Dialog->preview_file_selection;
-		$fs->set_filename($self->get_icon($type));
+	my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($self->get_icon($type));
+	$preview->set_from_pixbuf(Filer::Tools->intelligent_scale($pixbuf,100));
 
-		if ($fs->run eq 'ok') {
-			my $mimeicon = $fs->get_filename;
-			$icon_entry->set_text($mimeicon);
-			$icon_image->set_from_pixbuf(Filer::Tools->intelligent_scale(Gtk2::Gdk::Pixbuf->new_from_file($mimeicon),50));
-		}
+	$icon_browse_button = Gtk2::FileChooserButton->new("Select Icon", 'GTK_FILE_CHOOSER_ACTION_OPEN');
+	$icon_browse_button->set_use_preview_label(0);
+	$icon_browse_button->set_preview_widget($frame);
+	$icon_browse_button->set_preview_widget_active(1);
 
-		$fs->destroy;
-	});
-	$table->attach($icon_browse_button, 3, 4, 1, 2, [ "fill" ], [], 0, 0);
+	my $filter = new Gtk2::FileFilter;
+	$filter->add_pixbuf_formats;
+	$icon_browse_button->set_filter($filter);
+
+	$icon_browse_button->signal_connect("update-preview", sub {
+		my ($w,$preview) = @_;
+		my $filename = $w->get_preview_filename;
+
+		return if (-d $filename);
+
+		my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($filename);
+		$preview->set_from_pixbuf(Filer::Tools->intelligent_scale($pixbuf,100));
+		$icon_image->set_from_pixbuf($pixbuf);
+	}, $preview);
+
+	$icon_browse_button->set_filename($self->get_icon($type));	
+ 	$table->attach($icon_browse_button, 2, 3, 1, 2, [ "expand","fill" ], [], 0, 0);
 
 	$dialog->show_all;
 
 	if ($dialog->run eq 'close') {
-		$self->set_icon($type, $icon_entry->get_text);
+		$self->set_icon($type, $icon_browse_button->get_filename);
 	}
 
 	$dialog->destroy;

@@ -22,7 +22,7 @@ use warnings;
 use constant TARGET_URI_LIST => 0;
 
 sub new {
-	my ($class,$filer,$filepane) = @_;	
+	my ($class,$filer,$filepane) = @_;
 	my $self = bless {}, $class;
 	$self->{filer} = $filer;
 	$self->{filepane} = $filepane;
@@ -66,55 +66,42 @@ sub filepane_treeview_drag_data_received {
 		}
 
 		if ($self->{filer}->{active_pane}->get_pwd ne $path) {
-
 			if ($action eq "copy") {
 				if ($self->{filer}->{config}->get_option("ConfirmCopy") == 1) {
-					my $f = $self->{filer}->{active_pane}->get_fileinfo->[0]->get_basename; 
-					$f =~ s/&/&amp;/g; # sick fix. meh. 
-
 					if ($self->{filer}->{active_pane}->count_items == 1) {
+						my $f = $self->{filer}->{active_pane}->get_fileinfo->[0]->get_basename;
+						$f =~ s/&/&amp;/g; # sick fix. meh.
+
 						return if (Filer::Dialog->yesno_dialog("Copy $f to $path?") eq 'no');
 					} else {
 						return if (Filer::Dialog->yesno_dialog(sprintf("Copy %s files to $path?", $self->{filer}->{active_pane}->count_items)) eq 'no');
 					}
 				}
 
-				$do = Filer::Copy->new;
+				$do = new Filer::Copy;
 			} elsif ($action eq "move") {
 				if ($self->{filer}->{config}->get_option("ConfirmMove") == 1) {
-					my $f = $self->{filer}->{active_pane}->get_fileinfo->[0]->get_basename; 
-					$f =~ s/&/&amp;/g; # sick fix. meh. 
-
 					if ($self->{filer}->{active_pane}->count_items == 1) {
+						my $f = $self->{filer}->{active_pane}->get_fileinfo->[0]->get_basename;
+						$f =~ s/&/&amp;/g; # sick fix. meh.
+
 						return if (Filer::Dialog->yesno_dialog("Move $f to $path?") eq 'no');
 					} else {
 						return if (Filer::Dialog->yesno_dialog(sprintf("Move %s files to $path?", $self->{filer}->{active_pane}->count_items)) eq 'no');
 					}
 				}
 
-				$do = Filer::Move->new;
+				$do = new Filer::Move;
 			}
 
-			$do->set_total($self->{filer}->files_count);
-			$do->show;
+			my @files = ();
 
-			for (split /\r\n/, $data->data) {
-				$_ =~ s/file:\/\///g;
-
-				last if ($_ eq $path);
-
-				my $r = $do->action($_, $path);
-
-				if ($r == File::DirWalk::FAILED) {
-					Filer::Dialog->msgbox_info("Copying of $_ to $path failed!");
-					last;
-				} elsif ($r == File::DirWalk::ABORTED) {
-					Filer::Dialog->msgbox_info("Moving of $_ to $path aborted!");
-					last;
-				}
+			foreach (split /\r\n/, $data->data) {
+				$_ =~ s/file:\///g;
+				push @files, $_;
 			}
 
-			$do->destroy;
+			$do->action(\@files,$path);
 
 			if ($action eq "move") {
 				$self->{filer}->{active_pane}->remove_selected;

@@ -16,94 +16,55 @@
 
 package Filer::Bookmarks;
 
-use Filer;
-use Filer::Constants;
-
 use strict;
 use warnings;
+
+use Filer;
+use Filer::Constants;
 
 sub new {
 	my ($class,$filer) = @_;
 	my $self = bless {}, $class;
 
 	$self->{filer} = $filer;
-	$self->{bookmarks_store} = Filer::Tools->catpath((new File::BaseDir)->xdg_config_home, "filer", "bookmarks.cfg");
-	$self->{bookmarks_store_old} = Filer::Tools->catpath((new File::BaseDir)->xdg_config_home, "filer", "bookmarks");
-
-	if (-e $self->{bookmarks_store_old}) {
-		my $stuff = Storable::retrieve($self->{bookmarks_store_old});
-		$self->store(sort keys %{$stuff});
-		unlink($self->{bookmarks_store_old});
-	}
 
 	return $self;
 }
 
-sub store {
-	my ($self,@bookmarks) = @_;
-
-	open(my $cfg, ">$self->{bookmarks_store}") || die "$self->{bookmarks_store}: $!\n\n";
-	
-	foreach (@bookmarks) {
-		print $cfg "$_\n";
-	}
-
-	close($cfg);
-}
-
-sub get {
-	my ($self) = @_;
-	my @bookmarks = ();
-
-	if (! -e $self->{bookmarks_store}) {
-		return @bookmarks;
-	}
-
-	open(my $cfg, "$self->{bookmarks_store}") || die "$self->{bookmarks_store}: $!\n\n";
-	
-	while (<$cfg>) {
-		chomp $_;
-		push @bookmarks, $_;
-	}
-
-	close($cfg);
-
-	return (@bookmarks);
-}
-
 sub get_bookmarks {
 	my ($self) = @_;
-	return sort $self->get;
+	my $bookmarks = $self->{filer}->{config}->get_option("Bookmarks");
+	
+	if (defined $bookmarks) {
+		return sort @{$bookmarks};
+	} else {
+		return ();
+	}
 }
 
 sub set_bookmark {
 	my ($self,$path) = @_;
-	return if (!$path); 
+	my $bookmarks = $self->{filer}->{config}->get_option("Bookmarks");
+	my @b = @{$bookmarks};
+	push @b, $path;
+		
+	undef my %seen;
+	@seen{@b} = @b;
 
-	# 4.6. Extracting Unique Elements from a List
-	my %seen = ();
-	my @uniq = ();
-	foreach my $item ($path,$self->get) {
-		push (@uniq,$item) unless $seen{$item}++;
-	}
-
-	$self->store(@uniq);
+	$self->{filer}->{config}->set_option("Bookmarks", [keys %seen]);
 }
 
 sub remove_bookmark {
 	my ($self,$path) = @_;
-	return if (!$path); 
+	my $bookmarks = $self->{filer}->{config}->get_option("Bookmarks");
+	my @b = @{$bookmarks};
 
-	# 4.6. Extracting Unique Elements from a List
-	my %seen = ();
-	my @uniq = ();
-	foreach my $item ($self->get) {
-		push (@uniq,$item) unless $seen{$item}++;
-	}
+	undef my %seen;
+	@seen{@b} = @b;
 
 	delete $seen{$path};
 
-	$self->store(sort keys %seen);
+	$self->{filer}->{config}->set_option("Bookmarks", [keys %seen]);
 }
 
 sub bookmarks_menu {

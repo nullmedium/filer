@@ -32,7 +32,6 @@ use warnings;
 
 use lib "$libpath";
 use Filer;		
-use Filer::Constants;
 
 Glib->install_exception_handler(sub {
 	Filer::Dialog->msgbox_error($_[0]);
@@ -41,10 +40,9 @@ Glib->install_exception_handler(sub {
 
 Gtk2->init;
 
-$filer = new Filer; 
+my $filer = new Filer; 
 $filer->init_config;
-$filer->create_main_window;
+$filer->init_icons;
+$filer->init_main_window;
 
 Gtk2->main;
-
-1;

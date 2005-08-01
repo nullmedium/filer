@@ -21,11 +21,16 @@ use warnings;
 
 use File::Basename;
 
+use English;
+
+use constant TRUE => 1;
+use constant FALSE => 0;
+
 sub new {
 	my ($class) = @_;
 	my $self = bless {}, $class;
 
-	$self->{progress} = 1;
+	$self->{CANCELLED} = FALSE;
 	$self->{progress_dialog} = new Filer::ProgressDialog;
 	$self->{progress_dialog}->dialog->set_title("Deleting ...");
 	$self->{progress_dialog}->label1->set_markup("<b>Deleting: </b>");
@@ -35,81 +40,66 @@ sub new {
 
 	my $button = $self->{progress_dialog}->dialog->add_button('gtk-cancel' => 'cancel');
 	$button->signal_connect("clicked", sub {
-		$self->{progress} = 0;
+		$self->{CANCELLED} = TRUE;
 		$self->{progress_dialog}->destroy;
-	});
-
-	$self->{dirwalk} = new File::DirWalk;
-
-	$self->{dirwalk}->onBeginWalk(sub {
-		if ($self->{progress} == 0) {
-			return File::DirWalk::ABORTED;
-		}
-
-		return File::DirWalk::SUCCESS;
-	});
-
-	$self->{dirwalk}->onLink(sub {
-		my ($source) = @_;
-
-		unlink($source) || return File::DirWalk::FAILED;
-
-		return File::DirWalk::SUCCESS;
-	});
-
-	$self->{dirwalk}->onDirLeave(sub {
-		my ($source) = @_;
-
-		rmdir($source) || return File::DirWalk::FAILED;
-
-		return File::DirWalk::SUCCESS;
-	});
-
-	$self->{dirwalk}->onFile(sub {
-		my ($source) = @_;
-
-		$self->{progress_label}->set_text($source);
-		$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
-		while (Gtk2->events_pending) { Gtk2->main_iteration; }
-
-		unlink($source) || return File::DirWalk::FAILED;
-
-		return File::DirWalk::SUCCESS;
 	});
 
 	return $self;
 }
 
-sub set_total {
-	my ($self,$total) = @_;
-	$self->{progress_count} = 0;
-	$self->{progress_total} = $total;
-}
-
-sub show {
-	my ($self) = @_;
-	$self->{progress_dialog}->show;
-}
-
-sub destroy {
-	my ($self) = @_;
-	$self->{progress_dialog}->destroy;
-}
-
 sub delete {
-	my ($self,$source) = @_;
-	
-	if (-f $source) {
-		$self->{progress_label}->set_text($source);
-		$self->{progressbar_total}->set_fraction(++$self->{progress_count}/$self->{progress_total});
+	my ($self,$files) = @_;
+	$self->{deleted_total} = 0;
+	$self->{deleted_files} = 0;
+
+	my $dirwalk = new File::DirWalk;
+
+	$dirwalk->onFile(sub {
+		++$self->{deleted_total};
+		return 1;
+	});
+
+	$dirwalk->walk($ARG) for (@{$files});
+
+	$dirwalk->onBeginWalk(sub {
+		return ($self->{CANCELLED} == FALSE) ? File::DirWalk::SUCCESS : File::DirWalk::ABORTED;
+	});
+
+	$dirwalk->onLink(sub {
+		unlink($ARG[0]) || return File::DirWalk::FAILED;
+		return File::DirWalk::SUCCESS;
+	});
+
+	$dirwalk->onDirLeave(sub {
+		rmdir($ARG[0]) || return File::DirWalk::FAILED;
+		return File::DirWalk::SUCCESS;
+	});
+
+	$dirwalk->onFile(sub {
+		$self->{progress_label}->set_text($ARG[0]);
+		$self->{progressbar_total}->set_fraction(++$self->{deleted_files}/$self->{deleted_total});
 		while (Gtk2->events_pending) { Gtk2->main_iteration; }
 
-		unlink($source) || return File::DirWalk::FAILED;
+		unlink($ARG[0]) || return File::DirWalk::FAILED;
 
 		return File::DirWalk::SUCCESS;
-	} elsif (-d $source) {
-		return $self->{dirwalk}->walk($source);
+	});
+
+	$self->{progress_dialog}->show;
+
+	foreach my $source (@{$files}) {
+		my $r = $dirwalk->walk($source);
+
+		if ($r == File::DirWalk::FAILED) {
+			Filer::Dialog->msgbox_info("Deleting of $source failed: $!");
+			last;
+		} elsif ($r == File::DirWalk::ABORTED) {
+			Filer::Dialog->msgbox_info("Deleting of $source aborted!");
+			last;
+		}
 	}
+
+	$self->{progress_dialog}->destroy;
 }
 
 1;

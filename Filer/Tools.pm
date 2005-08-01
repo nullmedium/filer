@@ -84,8 +84,82 @@ sub catpath {
 	return File::Spec->catfile(File::Spec->splitdir($dir), @p);
 }
 
+sub _mkdir {
+	my ($self,$dir) = @_;
+	my $p = File::Spec->rootdir; 
+
+	foreach (File::Spec->splitdir($dir)) {
+		$p = Filer::Tools->catpath($p, $_); 
+
+		if (! -e $p) {
+			mkdir($p) || return undef;
+		}
+	}
+
+	return 1;
+}
+
+sub suggest_filename_helper {
+	my $filename = pop;
+	my $suggested = "";
+	my $suffix = "";
+	my $i = 1;
+
+	if (-f $filename) {
+		if ($filename =~ /((\..+)+)$/) {
+			my $re_sx = $1;
+			$suffix = $re_sx;
+
+			# escape parentheses.
+			$re_sx =~ s/\(/\\(/g;
+			$re_sx =~ s/\)/\\)/g;
+			$re_sx =~ s/\[/\\[/g;
+			$re_sx =~ s/\]/\\]/g;
+
+			$filename =~ s/$re_sx//g;
+		}
+	}
+
+	if ($filename =~ /(\s+\(copy\))$/) {
+		my $r = $1;
+		$r =~ s/\(/\\(/g;
+		$r =~ s/\)/\\)/g;
+		$filename =~ s/$r//g;
+		$i = 2;
+	} elsif ($filename =~ /(\s+\(another copy\))$/) {
+		my $r = $1;
+		$r =~ s/\(/\\(/g;
+		$r =~ s/\)/\\)/g;
+		$filename =~ s/$r//g;
+		$i = 3;
+	} elsif ($filename =~ /(\s+\(3rd copy\))$/) {
+		my $r = $1;
+		$r =~ s/\(/\\(/g;
+		$r =~ s/\)/\\)/g;
+		$filename =~ s/$r//g;
+		$i = 4;
+	}
+
+	while (1) {
+		if ($i == 1) {
+			$suggested = "$filename (copy)";
+		} elsif ($i == 2) {
+			$suggested = "$filename (another copy)";
+		} elsif ($i == 3) {
+			$suggested = "$filename (3rd copy)";
+		} else {
+			$suggested = "$filename ($i" . "th" . " copy)";
+		}
+
+		last if (! -e "$suggested$suffix");
+		$i++;
+	}
+
+	return "$suggested$suffix";
+}
+
 sub calculate_size {
-	my ($self,$size) = @_;
+	my $size = pop;
 
 	if ($size >= 1073741824) {
 		return sprintf("%.2f GB", $size/1073741824);
@@ -93,15 +167,14 @@ sub calculate_size {
 		return sprintf("%.2f MB", $size/1048576);
 	} elsif ($size >= 1024) {
 		return sprintf("%.2f kB", $size/1024);
-	} else {
-		return sprintf("%d Byte", $size);
 	}
 
 	return $size;	
 }
 
 sub intelligent_scale {
-	my ($self,$pixbuf,$scale) = @_;
+	my $scale = pop;
+	my $pixbuf = pop;
 	my $scaled;
 	my $w;
 	my $h;

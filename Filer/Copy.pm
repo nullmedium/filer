@@ -19,11 +19,11 @@ package Filer::Copy;
 use strict;
 use warnings;
 
-use Fcntl;
 use Cwd qw(abs_path);
 use File::Basename qw(dirname basename);
 use File::DirWalk;
-use Unicode::String qw(utf8 latin1);
+
+use English;
 
 use Filer::Constants;
 
@@ -31,292 +31,116 @@ sub new {
 	my ($class) = @_;
 	my $self = bless {}, $class;
 
-	$self->{progress} = 1;
+	$self->{SKIPALL} = 0;
+	$self->{OVERWRITEALL} = 0;
+	$self->{CANCELLED} = FALSE;
+
 	$self->{progress_dialog} = new Filer::ProgressDialog;
 	$self->{progress_dialog}->dialog->set_title("Copying ...");
 	$self->{progress_dialog}->label1->set_markup("<b>Copying: \nto: </b>");
 
 	$self->{progress_label} = $self->{progress_dialog}->label2;
 	$self->{progressbar_total} = $self->{progress_dialog}->add_progressbar;
-	$self->{progressbar_part} = $self->{progress_dialog}->add_progressbar;
 
 	my $button = $self->{progress_dialog}->dialog->add_button('gtk-cancel' => 'cancel');
 	$button->signal_connect("clicked", sub {
-		$self->{progress} = 0;
-		$self->destroy;
+		$self->{CANCELLED} = TRUE;
+		$self->{progress_dialog}->destroy;
 	});
-
-	$self->{SKIPALL} = 0;
-	$self->{OVERWRITEALL} = 0;
 
 	return $self;
 }
 
-sub set_total {
-	my ($self,$total) = @_;
-	$self->{progress_count} = 0;
-	$self->{progress_total} = $total;
-}
-
-sub show {
-	my ($self) = @_;
-	$self->{progress_dialog}->show;
-}
-
-sub destroy {
-	my ($self) = @_;
-	$self->{progress_dialog}->destroy;
-}
-
 sub copy {
-	my ($self,$source,$dest) = @_;
+	my ($self,$FILES,$DEST) = @_;
+	$self->{total_bytes} = 0;
+	$self->{completed_bytes} = 0;
 
 	my $dirwalk = new File::DirWalk;
+	my $filecopy = new Filer::FileCopy($self);
+
+	$dirwalk->onFile(sub {
+		$self->{total_bytes} += -s $ARG[0];
+		return 1;
+	});
+
+	$dirwalk->walk($ARG) for (@{$FILES});
 
 	$dirwalk->onBeginWalk(sub {
-		if ($self->{progress} == 0) {
-			return File::DirWalk::ABORTED;
-		}
-
-		return File::DirWalk::SUCCESS;
+		return ($self->{CANCELLED} == FALSE) ? File::DirWalk::SUCCESS : File::DirWalk::ABORTED;
 	});
 
 	$dirwalk->onLink(sub {
-		my ($source) = @_;
-		my $target = readlink($source);
-
-		symlink($target, Filer::Tools->catpath($dest, basename($source))) || return File::DirWalk::FAILED;
-
+		symlink(readlink($ARG[0]), Filer::Tools->catpath($DEST, basename($ARG[0]))) || return File::DirWalk::FAILED;
 		return File::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onDirEnter(sub {
-		my ($dir) = @_;
-		$dest = Filer::Tools->catpath($dest, basename($dir));
+		$DEST = Filer::Tools->catpath($DEST, basename($ARG[0]));
 
-		if (! -e $dest) {
-			mkdir($dest) || return File::DirWalk::FAILED;
+		if ((-e $DEST) and (dirname($ARG[0]) eq dirname($DEST))) {
+			$DEST = Filer::Tools->suggest_filename_helper($DEST);
 		}
 
-		if ((-e $dest) and (dirname($source) eq dirname($dest))) {
-			$dest = $self->_suggest_filename_helper($dest);
-
-			mkdir($dest) || return File::DirWalk::FAILED;
-		}
+		mkdir($DEST) || return File::DirWalk::FAILED;
 
 		return File::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onDirLeave(sub {
-		$dest = abs_path(Filer::Tools->catpath($dest, File::Spec->updir));
+		$DEST = abs_path(Filer::Tools->catpath($DEST, UPDIR));
 		return File::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onFile(sub {
-		my ($source) = @_;
-		my $my_source = utf8($source)->latin1;
-		my $my_dest = utf8(Filer::Tools->catpath($dest, basename($my_source)))->latin1;
+		my $my_dest = Filer::Tools->catpath($DEST, basename($ARG[0]));
 
 		if (-e $my_dest) {
-			if ($self->{SKIPALL}) {
-				return File::DirWalk::SUCCESS;
-			}
+			if (dirname($ARG[0]) eq dirname($my_dest)) {
 
-			if (!$self->{OVERWRITEALL}) {
-				my ($dialog,$label,$button,$hbox,$entry);
+				$my_dest = Filer::Tools->suggest_filename_helper($my_dest);
 
-				if (dirname($my_source) eq dirname($my_dest)) {
-					$dialog = new Gtk2::Dialog("File exists already", undef, 'modal');
-					$dialog->set_position('center');
-					$dialog->set_modal(1);
+			} else {
+				# TODO: Ask Overwrite Dialog
 
-					$label = new Gtk2::Label;
-					$label->set_use_markup(1);
-					$label->set_alignment(0.0,0.0);
-
-					my $f = $my_source;
-					$f =~ s/&/&amp;/g;
-
-					$label->set_markup("This action would overwrite '$f' with itself.\nPlease enter a new file name:");
-					$dialog->vbox->pack_start($label, 1,1,5);
-
-					$hbox = new Gtk2::HBox(0,0);
-					$dialog->vbox->pack_start($hbox, 1,1,5);
-
-					$entry = new Gtk2::Entry;
-					$entry->set_alignment(0.0);
-					$hbox->pack_start($entry, 1,1,5);
-
-					$button = new Gtk2::Button("Suggest New Name");
-					$button->signal_connect("clicked", sub {
-						my ($w) = @_;
-						my $suggest = $self->_suggest_filename_helper($my_dest);
-
-						$entry->set_text(basename($suggest));
-						$w->set_sensitive(0);
-					});
-					$hbox->pack_start($button, 0,1,5);
-
-					$dialog->add_button("Continue", 'ok');
-					$dialog->add_button("Cancel", 'cancel');
-
-					$dialog->show_all;
-					my $r = $dialog->run;
-					$dialog->destroy;
-
-					if ($r eq 'ok') {
-						$my_dest = Filer::Tools->catpath(dirname($my_dest), $entry->get_text);
-					} elsif ($r eq 'cancel') {
-						return File::DirWalk::ABORTED;
-					}
-
-				} else {
-					my ($dialog,$label,$button,$hbox,$entry);
-					my $f1 = $my_dest; 
-					my $f2 = $my_source;
-					$f1 =~ s/&/&amp;/g;
-					$f2 =~ s/&/&amp;/g;
-
-					$dialog = new Gtk2::Dialog("Overwrite", undef, 'modal');
-					$dialog->set_position('center');
-					$dialog->set_modal(1);
-
-					$label = new Gtk2::Label;
-					$label->set_use_markup(1);
-					$label->set_alignment(0.0,0.0);
-
-					$label->set_markup("Overwrite: <b>$f1</b>\nwith: <b>$f2</b>");
-					$dialog->vbox->pack_start($label, 1,1,5);
-
-					$hbox = new Gtk2::HBox(0,0);
-					$dialog->vbox->pack_start($hbox, 1,1,5);
-
-					$label = new Gtk2::Label;
-					$label->set_use_markup(1);
-					$label->set_alignment(0.0,0.5);
-					$label->set_markup("New Name: ");
-					$hbox->pack_start($label, 0,0,0);
-
-					$entry = new Gtk2::Entry;
-					$entry->set_alignment(0.0);
-					$hbox->pack_start($entry, 0,1,5);
-
-					$button = new Gtk2::Button("Suggest new name");
-					$button->signal_connect("clicked", sub {
-						my ($w) = @_;
-						my $suggest = $self->_suggest_filename_helper($my_dest);
-						$entry->set_text(basename($suggest));
-						$w->set_sensitive(0);
-					});
-					$hbox->pack_start($button, 0,1,5);
-
-					$dialog->add_button("Rename", 3);
-					$dialog->add_button("Overwrite", 'yes');
-
-					if ($self->{progress_total} > 1) {
-						$dialog->add_button("Overwrite All", 1);
-						$dialog->add_button("Overwrite None", 2);
-					}
-
-					$dialog->add_button("Cancel", 'cancel');
-
-					$dialog->show_all;
-					my $r = $dialog->run;
-					$dialog->destroy;
-
-					if ($r eq 'cancel') {
-						return File::DirWalk::ABORTED;
-					} elsif ($r eq 1) {
-						$self->{OVERWRITEALL} = 1;
-					} elsif ($r eq 2) {
-						$self->{SKIPALL} = 1;
-						return File::DirWalk::SUCCESS;
-					} elsif ($r eq 3) {
-						$my_dest = Filer::Tools->catpath(dirname($my_dest), $entry->get_text);
-					}
-				}
-
-				if ($my_source eq $my_dest) {
-					Filer::Dialog->msgbox_error("Can't overwrite file with itself! Skipping!");
-					return File::DirWalk::SUCCESS;
-				}
+				Filer::Dialog->msgbox_error("File $ARG[0] exists at $my_dest!\n");
+				return File::DirWalk::ABORTED;
 			}
 		}
 
- 		$self->{progress_label}->set_text("$my_source\n$my_dest");
-		$self->{progressbar_total}->set_fraction($self->{progress_count}/$self->{progress_total});
-		$self->{progressbar_total}->set_text("Copying file $self->{progress_count} of $self->{progress_total} ...");
+		return $filecopy->filecopy($ARG[0],$my_dest);
+ 	});
 
-		if ($my_source ne $my_dest) {
-			return (new Filer::FileCopy($self->{progressbar_part}, \$self->{progress}))->filecopy($my_source,$my_dest);
-		} else {
-			Filer::Dialog->msgbox_error("Destination and target are the same! Aborting!");
-			return File::DirWalk::ABORTED;
-		}
+	my $timeout = Glib::Timeout->add(100, sub {
+		return 1 if ($self->{total_bytes} == 0);
+		return 0 if ($self->{CANCELLED} == TRUE);
+
+		my $percent_written = $self->{completed_bytes}/$self->{total_bytes};
+
+		$self->{progressbar_total}->set_text(sprintf("%.0f", ($percent_written * 100)) . "%");
+		$self->{progressbar_total}->set_fraction($percent_written);
+
+		return 1;
 	});
 
-	return $dirwalk->walk($source);
+	$self->{progress_dialog}->show;
+
+	foreach my $source (@{$FILES}) {
+		my $r = $dirwalk->walk($source);
+
+		if ($r == File::DirWalk::FAILED) {
+			Filer::Dialog->msgbox_error("Copying of $source to " . $DEST . " failed: $!");
+			last;
+		} elsif ($r == File::DirWalk::ABORTED) {
+			Filer::Dialog->msgbox_info("Copying of $source to " . $DEST . " aborted!");
+			last;
+		}
+	}
+
+	Glib::Source->remove($timeout);
+	$self->{progress_dialog}->destroy;
 }
 
 *action = \&copy;
-
-sub _suggest_filename_helper {
-	my ($self,$filename) = @_;
-	my $suggested = "";
-	my $suffix = "";
-	my $i = 1;
-
-	if (-f $filename) {
-		if ($filename =~ /((\..+)+)$/) {
-			my $re_sx = $1;
-			$suffix = $re_sx;
-
-			# escape parentheses.
-			$re_sx =~ s/\(/\\(/g;
-			$re_sx =~ s/\)/\\)/g;
-			$re_sx =~ s/\[/\\[/g;
-			$re_sx =~ s/\]/\\]/g;
-
-			$filename =~ s/$re_sx//g;
-		}
-	}
-
-	if ($filename =~ /(\s+\(copy\))$/) {
-		my $r = $1;
-		$r =~ s/\(/\\(/g;
-		$r =~ s/\)/\\)/g;
-		$filename =~ s/$r//g;
-		$i = 2;
-	} elsif ($filename =~ /(\s+\(another copy\))$/) {
-		my $r = $1;
-		$r =~ s/\(/\\(/g;
-		$r =~ s/\)/\\)/g;
-		$filename =~ s/$r//g;
-		$i = 3;
-	} elsif ($filename =~ /(\s+\(3rd copy\))$/) {
-		my $r = $1;
-		$r =~ s/\(/\\(/g;
-		$r =~ s/\)/\\)/g;
-		$filename =~ s/$r//g;
-		$i = 4;
-	}
-
-	while (1) {
-		if ($i == 1) {
-			$suggested = "$filename (copy)";
-		} elsif ($i == 2) {
-			$suggested = "$filename (another copy)";
-		} elsif ($i == 3) {
-			$suggested = "$filename (3rd copy)";
-		} else {
-			$suggested = "$filename ($i" . "th" . " copy)";
-		}
-
-		last if (! -e $suggested);
-		$i++;
-	}
-
-	return $suggested . $suffix;
-}
 
 1;

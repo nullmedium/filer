@@ -19,20 +19,26 @@ package Filer::Config;
 use strict;
 use warnings;
 
+use YAML qw(LoadFile DumpFile Dump);
+
+use Filer::Constants;
+
 our ($default_config);
 
 $default_config = {
 	PathLeft		=> $ENV{HOME},
 	PathRight		=> $ENV{HOME},
-	ShowHiddenFiles 	=> 1,
-	CaseInsensitiveSort 	=> 1,
-	Mode			=> 0,
-	ConfirmCopy		=> 1,
-	ConfirmMove		=> 1,
-	ConfirmDelete		=> 1,
+	ShowHiddenFiles 	=> TRUE,
+	CaseInsensitiveSort 	=> TRUE,
+	Mode			=> NORTON_COMMANDER_MODE,
+	HonorUmask		=> FALSE,
+	ConfirmCopy		=> TRUE,
+	ConfirmMove		=> TRUE,
+	ConfirmDelete		=> TRUE,
 	WindowSize		=> "800:600",
 	Terminal		=> "xterm",
 	Editor			=> "nedit",
+	Bookmarks		=> [],
 };
 
 sub new {
@@ -40,66 +46,24 @@ sub new {
 	my $self = bless {}, $class;
 	my $xdg_config_home = (new File::BaseDir)->xdg_config_home;
 	$self->{cfg_home} = Filer::Tools->catpath($xdg_config_home, "filer");
-	$self->{config_store} = Filer::Tools->catpath($self->{cfg_home}, "config.cfg");
-	$self->{config_store_old} = Filer::Tools->catpath($self->{cfg_home}, "config");
-
-	if (-e $self->{config_store_old}) {
-		my $stuff = Storable::retrieve($self->{config_store_old});
-		$self->store($stuff);
-		unlink($self->{config_store_old});
-	}
+	$self->{config_store} = Filer::Tools->catpath($self->{cfg_home}, "config.yml");
 
 	if (! -e $self->{cfg_home}) {
-		if (! -e $xdg_config_home) {
-			mkdir($xdg_config_home);
-		}
-
-		mkdir($self->{cfg_home});
+ 		Filer::Tools->_mkdir($self->{cfg_home});
 	}
 
 	if (! -e $self->{config_store}) {
 		$self->{config} = $default_config;
-		$self->store($default_config);
+	} else {
+		$self->{config} = LoadFile($self->{config_store});
 	}
-
-	$self->get;
 
 	return $self;
 }
 
 sub DESTROY {
 	my ($self) = @_;
-	$self->store;
-}
-
-sub store {
-	my ($self) = @_;
-
-	open (my $cfg, ">$self->{config_store}") || die "$self->{config_store}: $!\n\n";
-
-	while (my ($key,$value) = each %{$self->{config}}) {
-		if (defined $key and defined $value) {
-			print $cfg "$key=$value\n";	
-		}
-	}
-
-	close($cfg);
-}
-
-sub get {
-	my ($self) = @_;
-	$self->{config} = {};
-
-	open (my $cfg, "$self->{config_store}") || die "$self->{config_store}: $!\n\n";
-
-	while (<$cfg>) {
-		chomp $_;
-		if ($_ =~ /^(\w+)?=(.+)/) {
-			$self->{config}->{$1} = $2; 
-		}
-	}
-
-	close($cfg);
+	DumpFile($self->{config_store}, $self->{config});
 }
 
 sub set_option {
@@ -109,7 +73,12 @@ sub set_option {
 
 sub get_option {
 	my ($self,$option) = @_;
-	return $self->{config}->{$option};
+
+	if (defined $self->{config}->{$option}) {
+		return $self->{config}->{$option};
+	} else {
+		return $default_config->{$option};
+	}
 }
 
 1;

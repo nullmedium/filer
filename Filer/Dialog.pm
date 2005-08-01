@@ -100,6 +100,7 @@ sub ask_command_dialog {
 	$dialog->set_has_separator(1);
 	$dialog->set_position('center');
 	$dialog->set_modal(1);
+	$dialog->set_default_response('ok');
 
 	$label = new Gtk2::Label;
 	$label->set_use_markup(1);
@@ -112,6 +113,7 @@ sub ask_command_dialog {
 
 	$entry = new Gtk2::Entry;
 	$entry->set_text($default);
+	$entry->set_activates_default(1);
 	$hbox->pack_start($entry, 1,1,5);
 
 	$button = new Gtk2::Button;
@@ -131,7 +133,7 @@ sub ask_command_dialog {
 	$dialog->show_all;
 
 	if ($dialog->run eq 'ok') {
-		$text = $button->get_filename;				
+		$text = $entry->get_text;				
 	} else {
 		$text = $default;
 	}

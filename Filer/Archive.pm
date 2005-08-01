@@ -22,62 +22,73 @@ use warnings;
 use File::Basename;
 use File::MimeInfo;
 
+use constant {
+	GZ   => 'application/x-gzip',		   
+	BZ2  => 'application/x-bzip',		   
+	TAR  => 'application/x-tar',		   
+	TGZ  => 'application/x-compressed-tar',    
+	TBZ2 => 'application/x-bzip-compressed-tar',
+	ZIP  => 'application/zip',	   
+	RAR  => 'application/x-rar',		   
+};
+
 sub new {
-	my ($class,$filepath,$files) = @_;
+	my ($class) = @_;
 	my $self = bless {}, $class;
+	$self->{supported_archives} = {};
 
-	$self->{path} = $filepath;
-	$self->{files} = $files;
-
-	$self->{supported_archives} = {
-		'application/x-gzip' 			=> { extension => 'gz',		create => 'gzip -c',	extract => 'gzip -d'},
-		'application/x-bzip' 			=> { extension => 'bz2',	create => 'bzip2 -c',	extract => 'bzip2 -d'},
-		'application/zip' 			=> { extension => 'zip',	create => 'zip',	extract => 'unzip'},
-		'application/x-tar' 			=> { extension => 'tar',	create => 'tar -c',	extract => 'tar -x'},
-		'application/x-compressed-tar'		=> { extension => 'tar.gz',	create => 'tar -cz',	extract => 'tar -xz'},
-		'application/x-bzip-compressed-tar' 	=> { extension => 'tar.bz2',	create => 'tar -cj',	extract => 'tar -xj'},
-		'application/x-rar' 			=> { extension => 'rar',	create => 'rar a',	extract => 'unrar x'}
-	};
+	foreach (GZ, BZ2, TAR, TGZ, TBZ2, ZIP, RAR) {
+		$self->{supported_archives}->{$_} = 1;
+	}
 
 	return $self;
 }
 
 sub create_tar_bz2_archive {
-	my ($self) = @_;
-	$self->create_archive('application/x-bzip-compressed-tar');
+	my ($self,$path,$files) = @_;
+	$self->create_archive('application/x-bzip-compressed-tar',$path,$files);
 }
 
 sub create_tar_gz_archive {
-	my ($self) = @_;
-	$self->create_archive('application/x-compressed-tar');
+	my ($self,$path,$files) = @_;
+	$self->create_archive('application/x-compressed-tar',$path,$files);
 }
 
 sub create_archive {
-	my ($self,$type) = @_;
-	my $path = $self->{path};
+	my ($self,$type,$path,$files) = @_;
+	my $archive_file = "";
+	my @files = map { Filer::Tools->catpath(File::Spec->curdir, basename($_)) } @{$files};
+	my @commandline = ();
 
-	my $archive_command = $self->{supported_archives}->{$type}->{create};
-	my $archive_file = sprintf("%s.%s", $self->{files}->[0], $self->{supported_archives}->{$type}->{extension});
+	if ($type eq TGZ) {
+		$archive_file = sprintf("%s.tar.gz", $files->[0]);
+		@commandline = ("tar", "-cz", "-C", $path, "-f", $archive_file, @files);
 	
-	# create a space delimited list of files and escape it properly to make shell happy
-	my @f = map { Filer::Tools->catpath(File::Spec->curdir, basename($_)) } @{$self->{files}};
+	} elsif ($type eq TBZ2) {
+		$archive_file = sprintf("%s.tar.bz2", $files->[0]);
+		@commandline = ("tar", "-cj", "-C", $path, "-f", $archive_file, @files);
+	}
 
-	my @c = split /\s+/, $archive_command;
-	my $pid = Filer::Tools->start_program(@c, "-C", $path, "-f", $archive_file, @f);
+	my $pid = Filer::Tools->start_program(@commandline);
 	Filer::Tools->wait_for_pid($pid);
 }
 
 sub extract_archive {
-	my ($self) = @_;
-	my $path = $self->{path};
+	my ($self,$path,$files) = @_;
 
-	foreach my $f (@{$self->{files}}) {
+	foreach my $f (@{$files}) {
 		my $type = mimetype($f);
-		my $archive_extract_command = $self->{supported_archives}->{$type}->{extract};
 
-		if ($archive_extract_command) {
-			my @c = split /\s+/, $archive_extract_command;
-			my $pid = Filer::Tools->start_program(@c, "-C", $path, "-f", $f);
+		my @cmdline =	($type eq GZ)	? ("gzip", "-d", $f)			:
+				($type eq BZ2)	? ("bzip2", "-d", $f)			:
+				($type eq TAR)	? ("tar", "-x", "-C", $path, "-f", $f)	:
+				($type eq TGZ)	? ("tar", "-xz", "-C", $path, "-f", $f)	:
+				($type eq TBZ2)	? ("tar", "-xj", "-C", $path, "-f", $f)	:
+				($type eq ZIP)	? ("unzip", $f, "-d", $path)		:
+				($type eq RAR)	? ("unrar", "x", $f, $path)		: undef;
+
+		if (@cmdline) {
+			my $pid = Filer::Tools->start_program(@cmdline);
 			Filer::Tools->wait_for_pid($pid);
 		}
 	}
@@ -85,7 +96,7 @@ sub extract_archive {
 
 sub is_supported_archive {
 	my ($self,$type) = @_;
-	return (defined $self->{supported_archives}->{$type});
+	return defined $self->{supported_archives}->{$type};
 }
 
 1;

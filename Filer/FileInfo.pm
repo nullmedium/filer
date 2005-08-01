@@ -14,28 +14,27 @@
 #     along with this program; if not, write to the Free Software
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-package Filer::FileInfo; 
+package Filer::FileInfo;
 
 use Memoize;
 use File::Basename;
 use File::MimeInfo;
 use Stat::lsMode qw(format_mode);
-use Unicode::String qw(utf8 latin1);
 
 use Filer::Tools;
 
-Memoize::memoize("Stat::lsMode::format_mode");
-Memoize::memoize("File::MimeInfo::Magic::mimetype");
-Memoize::memoize("File::MimeInfo::Magic::describe");
-Memoize::memoize("Filer::Tools::calculate_size");
+# Memoize::memoize("Stat::lsMode::format_mode");
+# Memoize::memoize("File::MimeInfo::mimetype");
+# Memoize::memoize("File::MimeInfo::describe");
+# Memoize::memoize("Filer::Tools::calculate_size");
 # Memoize::memoize("Filer::Tools::format_mode");
 
 sub new {
 	my ($class,$filepath) = @_;
 	my $self = bless {}, $class;
 
-	$self->{filepath} = utf8($filepath)->latin1; 
-	$self->{stat} = [ lstat($self->{filepath}) ];
+	$self->{filepath} = $filepath;
+	$self->{stat} = [ lstat $filepath ];
 
 	return $self;
 }
@@ -46,17 +45,17 @@ sub get_path {
 }
 
 sub get_basename {
-	my ($self) = @_; 
+	my ($self) = @_;
 	return basename($self->get_path);
 }
 
 sub get_mimetype {
-	my ($self) = @_; 
-	return (-l $self->{filepath}) ? "inode/symlink" : mimetype($self->{filepath});
+	my ($self) = @_;
+	return mimetype($self->{filepath});
 }
 
 sub get_mimetype_description {
-	my ($self) = @_; 
+	my ($self) = @_;
 	return describe($self->{type});
 }
 
@@ -66,32 +65,32 @@ sub get_stat {
 }
 
 sub get_raw_size {
-	my ($self) = @_; 
+	my ($self) = @_;
 	return $self->{stat}->[7];
 }
 
 sub get_raw_mtime {
-	my ($self) = @_; 
+	my ($self) = @_;
 	return $self->{stat}->[9];
 }
 
 sub get_raw_uid {
-	my ($self) = @_; 
+	my ($self) = @_;
 	return $self->{stat}->[4];
 }
 
 sub get_raw_gid {
-	my ($self) = @_; 
+	my ($self) = @_;
 	return $self->{stat}->[5];
 }
 
 sub get_raw_mode {
-	my ($self) = @_; 
+	my ($self) = @_;
 	return $self->{stat}->[2];
 }
 
 sub get_size {
-	my ($self) = @_; 
+	my ($self) = @_;
 	return Filer::Tools->calculate_size($self->get_raw_size);
 }
 
@@ -102,12 +101,12 @@ sub get_mtime {
 }
 
 sub get_uid {
-	my ($self) = @_; 
+	my ($self) = @_;
 	return getpwuid($self->get_raw_uid);
 }
 
 sub get_gid {
-	my ($self) = @_; 
+	my ($self) = @_;
 	return getgrgid($self->get_raw_gid);
 }
 

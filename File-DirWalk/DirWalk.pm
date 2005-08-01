@@ -12,16 +12,20 @@ use warnings;
 use File::Basename;
 use File::Spec;
 
-use constant FAILED => 0;
-use constant SUCCESS => 1;
-use constant ABORTED => -1;
-use constant PRUNE => -10;
+require Exporter;
+our @ISA = qw(Exporter);
+our @EXPORT = qw(FAILED SUCCESS ABORTED PRUNE);
+
+use constant SUCCESS 	=> 1;
+use constant FAILED 	=> 0;
+use constant ABORTED 	=> -1;
+use constant PRUNE 	=> -10;
 
 sub new {
 	my ($class) = @_;
 	my $self = bless {}, $class;
 
-	foreach (qw(onBeginWalk onLink onFile onDirEnter onDirLeave onForEach)) {
+	foreach (qw(onBeginWalk onLink onFile onDirEnter onDirLeave)) {
 		$self->{$_} = sub { SUCCESS; };
 	}
 
@@ -53,30 +57,7 @@ sub onDirLeave {
 	$self->{onDirLeave} = $func;
 }
 
-sub onForEach {
-	my ($self,$func) = @_;
-	$self->{onForEach} = $func;
-}
-
 sub walk {
-	my ($self,$path) = @_;
-
-	eval {
-		$self->_walk($path);
-	};
-	
-	if ($@) {
-		if ($@ =~  /aborted/) {
-			return ABORTED;
-		} elsif ($@ =~ /failed/) {
-			return FAILED;
-		}
-	}
-	
-	return SUCCESS;
-}
-
-sub _walk {
 	my ($self,$path) = @_;
 
 	if ((my $r = &{$self->{onBeginWalk}}($path)) != SUCCESS) {
@@ -104,15 +85,25 @@ sub _walk {
 			my @dirs = File::Spec->splitdir($path);
 			my $path = File::Spec->catfile(@dirs, $f);
 
-			my $r = $self->_walk($path);
+			my $r;
+
+			if (-l $path) {
+
+				$r = &{$self->{onLink}}($path);
+
+			} elsif (-d $path) {
+
+				$r = $self->walk($path);
+
+			} else {
+				$r = &{$self->{onFile}}($path);
+			}
 
 			if ($r == PRUNE) {
 				last;
-			} elsif ($r == ABORTED) {
-				die "aborted";
-			} elsif ($r == FAILED) {
-				die "failed";
-			}			
+			} elsif ($r != SUCCESS) {
+				return $r;
+			}
 		}
 
 		closedir($dirh);
@@ -141,11 +132,11 @@ Walk through your homedir and print out all filenames:
 
 	use File::DirWalk;
 
-	my $dw = new File::DirWalk; $dw->onFile(sub { 
+	my $dw = new File::DirWalk; $dw->onFile(sub {
 		my ($file) = @_;
 		print "$file\n";
 
-		return File::DirWalk::SUCCESS; 
+		return File::DirWalk::SUCCESS;
 	});
 
 	$dw->walk($ENV{'HOME'});
@@ -197,17 +188,17 @@ The name is passed to the function when called. Function must return true.
 =item C<walk($path)>
 
 Begin the walk through the given directory tree. This method returns if the walk
-is finished or if one of the callbacks doesn't return true. 
+is finished or if one of the callbacks doesn't return true.
 
 =back
 
 All callback-methods expect a function reference as their argument. The
 directory- or filename  is passed to the function as the argument when called.
 The function must return true, otherwise the recursive walk is aborted and
-C<walk> returns. You don't need to define a callback if you don't need to. 
+C<walk> returns. You don't need to define a callback if you don't need to.
 
 The module provides the following constants: SUCCESS, FAILED and ABORTED (1, 0
-and -1) which you can use within your callback code. 
+and -1) which you can use within your callback code.
 
 =head1 BUGS
 

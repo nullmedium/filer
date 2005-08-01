@@ -19,22 +19,15 @@ package Filer::FileCopy;
 use strict;
 use warnings;
 
-use File::Basename; 
 use Fcntl;
 
-use constant PROGRESSBAR => 0;
-use constant STOPPED => 1;
-
-use constant STOP => 0;
+use constant JOB => 0;
 
 sub new {
-	my ($class,$progressbar,$stop_ref) = @_;
+	my ($class,$job) = @_;
 	my $self = bless [], $class;
 
-	$self->[PROGRESSBAR] = $progressbar;
-	$self->[STOPPED] = $stop_ref;
-
-	$self->[PROGRESSBAR]->set_text(" ");
+	$self->[JOB] = $job;
 
 	return $self;
 }
@@ -42,53 +35,34 @@ sub new {
 sub filecopy {
 	my ($self,$source,$dest) = @_;
 
-	my @stat = stat($source); 
+	return if ($source eq $dest);
+
+	my @stat = stat($source);
 	my $mode = $stat[2];
-	my $size = $stat[7];
-	my $buf_size = $stat[11]; # use filesystem blocksize
+	my $buf_size = 4 * $stat[11];
 	my $buf = "";
-	my $written = 0;
-	my $written_avg = 0;
-	my $percent_written = 0;
-	my $size_h = Filer::Tools->calculate_size($size);
 
-	my $id = Glib::Timeout->add(1000, sub {
-		return 0 if ($written_avg == 0);
-		
-		my $p = sprintf("%.0f", $percent_written * 100);
-		my $str = "$p% of $size_h (" .  Filer::Tools->calculate_size($written_avg) . "/s)"; 
-  
-		$self->[PROGRESSBAR]->get_parent_window->set_title($str);
-		$self->[PROGRESSBAR]->set_text($str);
+	$self->[JOB]->{progress_label}->set_text("$source\n$dest");
+	while (Gtk2->events_pending) { Gtk2->main_iteration; }
 
-		$written_avg = 0;
+	sysopen(my $in_fh, $source, O_RDONLY);
+	sysopen(my $out_fh, $dest, O_CREAT|O_WRONLY|O_TRUNC, $mode);
 
-		return 1;
-	});
+	my ($r,$w,$t);
 
-	sysopen(SOURCE, $source, O_RDONLY);
-	sysopen(DEST, $dest, O_CREAT|O_WRONLY|O_TRUNC);
+	while (($r = sysread($in_fh, $buf, $buf_size)) && !$self->[JOB]->{CANCELLED}) {
 
-	while (sysread(SOURCE, $buf, $buf_size)) {
-		syswrite DEST, $buf, $buf_size;
+		for ($w = 0; $w < $r; $w += $t) {
+			$t = syswrite($out_fh, $buf, $r - $w, $w)
+				or return File::DirWalk::FAILED;
 
-		return File::DirWalk::ABORTED if (${$self->[STOPPED]} == STOP);
-
-		my $l = length($buf);
-		$written += $l;
-		$written_avg += $l;
-		$percent_written = $written/$size; 
-
-		$self->[PROGRESSBAR]->set_fraction($percent_written);
-		while (Gtk2->events_pending) { Gtk2->main_iteration; }
+			$self->[JOB]->{completed_bytes} += $t;
+			while (Gtk2->events_pending) { Gtk2->main_iteration; }
+		}
 	}
 
-	close(SOURCE);
-	close(DEST);
-
-	chmod $mode, $dest || return File::DirWalk::FAILED;
-
-	Glib::Source->remove($id);
+	close($in_fh) || return File::DirWalk::FAILED;
+	close($out_fh) || return File::DirWalk::FAILED;
 
 	return File::DirWalk::SUCCESS;
 }

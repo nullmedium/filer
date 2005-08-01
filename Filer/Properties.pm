@@ -69,7 +69,7 @@ sub set_properties_dialog {
 	my $multiple = 0;
 	
 	my $fileinfo;
-	my $mime = new Filer::Mime($filer); 
+#	my $mime = $filer->{mime}; 
 	my $type;
 
 	if ($filer->{active_pane}->count_items == 1) {
@@ -342,28 +342,44 @@ sub set_properties_dialog {
 
 	$owner_combo = Gtk2::ComboBox->new_text;
 	foreach (@users) { $owner_combo->append_text($_); $pos = $i if ($_ eq $owner); $i++;}
-	$owner_combo->set_active($pos);
+	$owner_combo->set_active($pos) if (!$multiple);
 	$owner_combo->set_sensitive(0) if ($ENV{USER} ne 'root');
 	$vbox->pack_start($owner_combo, 1, 1, 0);
 
 	$pos = 0; $i = 0;
 	$group_combo = Gtk2::ComboBox->new_text;
 	foreach (@groups) { $group_combo->append_text($_); $pos = $i if ($_ eq $group); $i++; }
-	$group_combo->set_active($pos);
+	$group_combo->set_active($pos) if (!$multiple);
 	$vbox->pack_start($group_combo, 1, 1, 0);
 
 	$dialog->show_all;
 	my $r = $dialog->run;
 
 	if ($r eq 'ok') {
-		my @files = map { $_->get_path; } @{$filer->{active_pane}->get_fileinfo};
+		my @fi = @{$filer->{active_pane}->get_fileinfo};
 		my $mode = oct(($properties_mode * 1000) + ($owner_mode * 100) +  ($group_mode * 10) + ($other_mode));
-
 		my $uid = getpwnam($owner_combo->get_active_text);
 		my $gid = getgrnam($group_combo->get_active_text);
 
-		chmod($mode, @files) || return Filer::Dialog->msgbox_error("Error: $!");
-		chown($uid, $gid, @files) || return Filer::Dialog->msgbox_error("Error: $!");
+# 		if ($mode == 0) {
+# 			Filer::Dialog->msgbox_error("Error: no defined mode");
+# 			$dialog->destroy;
+# 			return;
+# 		}
+
+		foreach (@fi) {
+			if ($_->get_uid eq $ENV{USER}) {
+				eval {
+					chmod($mode, $_->get_path);
+					chown($uid, $gid, $_->get_path);
+				};
+				
+				if ($@) {
+					Filer::Dialog->msgbox_error("Error: $!");
+					last;
+				}
+			}
+		}
 
 		$filer->refresh_cb;
 	}
