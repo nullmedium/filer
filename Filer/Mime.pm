@@ -85,6 +85,16 @@ sub new {
 		$self->{mime} = LoadFile($self->{mime_store});
 	}
 
+	foreach (keys %{$self->{mime}}) {
+		if (! -e $self->{mime}->{$_}->[ICON]) {
+			if (-e $default_mimetypes->{$_}->[ICON]) {
+				$self->{mime}->{$_}->[ICON] = $default_mimetypes->{$_}->[ICON];
+			} else {
+				$self->{mime}->{$_}->[ICON] = $default_mimetypes->{'application/default'}->[ICON];
+			}
+		}
+	}
+
 	return $self;
 }
 
@@ -201,7 +211,7 @@ sub set_icon_dialog {
 	$label->set_alignment(0.0,0.0);
 	$table->attach($label, 1, 2, 1, 2, [ "fill" ], [], 0, 0);
 
-	my $frame = new Gtk2::Frame("Preview");
+	$frame = new Gtk2::Frame("Preview");
 	my $preview = new Gtk2::Image;
 	$frame->add($preview);
 	$frame->show_all;

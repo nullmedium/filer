@@ -119,7 +119,7 @@ sub set_properties_dialog {
 		$label->set_ellipsize('PANGO_ELLIPSIZE_MIDDLE');
 		$table->attach($label, 1, 2, 0, 1, [ "fill", "expand" ], [ ], 0, 0);
 
-		$label = new Gtk2::Label($fileinfo->get_size);
+		$label = new Gtk2::Label($fileinfo->get_size . " (" . $fileinfo->get_raw_size . ")");
 		$label->set_alignment(0.0,0.0);
 		$table->attach($label, 1, 2, 1, 2, [ "fill" ], [ ], 0, 0);
 
