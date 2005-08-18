@@ -117,6 +117,11 @@ sub init_mimeicons {
 	}
 }
 
+sub get_mime {
+	my ($self) = @_;
+	return $mime{ident $self};
+}
+
 sub get_mimeicons {
 	my ($self) = @_;
 	return $mimeicons{ident $self};

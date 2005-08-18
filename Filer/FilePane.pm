@@ -286,7 +286,7 @@ sub show_popup_menu {
 			$item = $uimanager->get_widget("$ui_path/Open");
 			$item->set_submenu($commands_menu);
 
-			foreach ($filer{ident $self}->{mime}->get_commands($type)) {
+			foreach ($filer{ident $self}->get_mime->get_commands($type)) {
 				$item = new Gtk2::MenuItem(basename($_));
 				$item->signal_connect("activate", sub {
 					my @c = split /\s+/, $_[1];
@@ -561,6 +561,9 @@ sub update_navigation_buttons {
 
 sub open_file {
 	my ($self,$fileinfo) = @_;
+
+	return 0 if (not defined $fileinfo);
+
 	my $filepath = abs_path($fileinfo->get_path);
 
 	return 0 if ((not defined $filepath) or (not -R $filepath));
@@ -573,7 +576,7 @@ sub open_file {
 
 	} else {
 		my $type = $fileinfo->get_mimetype;
-		my @command = $filer{ident $self}->{mime}->get_default_command($type);
+		my @command = $filer{ident $self}->get_mime->get_default_command($type);
 
 		if (@command) {
 			Filer::Tools->start_program(@command,$filepath);
@@ -581,7 +584,7 @@ sub open_file {
 			if (defined Filer::Archive->is_supported_archive($type)) {
 				$self->extract_archive_temporary($filepath);
 			} else {
-				$filer{ident $self}->{mime}->run_dialog($fileinfo);
+				$filer{ident $self}->get_mime->run_dialog($fileinfo);
 			}
 		}
 	}
@@ -592,7 +595,7 @@ sub open_file_with {
 
 	return 0 if (not defined $self->get_iter);
 
-	$filer{ident $self}->{mime}->run_dialog($self->get_fileinfo->[0]);
+	$filer{ident $self}->get_mime->run_dialog($self->get_fileinfo->[0]);
 }
 
 sub open_path_helper {
