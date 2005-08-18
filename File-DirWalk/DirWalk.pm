@@ -85,19 +85,7 @@ sub walk {
 			my @dirs = File::Spec->splitdir($path);
 			my $path = File::Spec->catfile(@dirs, $f);
 
-			my $r;
-
-			if (-l $path) {
-
-				$r = &{$self->{onLink}}($path);
-
-			} elsif (-d $path) {
-
-				$r = $self->walk($path);
-
-			} else {
-				$r = &{$self->{onFile}}($path);
-			}
+			my $r = $self->walk($path);
 
 			if ($r == PRUNE) {
 				last;

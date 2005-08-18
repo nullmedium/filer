@@ -32,26 +32,30 @@ use constant {
 	RAR  => 'application/x-rar',		   
 };
 
+our @archive_types = (GZ,BZ2,TAR,TGZ,TBZ2,ZIP,RAR);
+
+sub is_supported_archive {
+	my $type = pop;
+	my %is_supported = map { $_ => 1 } @archive_types;
+
+	return defined $is_supported{$type};
+}
+
 sub new {
 	my ($class) = @_;
 	my $self = bless {}, $class;
-	$self->{supported_archives} = {};
-
-	foreach (GZ, BZ2, TAR, TGZ, TBZ2, ZIP, RAR) {
-		$self->{supported_archives}->{$_} = 1;
-	}
 
 	return $self;
 }
 
-sub create_tar_bz2_archive {
-	my ($self,$path,$files) = @_;
-	$self->create_archive('application/x-bzip-compressed-tar',$path,$files);
-}
-
 sub create_tar_gz_archive {
 	my ($self,$path,$files) = @_;
-	$self->create_archive('application/x-compressed-tar',$path,$files);
+	return $self->create_archive(TGZ, $path, $files);
+}
+
+sub create_tar_bz2_archive {
+	my ($self,$path,$files) = @_;
+	return $self->create_archive(TBZ2, $path, $files);
 }
 
 sub create_archive {
@@ -71,6 +75,8 @@ sub create_archive {
 
 	my $pid = Filer::Tools->start_program(@commandline);
 	Filer::Tools->wait_for_pid($pid);
+
+	return $path;
 }
 
 sub extract_archive {
@@ -92,11 +98,8 @@ sub extract_archive {
 			Filer::Tools->wait_for_pid($pid);
 		}
 	}
-}
 
-sub is_supported_archive {
-	my ($self,$type) = @_;
-	return defined $self->{supported_archives}->{$type};
+	return $path;
 }
 
 1;

@@ -15,6 +15,7 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::Bookmarks;
+use Class::Std::Utils;
 
 use strict;
 use warnings;
@@ -22,21 +23,31 @@ use warnings;
 use Filer;
 use Filer::Constants;
 
+my %filer;
+my %bookmarks;
+
 sub new {
 	my ($class,$filer) = @_;
-	my $self = bless {}, $class;
+	my $self = bless anon_scalar(), $class;
 
-	$self->{filer} = $filer;
+	$filer{ident $self}     = $filer;
+	$bookmarks{ident $self} = $filer->get_config->get_option("Bookmarks");
 
 	return $self;
 }
 
+sub DESTROY {
+	my ($self) = @_;
+
+	delete $filer{ident $self};
+	delete $bookmarks{ident $self};
+}
+
 sub get_bookmarks {
 	my ($self) = @_;
-	my $bookmarks = $self->{filer}->{config}->get_option("Bookmarks");
-	
-	if (defined $bookmarks) {
-		return sort @{$bookmarks};
+
+	if (defined $bookmarks{ident $self}) {
+		return sort @{$bookmarks{ident $self}};
 	} else {
 		return ();
 	}
@@ -44,88 +55,91 @@ sub get_bookmarks {
 
 sub set_bookmark {
 	my ($self,$path) = @_;
-	my $bookmarks = $self->{filer}->{config}->get_option("Bookmarks");
-	my @b = @{$bookmarks};
-	push @b, $path;
-		
-	undef my %seen;
-	@seen{@b} = @b;
 
-	$self->{filer}->{config}->set_option("Bookmarks", [keys %seen]);
+	undef my %seen;
+	push @{$bookmarks{ident $self}}, $path;
+	@seen{@{$bookmarks{ident $self}}} = 1;
+
+	$bookmarks{ident $self} = [keys %seen];
+
+	$filer{ident $self}->get_config->set_option("Bookmarks", $bookmarks{ident $self});
 }
 
 sub remove_bookmark {
 	my ($self,$path) = @_;
-	my $bookmarks = $self->{filer}->{config}->get_option("Bookmarks");
-	my @b = @{$bookmarks};
 
 	undef my %seen;
-	@seen{@b} = @b;
+	@seen{@{$bookmarks{ident $self}}} = 1;
 
 	delete $seen{$path};
 
-	$self->{filer}->{config}->set_option("Bookmarks", [keys %seen]);
+	$bookmarks{ident $self} = [keys %seen];
+
+	$filer{ident $self}->get_config->set_option("Bookmarks", $bookmarks{ident $self});
 }
 
-sub bookmarks_menu {
-	my ($self) = @_;
-	my $menu = new Gtk2::Menu;
+sub generate_bookmarks_menu {
+	my ($self)         = @_;
+	my $bookmarks_menu = new Gtk2::Menu;
 	my $menuitem;
 
 	$menuitem = new Gtk2::MenuItem("Set Bookmark");
 	$menuitem->signal_connect("activate", sub {
+		my $pane = $filer{ident $self}->get_active_pane;
 
-		if ($self->{filer}->{active_pane}->count_items > 0) {
-			foreach (@{$self->{filer}->{active_pane}->get_items}) {
-				if (-d $_) {
-					$self->set_bookmark($_);
+		if ($pane->count_items > 0) {
+			foreach (@{$pane->get_fileinfo}) {
+				if ($_->is_dir) {
+					$self->set_bookmark($_->get_path);
 				} else {
-					$self->set_bookmark($self->{filer}->{active_pane}->get_pwd);
+					$self->set_bookmark($pane->get_pwd);
 				}
 			}
 		} else {
-			$self->set_bookmark($self->{filer}->{active_pane}->get_pwd);
+			$self->set_bookmark($pane->get_pwd);
 		}
 
-	  	$self->{filer}->{widgets}->{uimanager}->get_widget("/ui/menubar/bookmarks-menu")->set_submenu($self->bookmarks_menu);
+		$filer{ident $self}->get_widgets->{uimanager}->get_widget("/ui/menubar/bookmarks-menu")->set_submenu($self->generate_bookmarks_menu);
 	});
 	$menuitem->show;
-	$menu->add($menuitem);
+	$bookmarks_menu->add($menuitem);
 
 	$menuitem = new Gtk2::MenuItem("Remove Bookmark");
 	$menuitem->signal_connect("activate", sub {
-		if ($self->{filer}->{active_pane}->count_items > 0) {
-			foreach (@{$self->{filer}->{active_pane}->get_items}) {
-				if (-d $_) {
-					$self->remove_bookmark($_);
+		my $pane = $filer{ident $self}->get_active_pane;
+
+		if ($pane->count_items > 0) {
+			foreach (@{$pane->get_fileinfo}) {
+				if ($_->is_dir) {
+					$self->remove_bookmark($_->get_path);
 				} else {
-					$self->remove_bookmark($self->{filer}->{active_pane}->get_pwd);
+					$self->remove_bookmark($pane->get_pwd);
 				}
 			}
 		} else {
-			$self->remove_bookmark($self->{filer}->{active_pane}->get_pwd);
+			$self->remove_bookmark($pane->get_pwd);
 		}
 
-	  	$self->{filer}->{widgets}->{uimanager}->get_widget("/ui/menubar/bookmarks-menu")->set_submenu($self->bookmarks_menu);
+		$filer{ident $self}->get_widgets->{uimanager}->get_widget("/ui/menubar/bookmarks-menu")->set_submenu($self->generate_bookmarks_menu);
 	});
 	$menuitem->show;
-	$menu->add($menuitem);
+	$bookmarks_menu->add($menuitem);
 
 	$menuitem = new Gtk2::SeparatorMenuItem;
 	$menuitem->show;
-	$menu->add($menuitem);
+	$bookmarks_menu->add($menuitem);
 
 	foreach ($self->get_bookmarks) {
 		$menuitem = new Gtk2::MenuItem($_);
 		$menuitem->signal_connect("activate", sub {
-			my $p = ($self->{filer}->{config}->get_option("Mode") == NORTON_COMMANDER_MODE) ? $self->{filer}->{active_pane} : $self->{filer}->{pane}->[RIGHT];
-			$p->open_path_helper($_[1]);
+			$filer{ident $self}->get_active_pane->open_path_helper($_[1]);
 		},$_);
+
 		$menuitem->show;
-		$menu->add($menuitem);
+		$bookmarks_menu->add($menuitem);
 	}
 
-	return $menu;
+	return $bookmarks_menu;
 }
 
 1;

@@ -15,33 +15,67 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::FileInfo;
+use Class::Std::Utils;
+
+use strict;
+use warnings;
 
 use Memoize;
-use File::Basename;
-use File::MimeInfo;
+use File::Basename qw(basename);
+use File::MimeInfo::Magic qw(inodetype mimetype describe);
 use Stat::lsMode qw(format_mode);
 
 use Filer::Tools;
 
-# Memoize::memoize("Stat::lsMode::format_mode");
-# Memoize::memoize("File::MimeInfo::mimetype");
-# Memoize::memoize("File::MimeInfo::describe");
-# Memoize::memoize("Filer::Tools::calculate_size");
-# Memoize::memoize("Filer::Tools::format_mode");
+my $S_IFDIR = 0040000;
+my $S_IXUSR = 00100;
+
+use enum qw(
+	:STAT_
+	DEV
+	INO
+	MODE
+	NLINK
+	UID
+	GID
+	RDEV
+	SIZE
+	ATIME
+	MTIME
+	CTIME
+	BLKSIZE
+	BLOCKS
+);
+
+# attributes;
+my %filepath;
+my %stat;
+my %mimetype;
 
 sub new {
 	my ($class,$filepath) = @_;
-	my $self = bless {}, $class;
+	my $self = bless anon_scalar(), $class;
 
-	$self->{filepath} = $filepath;
-	$self->{stat} = [ lstat $filepath ];
+	$filepath{ident $self} = $filepath;
+	$stat{ident $self}     = [ lstat($filepath) ];
+	$mimetype{ident $self} = mimetype($filepath);
 
 	return $self;
 }
 
+sub DESTROY {
+	my ($self) = @_;
+
+#	print "$self DESTROY: $filepath{ident $self}\n";
+
+	delete $filepath{ident $self};
+	delete $stat{ident $self};
+	delete $mimetype{ident $self};
+}
+
 sub get_path {
 	my ($self) = @_;
-	return $self->{filepath};
+	return $filepath{ident $self};
 }
 
 sub get_basename {
@@ -51,42 +85,42 @@ sub get_basename {
 
 sub get_mimetype {
 	my ($self) = @_;
-	return mimetype($self->{filepath});
+	return $mimetype{ident $self};
 }
 
 sub get_mimetype_description {
 	my ($self) = @_;
-	return describe($self->{type});
+	return describe($self->get_mimetype);
 }
 
 sub get_stat {
 	my ($self) = @_;
-	return $self->{stat};
+	return $stat{ident $self};
 }
 
 sub get_raw_size {
 	my ($self) = @_;
-	return $self->{stat}->[7];
+	return $stat{ident $self}->[STAT_SIZE];
 }
 
 sub get_raw_mtime {
 	my ($self) = @_;
-	return $self->{stat}->[9];
+	return $stat{ident $self}->[STAT_MTIME];
 }
 
 sub get_raw_uid {
 	my ($self) = @_;
-	return $self->{stat}->[4];
+	return $stat{ident $self}->[STAT_UID];
 }
 
 sub get_raw_gid {
 	my ($self) = @_;
-	return $self->{stat}->[5];
+	return $stat{ident $self}->[STAT_GID];
 }
 
 sub get_raw_mode {
 	my ($self) = @_;
-	return $self->{stat}->[2];
+	return $stat{ident $self}->[STAT_MODE];
 }
 
 sub get_size {
@@ -113,6 +147,16 @@ sub get_gid {
 sub get_mode {
 	my ($self) = @_;
 	return format_mode($self->get_raw_mode);
+}
+
+sub is_dir {
+	my ($self) = @_;
+	return ($self->get_raw_mode & $S_IFDIR);
+}
+
+sub is_executable {
+	my ($self) = @_;
+	return ($self->get_raw_mode & $S_IXUSR);
 }
 
 sub is_hidden {

@@ -97,7 +97,7 @@
       <menuitem name="CreateTBZ2" action="create-tbz2-action"/>
       <menuitem name="Extract" action="extract-action"/>
     </menu>
-    <menuitem name="Bookmarks" action="BookmarksPopupMenuAction"/>
+    <menuitem name="Bookmarks" action="BookmarksMenuAction"/>
     <separator/>
     <menuitem name="Properties" action="properties-action"/>
   </popup>

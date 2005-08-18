@@ -15,6 +15,7 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::Mime;
+use Class::Std::Utils;
 
 use strict;
 use warnings;
@@ -26,9 +27,7 @@ use Filer::Constants;
 
 use enum qw(ICON COMMANDS);
 
-our ($default_mimetypes);
-
-$default_mimetypes = {
+my $default_mimetypes = {
 	'application/default'			=> [ "$main::libpath/icons/default.png",			[] ],
 	'application/ogg'			=> [ "$main::libpath/icons/mimetypes/audio.png",		[] ],
 	'application/pdf'			=> [ "$main::libpath/icons/mimetypes/pdf.png",			[] ],
@@ -73,24 +72,29 @@ $default_mimetypes = {
 	'video/x-msvideo'			=> [ "$main::libpath/icons/mimetypes/video.png",		[] ],
 };
 
+# attributes;
+my %filer;
+my %mime;
+my %mime_file;
+
 sub new {
 	my ($class,$filer) = @_;
-	my $self = bless {}, $class;
-	$self->{filer} = $filer;
-	$self->{mime_store} = Filer::Tools->catpath((new File::BaseDir)->xdg_config_home, "filer", "mime.yml");
+	my $self = bless anon_scalar(), $class;
+	$filer{ident $self} = $filer;
+	$mime_file{ident $self} = Filer::Tools->catpath(File::BaseDir->new->xdg_config_home, "filer", "mime.yml");
 
-	if (! -e $self->{mime_store}) {
-		$self->{mime} = $default_mimetypes;
+	if (! -e $mime_file{ident $self}) {
+		$mime{ident $self} = $default_mimetypes;
 	} else {
-		$self->{mime} = LoadFile($self->{mime_store});
+		$mime{ident $self} = LoadFile($mime_file{ident $self});
 	}
 
-	foreach (keys %{$self->{mime}}) {
-		if (! -e $self->{mime}->{$_}->[ICON]) {
+	foreach (keys %{$mime{ident $self}}) {
+		if (! -e $mime{ident $self}->{$_}->[ICON]) {
 			if (-e $default_mimetypes->{$_}->[ICON]) {
-				$self->{mime}->{$_}->[ICON] = $default_mimetypes->{$_}->[ICON];
+				$mime{ident $self}->{$_}->[ICON] = $default_mimetypes->{$_}->[ICON];
 			} else {
-				$self->{mime}->{$_}->[ICON] = $default_mimetypes->{'application/default'}->[ICON];
+				$mime{ident $self}->{$_}->[ICON] = $default_mimetypes->{'application/default'}->[ICON];
 			}
 		}
 	}
@@ -100,12 +104,16 @@ sub new {
 
 sub DESTROY {
 	my ($self) = @_;
-	DumpFile($self->{mime_store}, $self->{mime});
+	DumpFile($mime_file{ident $self}, $mime{ident $self});
+
+	delete $filer{ident $self};
+	delete $mime{ident $self};
+	delete $mime_file{ident $self};
 }
 
 sub get_mimetypes {
 	my ($self) = @_;
-	return keys %{$self->{mime}};
+	return keys %{$mime{ident $self}};
 }
 
 sub get_mimetype_groups {
@@ -113,7 +121,7 @@ sub get_mimetype_groups {
 	my %groups = ();
 
 	foreach ($self->get_mimetypes) {
-		my ($group) = split /\//, $_;
+		my ($group) = split "/", $_;
 		$groups{$group}++;
 	}
 
@@ -122,17 +130,17 @@ sub get_mimetype_groups {
 
 sub add_mimetype {
 	my ($self,$type) = @_;
-	$self->{mime}->{$type} = [ $self->{mime}->{'application/default'}->[ICON], [] ];
+	$mime{ident $self}->{$type} = [ $mime{ident $self}->{'application/default'}->[ICON], [] ];
 }
 
 sub delete_mimetype {
 	my ($self,$type) = @_;
-	delete $self->{mime}->{$type};
+	delete $mime{ident $self}->{$type};
 }
 
 sub get_icon {
 	my ($self,$type) = @_;
-	return $self->{mime}->{$type}->[ICON];
+	return $mime{ident $self}->{$type}->[ICON];
 }
 
 sub get_icons {
@@ -143,27 +151,32 @@ sub get_icons {
 
 sub set_icon {
 	my ($self,$type,$icon) = @_;
-	$self->{mime}->{$type}->[ICON] = $icon;
+	$mime{ident $self}->{$type}->[ICON] = $icon;
 }
 
 sub get_commands {
 	my ($self,$type) = @_;
-	return @{$self->{mime}->{$type}->[COMMANDS]};
+	return @{$mime{ident $self}->{$type}->[COMMANDS]};
 }
 
 sub set_commands {
 	my ($self,$type,$commands) = @_;
-	$self->{mime}->{$type}->[COMMANDS] = $commands;
+	$mime{ident $self}->{$type}->[COMMANDS] = $commands;
 }
 
 sub get_default_command {
 	my ($self,$type) = @_;
-	return $self->{mime}->{$type}->[COMMANDS]->[0];
+
+	if (wantarray) {
+		return split /\s+/, $mime{ident $self}->{$type}->[COMMANDS]->[0];
+	} else {
+		return $mime{ident $self}->{$type}->[COMMANDS]->[0];
+	}
 }
 
 sub set_default_command {
 	my ($self,$type,$command) = @_;
-	$self->{mime}->{$type}->[COMMANDS]->[0] = $command;
+	$mime{ident $self}->{$type}->[COMMANDS]->[0] = $command;
 }
 
 sub set_icon_dialog {
@@ -171,11 +184,16 @@ sub set_icon_dialog {
 	my ($dialog,$table,$frame,$label,$type_label,$icon_image,$icon_entry,$icon_browse_button);
 	my ($button,$alignment,$hbox);
 
-	$dialog = new Gtk2::Dialog("Set Icon", undef, 'modal', 'gtk-close' => 'close');
+	$dialog = new Gtk2::Dialog(
+		"Set Icon",
+		undef,
+		'modal',
+		'gtk-close' => 'close'
+	);
+
 	$dialog->set_has_separator(1);
 	$dialog->set_size_request(450,150);
 	$dialog->set_position('center');
-	$dialog->set_modal(1);
 
 	$table = new Gtk2::Table(2,4);
 	$table->set_homogeneous(0);
@@ -239,7 +257,7 @@ sub set_icon_dialog {
 		$icon_image->set_from_pixbuf($pixbuf);
 	}, $preview);
 
-	$icon_browse_button->set_filename($self->get_icon($type));	
+	$icon_browse_button->set_filename($self->get_icon($type));
  	$table->attach($icon_browse_button, 2, 3, 1, 2, [ "expand","fill" ], [], 0, 0);
 
 	$dialog->show_all;
@@ -261,10 +279,15 @@ sub run_dialog {
 	my $type = $fileinfo->get_mimetype;
 	my ($dialog,$table,$label,$button,$type_label,$cmd_browse_button,$remember_checkbutton,$run_terminal_checkbutton,$command_combo);
 
-	$dialog = new Gtk2::Dialog("Open With", undef, 'modal', 'gtk-close' => 'close');
+	$dialog = new Gtk2::Dialog(
+		"Open With",
+		undef,
+		'modal',
+		'gtk-close' => 'close'
+	);
+
 	$dialog->set_has_separator(1);
 	$dialog->set_position('center');
-	$dialog->set_modal(1);
 
 	$table = new Gtk2::Table(3,3);
 	$table->set_homogeneous(0);
@@ -298,12 +321,20 @@ sub run_dialog {
 	$cmd_browse_button = new Gtk2::Button;
 	$cmd_browse_button->add(Gtk2::Image->new_from_stock('gtk-open', 'button'));
 	$cmd_browse_button->signal_connect("clicked", sub {
-		my $fs = new Gtk2::FileChooserDialog("Select Command", undef, 'GTK_FILE_CHOOSER_ACTION_OPEN', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
+		my $fs = new Gtk2::FileChooserDialog(
+			"Select Command",
+			undef,
+			'GTK_FILE_CHOOSER_ACTION_OPEN',
+			'gtk-cancel' => 'cancel',
+			'gtk-ok' => 'ok'
+		);
+
 		$fs->set_filename($command_combo->get_child->get_text);
 
 		if ($fs->run eq 'ok') {
 			$command_combo->get_child->set_text($fs->get_filename);
 		}
+
 
 		$fs->destroy;
 	});
@@ -329,12 +360,12 @@ sub run_dialog {
 		}
 
 		if (! $run_terminal_checkbutton->get_active) {
-			my @c = split /\s+/, $command;			
+			my @c = split /\s+/, $command;
 			Filer::Tools->start_program(@c, $file);
 		} else {
-			my $term = $self->{filer}->{config}->get_option("Terminal");
+			my $term = $filer{ident $self}->get_config->get_option("Terminal");
 			my @t = split /\s+/, $term;
-			my @c = split /\s+/, $command;		
+			my @c = split /\s+/, $command;
 			Filer::Tools->start_program(@t, "-x", @c, $file);
 		}
 	}

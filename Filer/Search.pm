@@ -41,7 +41,7 @@ sub new {
 	$table->attach($label, 0, 1, 0, 1, [ "fill" ], [], 0, 0);
 
 	$self->{filechooser_button} = new Gtk2::FileChooserButton("Search in ...", 'GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER');
-	$self->{filechooser_button}->set_current_folder($filer->{active_pane}->get_item);
+	$self->{filechooser_button}->set_current_folder($filer->get_active_pane->get_item);
        	$table->attach($self->{filechooser_button}, 1, 2, 0, 1, [ "fill", "expand" ], [], 0, 0);
  
 	$label = new Gtk2::Label("Filename: ");

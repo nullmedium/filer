@@ -21,32 +21,32 @@ use Filer::Constants;
 use strict;
 use warnings;
 
-use constant S_IFMT  => 00170000;
-use constant S_IFSOCK => 0140000;
-use constant S_IFLNK => 0120000;
-use constant S_IFREG => 0100000;
-use constant S_IFBLK => 0060000;
-use constant S_IFDIR => 0040000;
-use constant S_IFCHR => 0020000;
-use constant S_IFIFO => 0010000;
-use constant S_ISUID => 0004000;
-use constant S_ISGID => 0002000;
-use constant S_ISVTX => 0001000;
+my $S_IFMT   = 00170000;
+my $S_IFSOCK = 0140000;
+my $S_IFLNK  = 0120000;
+my $S_IFREG  = 0100000;
+my $S_IFBLK  = 0060000;
+my $S_IFDIR  = 0040000;
+my $S_IFCHR  = 0020000;
+my $S_IFIFO  = 0010000;
+my $S_ISUID  = 0004000;
+my $S_ISGID  = 0002000;
+my $S_ISVTX  = 0001000;
 
-use constant S_IRWXU => 00700;
-use constant S_IRUSR => 00400;
-use constant S_IWUSR => 00200;
-use constant S_IXUSR => 00100;
+my $S_IRWXU = 00700;
+my $S_IRUSR = 00400;
+my $S_IWUSR = 00200;
+my $S_IXUSR = 00100;
 
-use constant S_IRWXG => 00070;
-use constant S_IRGRP => 00040;
-use constant S_IWGRP => 00020;
-use constant S_IXGRP => 00010;
+my $S_IRWXG = 00070;
+my $S_IRGRP = 00040;
+my $S_IWGRP = 00020;
+my $S_IXGRP = 00010;
 
-use constant S_IRWXO => 00007;
-use constant S_IROTH => 00004;
-use constant S_IWOTH => 00002;
-use constant S_IXOTH => 00001;
+my $S_IRWXO = 00007;
+my $S_IROTH = 00004;
+my $S_IWOTH = 00002;
+my $S_IXOTH = 00001;
 
 sub set_properties_dialog {
 	my ($filer) = pop;
@@ -57,27 +57,20 @@ sub set_properties_dialog {
 	my $owner_combo;
 	my $group_combo;
 
-	my $mode = 0;
 	my $properties_mode = 0;
 	my $owner_mode = 0;
 	my $group_mode = 0;
 	my $other_mode = 0;
 
-	my @stat = ();
+	my $fileinfo;
 	my $owner = "";
 	my $group = "";
 	my $multiple = 0;
-	
-	my $fileinfo;
-#	my $mime = $filer->{mime}; 
-	my $type;
 
-	if ($filer->{active_pane}->count_items == 1) {
-		$fileinfo = $filer->{active_pane}->get_fileinfo->[0];
-		@stat = @{$fileinfo->get_stat};
+	if ($filer->get_active_pane->count_items == 1) {
+		$fileinfo = $filer->get_active_pane->get_fileinfo->[0];
 		$owner = $fileinfo->get_uid;
 		$group = $fileinfo->get_gid;
-		$type = $fileinfo->get_mimetype;
 	} else {
 		$multiple = 1;
 	}
@@ -90,7 +83,14 @@ sub set_properties_dialog {
 		${$mode_ref} += ($w->get_active) ? $x : -$x;
 	};
 
-	$dialog = new Gtk2::Dialog("Set File Properties", undef, 'modal', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
+	$dialog = new Gtk2::Dialog(
+		"Set File Properties",
+		undef,
+		'modal',
+		'gtk-cancel' => 'cancel',
+		'gtk-ok' => 'ok'
+	);
+
 	$dialog->set_has_separator(1);
 	$dialog->set_position('center');
 	$dialog->vbox->set_spacing(10);
@@ -119,86 +119,15 @@ sub set_properties_dialog {
 		$label->set_ellipsize('PANGO_ELLIPSIZE_MIDDLE');
 		$table->attach($label, 1, 2, 0, 1, [ "fill", "expand" ], [ ], 0, 0);
 
-		$label = new Gtk2::Label($fileinfo->get_size . " (" . $fileinfo->get_raw_size . ")");
+		$label = new Gtk2::Label($fileinfo->get_size . " (" . $fileinfo->get_raw_size . " Bytes)");
 		$label->set_alignment(0.0,0.0);
 		$table->attach($label, 1, 2, 1, 2, [ "fill" ], [ ], 0, 0);
-
-		# Icon
-
-# 		$frame = new Gtk2::Frame("<b>Mimetype Icon</b>");
-# 		$frame->get_label_widget->set_use_markup(1); 
-# 		$frame->set_label_align(0.0,0.0);
-# 		$frame->set_shadow_type('none');
-# 		$dialog->vbox->pack_start($frame,0,0,0);
-# 
-# 		$table = new Gtk2::Table(2,4);
-# 		$table->set_homogeneous(0);
-# 		$table->set_col_spacings(5);
-# 		$table->set_row_spacings(1);
-# 		$frame->add($table);
-# 
-# 		$frame = new Gtk2::Frame;
-# 		$frame->set_size_request(50, 50);
-# 		$frame->set_shadow_type('out');
-# 		$table->attach($frame, 0, 1, 0, 2, [], [], 0, 0);
-# 
-# 		$icon_image = new Gtk2::Image;
-# 		$icon_image->set_from_pixbuf(Filer::Tools->intelligent_scale(Gtk2::Gdk::Pixbuf->new_from_file($mime->get_icon($type)),50));
-# 		$icon_image->set_alignment(0.50,0.50);
-# 		$frame->add($icon_image);
-# 
-# 		$label = new Gtk2::Label;
-# 		$label->set_justify('left');
-# 		$label->set_text("Type: ");
-# 		$label->set_alignment(0.0,0.0);
-# 		$table->attach($label, 1, 2, 0, 1, [ "fill" ], [], 0, 0);
-# 
-# 		$type_label = new Gtk2::Label;
-# 		$type_label->set_justify('right');
-# 		$type_label->set_text($type);
-# 		$type_label->set_alignment(0.0,0.0);
-# 		$table->attach($type_label, 2, 4, 0, 1, [ "expand","fill" ], [], 0, 0);
-# 
-# 		$label = new Gtk2::Label;
-# 		$label->set_justify('left');
-# 		$label->set_text("Icon:");
-# 		$label->set_alignment(0.0,0.0);
-# 		$table->attach($label, 1, 2, 1, 2, [ "fill" ], [], 0, 0);
-# 
-# 		$icon_entry = new Gtk2::Entry;
-# 		$icon_entry->set_text($mime->get_icon($type));
-# 		$table->attach($icon_entry, 2, 3, 1, 2, [ "expand","fill" ], [], 0, 0);
-# 
-# 		$icon_browse_button = new Gtk2::Button;
-# 		$icon_browse_button->add(Gtk2::Image->new_from_stock('gtk-open', 'button'));
-# 		$icon_browse_button->signal_connect("clicked", sub {
-# 			my $fs = Filer::Dialog->preview_file_selection;
-# 			$fs->set_filename($mime->get_icon($type));
-# 
-# 			if ($fs->run eq 'ok') {
-# 				my $mimeicon = $fs->get_filename;
-# 				my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($mimeicon) || return;
-# 
-# 				$icon_entry->set_text($mimeicon);
-# 				$icon_image->set_from_pixbuf(Filer::Tools->intelligent_scale($pixbuf,50));
-# 
-# 				$mime->set_icon($type, $mimeicon);
-# 			}
-# 
-# 			$fs->destroy;
-# 		});
-# 		$table->attach($icon_browse_button, 3, 4, 1, 2, [ "fill" ], [], 0, 0);
-	} else {
-		$label = new Gtk2::Label("<b>Set permissions for multiple files</b>");
-		$label->set_use_markup(1);
-		$label->set_alignment(0.0,0.0);
-		$dialog->vbox->pack_start($label,0,0,5);
-	}
+ 	}
 
 	# Permissions
 
 	$frame = new Gtk2::Frame("<b>Permissions</b>");
-	$frame->get_label_widget->set_use_markup(1); 
+	$frame->get_label_widget->set_use_markup(1);
 	$frame->set_label_align(0.0,0.0);
 	$frame->set_shadow_type('none');
 	$dialog->vbox->pack_start($frame,0,0,0);
@@ -208,7 +137,7 @@ sub set_properties_dialog {
 	$table->set_col_spacings(5);
 	$table->set_row_spacings(1);
 	$frame->add($table);
-	
+
 	$label = new Gtk2::Label("<b>Owner</b>");
 	$label->set_use_markup(1);
 	$label->set_alignment(0.0,0.0);
@@ -231,7 +160,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		$mode_clicked->($w,\$properties_mode,4);
 	});
-	$checkbutton->set_active(S_ISUID & $stat[2]) if (!$multiple);
+	$checkbutton->set_active($S_ISUID & $fileinfo->get_raw_mode && !$multiple);
 	$table->attach($checkbutton, 0, 1, 1, 2, [ "fill" ], [], 0, 0);
 
 	$checkbutton = new Gtk2::CheckButton("Set GID");
@@ -239,7 +168,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		$mode_clicked->($w,\$properties_mode,2);
 	});
-	$checkbutton->set_active(S_ISGID & $stat[2]) if (!$multiple);
+	$checkbutton->set_active($S_ISGID & $fileinfo->get_raw_mode && !$multiple);
 	$table->attach($checkbutton, 0, 1, 2, 3, [ "fill" ], [], 0, 0);
 
 	$checkbutton = new Gtk2::CheckButton("Sticky Bit");
@@ -247,7 +176,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		$mode_clicked->($w,\$properties_mode,1);
 	});
-	$checkbutton->set_active(S_ISVTX & $stat[2]) if (!$multiple);
+	$checkbutton->set_active($S_ISVTX & $fileinfo->get_raw_mode && !$multiple);
 	$table->attach($checkbutton, 0, 1, 3, 4, [ "fill" ], [], 0, 0);
 
 	# Owner
@@ -257,7 +186,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		$mode_clicked->($w,\$owner_mode,4);
 	});
-	$checkbutton->set_active(S_IRUSR & $stat[2]) if (!$multiple);
+	$checkbutton->set_active($S_IRUSR & $fileinfo->get_raw_mode && !$multiple);
 	$table->attach($checkbutton, 1, 2, 1, 2, [ "fill" ], [], 0, 0);
 
 	$checkbutton = new Gtk2::CheckButton("Write");
@@ -265,7 +194,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		$mode_clicked->($w,\$owner_mode,2);
 	});
-	$checkbutton->set_active(S_IWUSR & $stat[2]) if (!$multiple);
+	$checkbutton->set_active($S_IWUSR & $fileinfo->get_raw_mode && !$multiple);
 	$table->attach($checkbutton, 1, 2, 2, 3, [ "fill" ], [], 0, 0);
 
 	$checkbutton = new Gtk2::CheckButton("Execute");
@@ -273,7 +202,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		$mode_clicked->($w,\$owner_mode,1);
 	});
-	$checkbutton->set_active(S_IXUSR & $stat[2]) if (!$multiple);
+	$checkbutton->set_active($S_IXUSR & $fileinfo->get_raw_mode && !$multiple);
 	$table->attach($checkbutton, 1, 2, 3, 4, [ "fill" ], [], 0, 0);
 
 	# Group
@@ -283,7 +212,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		$mode_clicked->($w,\$group_mode,4);
 	});
-	$checkbutton->set_active(S_IRGRP & $stat[2]) if (!$multiple);
+	$checkbutton->set_active($S_IRGRP & $fileinfo->get_raw_mode && !$multiple);
 	$table->attach($checkbutton, 2, 3, 1, 2, [ "fill" ], [], 0, 0);
 
 	$checkbutton = new Gtk2::CheckButton("Write");
@@ -291,7 +220,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		$mode_clicked->($w,\$group_mode,2);
 	});
-	$checkbutton->set_active(S_IWGRP & $stat[2]) if (!$multiple);
+	$checkbutton->set_active($S_IWGRP & $fileinfo->get_raw_mode && !$multiple);
 	$table->attach($checkbutton, 2, 3, 2, 3, [ "fill" ], [], 0, 0);
 
 	$checkbutton = new Gtk2::CheckButton("Execute");
@@ -299,7 +228,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		$mode_clicked->($w,\$group_mode,1);
 	});
-	$checkbutton->set_active(S_IXGRP & $stat[2]) if (!$multiple);
+	$checkbutton->set_active($S_IXGRP & $fileinfo->get_raw_mode && !$multiple);
 	$table->attach($checkbutton, 2, 3, 3, 4, [ "fill" ], [], 0, 0);
 
 	# Other
@@ -309,7 +238,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		$mode_clicked->($w,\$other_mode,4);
 	});
-	$checkbutton->set_active(S_IROTH & $stat[2]) if (!$multiple);
+	$checkbutton->set_active($S_IROTH & $fileinfo->get_raw_mode && !$multiple);
 	$table->attach($checkbutton, 3, 4, 1, 2, [ "fill" ], [], 0, 0);
 
 	$checkbutton = new Gtk2::CheckButton("Write");
@@ -317,7 +246,7 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		$mode_clicked->($w,\$other_mode,2);
 	});
-	$checkbutton->set_active(S_IWOTH & $stat[2]) if (!$multiple);
+	$checkbutton->set_active($S_IWOTH & $fileinfo->get_raw_mode && !$multiple);
 	$table->attach($checkbutton, 3, 4, 2, 3, [ "fill" ], [], 0, 0);
 
 	$checkbutton = new Gtk2::CheckButton("Execute");
@@ -325,11 +254,11 @@ sub set_properties_dialog {
 		my ($w,$e) = @_;
 		$mode_clicked->($w,\$other_mode,1);
 	});
-	$checkbutton->set_active(S_IXOTH & $stat[2]) if (!$multiple);
+	$checkbutton->set_active($S_IXOTH & $fileinfo->get_raw_mode && !$multiple);
 	$table->attach($checkbutton, 3, 4, 3, 4, [ "fill" ], [], 0, 0);
 
 	$frame = new Gtk2::Frame("<b>Owner and Group</b>");
-	$frame->get_label_widget->set_use_markup(1); 
+	$frame->get_label_widget->set_use_markup(1);
 	$frame->set_label_align(0.0,0.0);
 	$frame->set_shadow_type('none');
 	$dialog->vbox->pack_start($frame,0,0,0);
@@ -343,7 +272,7 @@ sub set_properties_dialog {
 	$owner_combo = Gtk2::ComboBox->new_text;
 	foreach (@users) { $owner_combo->append_text($_); $pos = $i if ($_ eq $owner); $i++;}
 	$owner_combo->set_active($pos) if (!$multiple);
-	$owner_combo->set_sensitive(0) if ($ENV{USER} ne 'root');
+	$owner_combo->set_sensitive(($ENV{USER} eq 'root') ? 1 : 0);
 	$vbox->pack_start($owner_combo, 1, 1, 0);
 
 	$pos = 0; $i = 0;
@@ -356,29 +285,19 @@ sub set_properties_dialog {
 	my $r = $dialog->run;
 
 	if ($r eq 'ok') {
-		my @fi = @{$filer->{active_pane}->get_fileinfo};
+		my @files = @{$filer->get_active_pane->get_items};
 		my $mode = oct(($properties_mode * 1000) + ($owner_mode * 100) +  ($group_mode * 10) + ($other_mode));
 		my $uid = getpwnam($owner_combo->get_active_text);
 		my $gid = getgrnam($group_combo->get_active_text);
 
-# 		if ($mode == 0) {
-# 			Filer::Dialog->msgbox_error("Error: no defined mode");
-# 			$dialog->destroy;
-# 			return;
-# 		}
+		eval {
+			chown($uid, $gid, @files);
+			chmod($mode, @files);
+		};
 
-		foreach (@fi) {
-			if ($_->get_uid eq $ENV{USER}) {
-				eval {
-					chmod($mode, $_->get_path);
-					chown($uid, $gid, $_->get_path);
-				};
-				
-				if ($@) {
-					Filer::Dialog->msgbox_error("Error: $!");
-					last;
-				}
-			}
+		if ($@) {
+			Filer::Dialog->msgbox_error("Error: $@: $!");
+			last;
 		}
 
 		$filer->refresh_cb;

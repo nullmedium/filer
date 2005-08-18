@@ -15,6 +15,7 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::Config;
+use Class::Std::Utils;
 
 use strict;
 use warnings;
@@ -23,13 +24,11 @@ use YAML qw(LoadFile DumpFile Dump);
 
 use Filer::Constants;
 
-our ($default_config);
-
-$default_config = {
+my $default_config = {
 	PathLeft		=> $ENV{HOME},
 	PathRight		=> $ENV{HOME},
 	ShowHiddenFiles 	=> TRUE,
-	CaseInsensitiveSort 	=> TRUE,
+	CaseInsensitiveSort	=> TRUE,
 	Mode			=> NORTON_COMMANDER_MODE,
 	HonorUmask		=> FALSE,
 	ConfirmCopy		=> TRUE,
@@ -41,21 +40,25 @@ $default_config = {
 	Bookmarks		=> [],
 };
 
+my %config_home;
+my %config_file;
+my %config;
+
 sub new {
 	my ($class) = @_;
-	my $self = bless {}, $class;
-	my $xdg_config_home = (new File::BaseDir)->xdg_config_home;
-	$self->{cfg_home} = Filer::Tools->catpath($xdg_config_home, "filer");
-	$self->{config_store} = Filer::Tools->catpath($self->{cfg_home}, "config.yml");
+	my $self = bless anon_scalar(), $class;
+	my $xdg_config_home = File::BaseDir->new->xdg_config_home;
+	$config_home{ident $self} = Filer::Tools->catpath($xdg_config_home, "filer");
+	$config_file{ident $self} = Filer::Tools->catpath($config_home{ident $self}, "config.yml");
 
-	if (! -e $self->{cfg_home}) {
- 		Filer::Tools->_mkdir($self->{cfg_home});
+	if (! -e $config_home{ident $self}) {
+ 		Filer::Tools->_mkdir($config_home{ident $self});
 	}
 
-	if (! -e $self->{config_store}) {
-		$self->{config} = $default_config;
+	if (! -e $config_file{ident $self}) {
+		$config{ident $self} = $default_config;
 	} else {
-		$self->{config} = LoadFile($self->{config_store});
+		$config{ident $self} = LoadFile($config_file{ident $self});
 	}
 
 	return $self;
@@ -63,22 +66,24 @@ sub new {
 
 sub DESTROY {
 	my ($self) = @_;
-	DumpFile($self->{config_store}, $self->{config});
+	DumpFile($config_file{ident $self}, $config{ident $self});
+
+	delete $config_home{ident $self};
+	delete $config_file{ident $self};
+	delete $config{ident $self};
 }
 
 sub set_option {
 	my ($self,$option,$value) = @_;
-	$self->{config}->{$option} = $value;
+	$config{ident $self}->{$option} = $value;
 }
 
 sub get_option {
 	my ($self,$option) = @_;
 
-	if (defined $self->{config}->{$option}) {
-		return $self->{config}->{$option};
-	} else {
-		return $default_config->{$option};
-	}
+	return (defined $config{ident $self}->{$option})
+		? $config{ident $self}->{$option}
+		: $default_config->{$option};
 }
 
 1;

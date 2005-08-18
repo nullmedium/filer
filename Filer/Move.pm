@@ -47,7 +47,10 @@ sub move {
 		}
 	}
 
-	return if ($rename_failed == FALSE);
+	# don't try the copy + delete method for moving if rename was successful:
+	if ($rename_failed == FALSE) {
+		return;
+	}
 
 	$self->{total_bytes} = 0;
 	$self->{completed_bytes} = 0;
@@ -147,6 +150,8 @@ sub move {
 	$self->{progress_dialog}->show;
 
 	foreach my $source (@{$FILES}) {
+		$source =~ s/file:\///g;
+
 		return 0 if ($self->{CANCELLED} == TRUE);
 		my $r = $dirwalk->walk($source);
 

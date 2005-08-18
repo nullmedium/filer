@@ -23,7 +23,7 @@ BEGIN {
 	$libpath =~ s!/[^/]+$!!;
 	$libpath =~ s!/bin$!/lib/filer!;
 	die "Can't find required files in $libpath" unless -e $libpath;
-	
+
 	$libpath = abs_path($libpath);
 }
 
@@ -31,18 +31,16 @@ BEGIN {
 use warnings;
 
 use lib "$libpath";
-use Filer;		
+use Filer;
 
 Glib->install_exception_handler(sub {
 	Filer::Dialog->msgbox_error($_[0]);
 	return 1;
 });
 
-Gtk2->init;
-
-my $filer = new Filer; 
+my $filer = new Filer;
 $filer->init_config;
-$filer->init_icons;
+$filer->init_mimeicons;
 $filer->init_main_window;
 
 Gtk2->main;

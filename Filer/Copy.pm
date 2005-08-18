@@ -126,6 +126,8 @@ sub copy {
 	$self->{progress_dialog}->show;
 
 	foreach my $source (@{$FILES}) {
+		$source =~ s/file:\///g;
+
 		my $r = $dirwalk->walk($source);
 
 		if ($r == File::DirWalk::FAILED) {

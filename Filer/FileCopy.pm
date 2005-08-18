@@ -50,6 +50,7 @@ sub filecopy {
 
 	my ($r,$w,$t);
 
+#	while (($r = sysread($in_fh, $buf, -s $in_fh)) && !$self->[JOB]->{CANCELLED}) {
 	while (($r = sysread($in_fh, $buf, $buf_size)) && !$self->[JOB]->{CANCELLED}) {
 
 		for ($w = 0; $w < $r; $w += $t) {
