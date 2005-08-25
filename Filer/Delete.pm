@@ -21,16 +21,16 @@ use warnings;
 
 use File::Basename;
 
+use Filer::Constants;
+
 use English;
 
-use constant TRUE => 1;
-use constant FALSE => 0;
 
 sub new {
 	my ($class) = @_;
 	my $self = bless {}, $class;
 
-	$self->{CANCELLED} = FALSE;
+	$self->{CANCELLED} = $FALSE;
 	$self->{progress_dialog} = new Filer::ProgressDialog;
 	$self->{progress_dialog}->dialog->set_title("Deleting ...");
 	$self->{progress_dialog}->label1->set_markup("<b>Deleting: </b>");
@@ -40,7 +40,7 @@ sub new {
 
 	my $button = $self->{progress_dialog}->dialog->add_button('gtk-cancel' => 'cancel');
 	$button->signal_connect("clicked", sub {
-		$self->{CANCELLED} = TRUE;
+		$self->{CANCELLED} = $TRUE;
 		$self->{progress_dialog}->destroy;
 	});
 
@@ -62,7 +62,7 @@ sub delete {
 	$dirwalk->walk($ARG) for (@{$files});
 
 	$dirwalk->onBeginWalk(sub {
-		return ($self->{CANCELLED} == FALSE) ? File::DirWalk::SUCCESS : File::DirWalk::ABORTED;
+		return ($self->{CANCELLED} == $FALSE) ? File::DirWalk::SUCCESS : File::DirWalk::ABORTED;
 	});
 
 	$dirwalk->onLink(sub {

@@ -29,9 +29,10 @@ my %commands_treeview;
 sub new {
 	my ($class,$mime) = @_;
 	my $self = bless anon_scalar(), $class;
-	$mime{ident $self} = $mime;
+	
+	my ($dialog,$sw,$hbox,$col,$cell,$selection,$bbox,$button);
 
-	my ($dialog,$bbox,$hbox,$vbox,$sw,$treeview,$selection,$cell,$col,$button);
+	$mime{ident $self} = $mime;
 
 	$dialog = new Gtk2::Dialog(
 		"File Association",
@@ -98,7 +99,7 @@ sub new {
 	$sw->set_shadow_type('etched-in');
 	$hbox->pack_start($sw,1,1,0);
 
-	$commands_model{ident $self} = new Gtk2::ListStore('Glib::String');
+	$commands_model{ident $self}    = new Gtk2::ListStore('Glib::String');
 	$commands_treeview{ident $self} = Gtk2::TreeView->new_with_model($commands_model{ident $self});
 	$commands_treeview{ident $self}->insert_column_with_attributes(0, "Application Preference Order", Gtk2::CellRendererText->new, text => 0);
 	$sw->add($commands_treeview{ident $self});
@@ -314,18 +315,15 @@ sub refresh_types {
 
 		my ($group,$type) = split "/", $mimetype;
 		
-		if (! defined $groups->{$group}) {
-			$groups->{$group} = $types_model{ident $self}->append(undef);
+		$groups->{$group} ||= $types_model{ident $self}->insert_with_values(undef, -1,
+			1, $group
+		);
 
-			$types_model{ident $self}->set($groups->{$group},
-				1, $group
-			);
-		}
+		my $icon   = $mime{ident $self}->get_icon($mimetype);
+		my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($icon);
 
-		my $iter = $types_model{ident $self}->append($groups->{$group});
-
-		$types_model{ident $self}->set($iter,
-			0, Gtk2::Gdk::Pixbuf->new_from_file($mime{ident $self}->get_icon($mimetype)),
+		$types_model{ident $self}->insert_with_values($groups->{$group}, -1,
+			0, $pixbuf,
 			1, $type,
 			2, $mimetype
 		);
@@ -337,7 +335,7 @@ sub refresh_commands {
 	$commands_model{ident $self}->clear;
 
 	foreach ($mime{ident $self}->get_commands($type)) {
-		$commands_model{ident $self}->set($commands_model{ident $self}->append, 0, $_);
+		$commands_model{ident $self}->insert_with_values(-1, 0, $_);
 	}
 }
 
@@ -349,7 +347,9 @@ sub set_commands {
 	return if (! defined $type);
 
 	$commands_model{ident $self}->foreach(sub {
-		my $cmd = $_[0]->get($_[2], 0);
+		my ($model,$path,$iter) = @_;
+
+		my $cmd = $model->get($iter, 0);
 		push @commands, $cmd;
 		return 0;
 	});

@@ -21,7 +21,7 @@ use strict;
 use warnings;
 
 use Storable;
-use Gtk2 qw(-init);
+use Gtk2 -init;
 use Gtk2::Gdk::Keysyms;
 
 use Fcntl;
@@ -46,6 +46,7 @@ require Filer::Archive;
 require Filer::Properties;
 require Filer::Dialog;
 require Filer::ProgressDialog;
+require Filer::FilePaneInterface;
 require Filer::FilePane;
 require Filer::FileTreePane;
 require Filer::FileCopy;
@@ -108,13 +109,16 @@ sub get_config {
 
 sub init_mimeicons {
 	my ($self) = @_;
-	my $icons = $mime{ident $self}->get_icons;
 
-	$mimeicons{ident $self} = {};
+	my %icons = map {
+		my $icon   = $mime{ident $self}->get_icon($_);
+		my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($icon);
 
-	while (my ($key,$value) = each %{$icons}) {
-		$mimeicons{ident $self}->{$key} = Filer::Tools->intelligent_scale(Gtk2::Gdk::Pixbuf->new_from_file($value), 22);
-	}
+		$_ => $pixbuf->intelligent_scale(22);
+
+	} $mime{ident $self}->get_mimetypes;
+
+	$mimeicons{ident $self} = \%icons;	
 }
 
 sub get_mime {
@@ -149,7 +153,7 @@ sub init_main_window {
 	my $a_entries =
 	[{
 		name => "FileMenuAction",
-		label => "File",
+		label => "_File",
 	},{
 		name => "open-terminal-action",
 		label => "Open Terminal",
@@ -171,7 +175,7 @@ sub init_main_window {
 		callback => sub { $self->quit_cb },
 	},{
 		name => "EditMenuAction",
-		label => "Edit",
+		label => "_Edit",
 	},{
 		name => "cut-action",
 		stock_id => "gtk-cut",
@@ -239,10 +243,10 @@ sub init_main_window {
 		callback => sub { $self->unselect_cb },
 	},{
 		name => "BookmarksMenuAction",
-		label => "Bookmarks",
+		label => "_Bookmarks",
 	},{
 		name => "OptionsMenuAction",
-		label => "Options",
+		label => "_Options",
 	},{
 		name => "ModeMenuAction",
 		label => "View Mode",
@@ -254,16 +258,12 @@ sub init_main_window {
 		label => "Set Terminal",
 		callback => sub { $self->set_terminal_cb },
 	},{
-		name => "set-editor-action",
-		label => "Set Editor",
-		callback => sub { $self->set_editor_cb },
-	},{
 		name => "file-assoc-action",
 		label => "File Associations",
 		callback => sub { $self->file_ass_cb },
 	},{
 		name => "HelpMenuAction",
-		label => "Help",
+		label => "_Help",
 	},{
 		name => "about-action",
 		stock_id => "gtk-about",
@@ -306,11 +306,11 @@ sub init_main_window {
 	{
 		name => "commander-style-action",
 		label => "Norton Commander Style",
-		value => NORTON_COMMANDER_MODE,
+		value => $NORTON_COMMANDER_MODE,
 	},{
 		name => "explorer-style-action",
 		label => "MS Explorer View",
-		value => EXPLORER_MODE,
+		value => $EXPLORER_MODE,
 	}];
 
 	my $a_toggle_entries =
@@ -335,11 +335,6 @@ sub init_main_window {
 		callback => sub { $self->hidden_cb($_[0]) },
 		accelerator => "<control>H",
 		is_active => $config{ident $self}->get_option("ShowHiddenFiles"),
-# 	},{
-# 		name => "case-sort-action",
-# 		label => "Case Insensitive Sort",
-# 		callback => sub { $self->case_sort_cb($_[0]) },
-# 		is_active => $config{ident $self}->get_option("CaseInsensitiveSort"),
 	}];
 
 	$actions->add_actions($a_entries);
@@ -365,15 +360,12 @@ sub init_main_window {
 	$widgets{ident $self}->{sync_button} = $widgets{ident $self}->{uimanager}->get_widget("/ui/toolbar/Synchronize");
 	$widgets{ident $self}->{vbox}->pack_start($widgets{ident $self}->{toolbar}, 0, 0, 0);
 
-# 	$widgets{ident $self}->{location_bar} = new Gtk2::HBox(0,0);
-# 	$widgets{ident $self}->{vbox}->pack_start($widgets{ident $self}->{location_bar}, 0, 0, 0);
-
 	$widgets{ident $self}->{hpaned} = new Gtk2::HPaned();
-	$widgets{ident $self}->{hbox} = new Gtk2::HBox(0,0);
+	$widgets{ident $self}->{hbox}   = new Gtk2::HBox(0,0);
 
-	$widgets{ident $self}->{tree} = new Filer::FileTreePane($self,LEFT);
-	$widgets{ident $self}->{list1} = new Filer::FilePane($self,LEFT);
-	$widgets{ident $self}->{list2} = new Filer::FilePane($self,RIGHT);
+	$widgets{ident $self}->{tree}  = new Filer::FileTreePane($self,$LEFT);
+	$widgets{ident $self}->{list1} = new Filer::FilePane($self,$LEFT);
+	$widgets{ident $self}->{list2} = new Filer::FilePane($self,$RIGHT);
 
 	$widgets{ident $self}->{hpaned}->add1($widgets{ident $self}->{tree}->get_vbox);
 	$widgets{ident $self}->{hpaned}->add2($widgets{ident $self}->{hbox});
@@ -394,14 +386,14 @@ sub init_main_window {
 	$widgets{ident $self}->{tree}->get_vbox->hide;
 	$widgets{ident $self}->{list1}->get_vbox->hide;
 	$widgets{ident $self}->{list2}->get_vbox->show;
-
-	$pane{ident $self}->[LEFT] = undef;
-	$pane{ident $self}->[RIGHT] = $widgets{ident $self}->{list2};
+	
+	$pane{ident $self}->[$LEFT]  = undef;
+	$pane{ident $self}->[$RIGHT] = $widgets{ident $self}->{list2};
 
 	$self->switch_mode;
 
-	$active_pane{ident $self}   = $pane{ident $self}->[RIGHT];
-	$inactive_pane{ident $self} = $pane{ident $self}->[LEFT];
+	$active_pane{ident $self}   = $pane{ident $self}->[$RIGHT];
+	$inactive_pane{ident $self} = $pane{ident $self}->[$LEFT];
 
 	$active_pane{ident $self}->set_focus;
 }
@@ -409,6 +401,11 @@ sub init_main_window {
 sub get_widgets {
 	my ($self) = @_;
 	return $widgets{ident $self};
+}
+
+sub get_widget {
+	my ($self,$id) = @_;
+	return $widgets{ident $self}->{$id};
 }
 
 sub get_active_pane {
@@ -431,22 +428,26 @@ sub set_inactive_pane {
 	$inactive_pane{ident $self} = $pane;
 }
 
+sub get_pane {
+	my ($self,$side) = @_;
+	return $pane{ident $self}->[$side];
+}
+
+sub get_left_pane {
+	my ($self) = @_;
+	return $pane{ident $self}->[$LEFT];
+}
+
+sub get_right_pane {
+	my ($self) = @_;
+	return $pane{ident $self}->[$RIGHT];
+}
+
 sub window_event_cb {
 	my ($self,$w,$e,$d) = @_;
 
 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Tab'})) {
-		if ($active_pane{ident $self}->get_side == LEFT) {
-			$active_pane{ident $self}   = $pane{ident $self}->[RIGHT];
-			$inactive_pane{ident $self} = $pane{ident $self}->[LEFT];
-
-		} elsif ($active_pane{ident $self}->get_side == RIGHT) {
-
-			$active_pane{ident $self}   = $pane{ident $self}->[LEFT];
-			$inactive_pane{ident $self} = $pane{ident $self}->[RIGHT];
-		}
-
-		$active_pane{ident $self}->set_focus;
-
+		$inactive_pane{ident $self}->set_focus;
 		return 1;
 	}
 
@@ -456,8 +457,8 @@ sub window_event_cb {
 sub quit_cb {
 	my ($self) = @_;
 
-	$config{ident $self}->set_option('PathLeft', $pane{ident $self}->[LEFT]->get_pwd);
-	$config{ident $self}->set_option('PathRight', $pane{ident $self}->[RIGHT]->get_pwd);
+	$config{ident $self}->set_option('PathLeft', $pane{ident $self}->[$LEFT]->get_pwd);
+	$config{ident $self}->set_option('PathRight', $pane{ident $self}->[$RIGHT]->get_pwd);
 	$config{ident $self}->set_option('WindowSize', join ":", $widgets{ident $self}->{main_window}->get_size());
 
 	Gtk2->main_quit;
@@ -504,20 +505,20 @@ EOF
 sub open_cb {
 	my ($self) = @_;
 
-	if ($config{ident $self}->get_option('Mode') == NORTON_COMMANDER_MODE) {
+	if ($config{ident $self}->get_option('Mode') == $NORTON_COMMANDER_MODE) {
 		$active_pane{ident $self}->open_file($active_pane{ident $self}->get_fileinfo->[0]);
 	} else {
-		$pane{ident $self}->[RIGHT]->open_file($pane{ident $self}->[RIGHT]->get_fileinfo->[0]);
+		$pane{ident $self}->[$RIGHT]->open_file($pane{ident $self}->[$RIGHT]->get_fileinfo->[0]);
 	}
 }
 
 sub open_with_cb {
 	my ($self) = @_;
 
-	if ($config{ident $self}->get_option('Mode') == NORTON_COMMANDER_MODE) {
+	if ($config{ident $self}->get_option('Mode') == $NORTON_COMMANDER_MODE) {
 		$active_pane{ident $self}->open_file_with;
 	} else {
-		$pane{ident $self}->[RIGHT]->open_file_with;
+		$pane{ident $self}->[$RIGHT]->open_file_with;
 	}
 }
 
@@ -535,11 +536,7 @@ sub open_terminal_cb {
 sub switch_mode {
 	my ($self) = @_;
 
-	if ($config{ident $self}->get_option('Mode') == EXPLORER_MODE) {
-# 		$widgets{ident $self}->{list2}->get_location_bar->hide;
-# 		$widgets{ident $self}->{list2}->get_location_bar->reparent($widgets{ident $self}->{location_bar});
-# 		$widgets{ident $self}->{list2}->get_location_bar->show;
-
+	if ($config{ident $self}->get_option('Mode') == $EXPLORER_MODE) {
 		$widgets{ident $self}->{list2}->get_location_bar->hide;
 
 		$widgets{ident $self}->{sync_button}->hide;
@@ -549,12 +546,8 @@ sub switch_mode {
 		$widgets{ident $self}->{list1}->get_navigation_box->hide;
 		$widgets{ident $self}->{list2}->get_navigation_box->show;
 
-		$pane{ident $self}->[LEFT] = $widgets{ident $self}->{tree};
+		$pane{ident $self}->[$LEFT] = $widgets{ident $self}->{tree};
 	} else {
-# 		$widgets{ident $self}->{list2}->get_location_bar->hide;
-# 		$widgets{ident $self}->{list2}->get_location_bar->reparent($widgets{ident $self}->{list2}->get_location_bar_parent);
-# 		$widgets{ident $self}->{list2}->get_location_bar->show;
-
 		$widgets{ident $self}->{list2}->get_location_bar->show;
 
 		$widgets{ident $self}->{sync_button}->show;
@@ -564,35 +557,22 @@ sub switch_mode {
  		$widgets{ident $self}->{list1}->get_navigation_box->hide;
  		$widgets{ident $self}->{list2}->get_navigation_box->hide;
 
-		$pane{ident $self}->[LEFT] = $widgets{ident $self}->{list1};
+		$pane{ident $self}->[$LEFT] = $widgets{ident $self}->{list1};
 	}
 }
 
 sub hidden_cb {
 	my ($self,$action) = @_;
 	$config{ident $self}->set_option('ShowHiddenFiles', ($action->get_active) ? 1 : 0);
-	$pane{ident $self}->[LEFT]->refresh;
-	$pane{ident $self}->[RIGHT]->refresh;
+
+	$pane{ident $self}->[$LEFT]->refresh;
+	$pane{ident $self}->[$RIGHT]->refresh;
+
+# 	$pane{ident $self}->[$LEFT]->refilter;
+# 	$pane{ident $self}->[$RIGHT]->refilter;
+
 	return 1;
 }
-
-# sub case_sort_cb {
-# 	my ($self,$action) = @_;
-# 	$config{ident $self}->set_option('CaseInsensitiveSort', ($action->get_active) ? 1 : 0);
-# 
-# 	if ($pane{ident $self}->[LEFT]->get_type ne "TREE") {
-# 		my ($col,$order) = $pane{ident $self}->[LEFT]->get_model->get_sort_column_id;
-# 
-# 		$pane{ident $self}->[LEFT]->get_model->set_sort_column_id(-2, $order);
-# 		$pane{ident $self}->[LEFT]->get_model->set_sort_column_id($col,$order);
-# 	}
-# 
-# 	my ($col,$order) = $pane{ident $self}->[RIGHT]->get_model->get_sort_column_id;
-# 	$pane{ident $self}->[RIGHT]->get_model->set_sort_column_id(-2,$order);
-# 	$pane{ident $self}->[RIGHT]->get_model->set_sort_column_id($col,$order);
-# 
-# 	return 1;
-# }
 
 sub ask_copy_cb {
 	my ($self,$action) = @_;
@@ -614,12 +594,6 @@ sub set_terminal_cb {
 	my $term = Filer::Dialog->ask_command_dialog("Set Terminal", $config{ident $self}->get_option('Terminal'));
 	$config{ident $self}->set_option('Terminal', $term);
 }
-
-# sub set_editor_cb {
-# 	my ($self) = @_;
-# 	my $edit = Filer::Dialog->ask_command_dialog("Set Editor", $config{ident $self}->get_option('Editor'));
-# 	$config{ident $self}->set_option('Editor', $edit);
-# }
 
 sub file_ass_cb {
 	my ($self) = @_;
@@ -663,10 +637,10 @@ sub go_home_cb {
 	my ($self) = @_;
 	my $opt = $config{ident $self}->get_option('Mode');
 
-	if ($config{ident $self}->get_option('Mode') == NORTON_COMMANDER_MODE) {
+	if ($config{ident $self}->get_option('Mode') == $NORTON_COMMANDER_MODE) {
 		$active_pane{ident $self}->open_path_helper($ENV{HOME});
 	} else {
-		$pane{ident $self}->[RIGHT]->open_path_helper($ENV{HOME});
+		$pane{ident $self}->[$RIGHT]->open_path_helper($ENV{HOME});
 	}
 }
 
@@ -677,19 +651,19 @@ sub synchronize_cb {
 
 sub select_cb {
 	my ($self) = @_;
-	$self->select_dialog(Filer::FilePane->SELECT);
+	$self->select_dialog($Filer::FilePane::SELECT);
 }
 
 sub unselect_cb {
 	my ($self) = @_;
-	$self->select_dialog(Filer::FilePane->UNSELECT);
+	$self->select_dialog($Filer::FilePane::UNSELECT);
 }
 
 sub select_dialog {
 	my ($self,$type) = @_;
 
 	if ($active_pane{ident $self}->get_type eq "TREE") {
-		$pane{ident $self}->[RIGHT]->select_dialog($type);
+		$pane{ident $self}->[$RIGHT]->select_dialog($type);
 	} else {
 		$active_pane{ident $self}->select_dialog($type);
 	}

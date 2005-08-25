@@ -1,19 +1,21 @@
 package Filer::Constants;
 
+use Readonly;
+
 require Exporter; 
 our @ISA = qw(Exporter);
-our @EXPORT = qw(LEFT RIGHT NORTON_COMMANDER_MODE EXPLORER_MODE TRUE FALSE UPDIR TMPDIR);
+our @EXPORT = qw($LEFT $RIGHT $NORTON_COMMANDER_MODE $EXPLORER_MODE $TRUE $FALSE $UPDIR $TMPDIR);
 
-use constant LEFT => 0;
-use constant RIGHT => 1;
+Readonly $LEFT  => 0;
+Readonly $RIGHT => 1;
 
-use constant NORTON_COMMANDER_MODE => 0;
-use constant EXPLORER_MODE => 1;
+Readonly $NORTON_COMMANDER_MODE => 0;
+Readonly $EXPLORER_MODE         => 1;
 
-use constant TRUE => 1;
-use constant FALSE => 0;
+Readonly $TRUE  => 1;
+Readonly $FALSE => 0;
 
-use constant UPDIR => File::Spec->updir;
-use constant TMPDIR => File::Spec->tmpdir;
+Readonly $UPDIR  => File::Spec->updir;
+Readonly $TMPDIR => File::Spec->tmpdir;
 
 1;

@@ -211,41 +211,6 @@ sub source_target_dialog {
 	return ($dialog,$source_label,$target_label,$source_entry,$target_entry);
 }
 
-sub preview_file_selection {
-	my $frame = new Gtk2::Frame("Preview");
-	my $preview = new Gtk2::Image;
-	$frame->add($preview);
-	$frame->show_all;
-
-	my $dialog = new Gtk2::FileChooserDialog(
-		"Select Icon",
-		undef,
-		'GTK_FILE_CHOOSER_ACTION_OPEN',
-		'gtk-cancel' => 'cancel',
-		'gtk-ok'     => 'ok'
-	);
-
-	$dialog->set_use_preview_label(0);
-	$dialog->set_preview_widget($frame);
-	$dialog->set_preview_widget_active(1);
-
-	my $filter = new Gtk2::FileFilter;
-	$filter->add_pixbuf_formats;
-	$dialog->set_filter($filter);
-
-	$dialog->signal_connect("update-preview", sub {
-		my ($w,$preview) = @_;
-		my $filename = $w->get_preview_filename;
-
-		return if ((not defined $filename) or (-d $filename));
-
-		my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($filename);
-		$preview->set_from_pixbuf(Filer::Tools->intelligent_scale($pixbuf,100));
-	}, $preview);
-
-	return $dialog;
-}
-
 sub mixed_button_new {
 	my ($stock,$text) = @_;
 

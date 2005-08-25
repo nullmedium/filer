@@ -1,0 +1,174 @@
+package Filer::FilePaneInterface;
+
+use Class::Std::Utils;
+
+use Readonly;
+
+my %filer;
+my %filepath;
+my %side;
+my %vbox;
+my %treeview;
+my %treemodel;
+my %treeselection;
+my %treefilter;
+my %mouse_motion_select;
+my %mouse_motion_y_pos_old;
+
+sub import {
+	my $class = caller();
+
+	*{ "$class\::COL_FILEINFO" }    = \0;
+	*{ "$class\::COL_ICON"     }    = \1;
+	*{ "$class\::COL_NAME"     }    = \2;
+	*{ "$class\::COL_SIZE"     }    = \3;
+	*{ "$class\::COL_MODE"     }    = \4;
+	*{ "$class\::COL_TYPE"     }    = \5;
+	*{ "$class\::COL_DATE"     }    = \6;
+
+	*{ "$class\::filer"         } = \%filer;
+	*{ "$class\::filepath"      } = \%filepath;
+	*{ "$class\::side"          } = \%side;
+	*{ "$class\::vbox"          } = \%vbox;
+	*{ "$class\::treeview"      } = \%treeview;
+	*{ "$class\::treemodel"     } = \%treemodel;
+	*{ "$class\::treeselection" } = \%treeselection;
+	*{ "$class\::treefilter"    } = \%treefilter;
+
+	*{ "$class\::mouse_motion_select"    } = \%mouse_motion_select;
+	*{ "$class\::mouse_motion_y_pos_old" } = \%mouse_motion_y_pos_old;
+}
+
+# API methods shared between Filer::FilePane and Filer::FileTreePane
+
+sub get_side {
+	my ($self) = @_;
+	return $side{ident $self};
+}
+
+sub get_vbox {
+	my ($self) = @_;
+	return $vbox{ident $self};
+}
+
+sub get_treeview {
+	my ($self) = @_;
+	return $treeview{ident $self};
+}
+
+sub get_model {
+	my ($self) = @_;
+	return $treemodel{ident $self};
+}
+
+sub set_focus {
+	my ($self) = @_;
+	$treeview{ident $self}->grab_focus;
+}
+
+sub treeview_grab_focus_cb {
+	my ($self) = @_;
+
+	$filer{ident $self}->set_active_pane($self);
+	$filer{ident $self}->set_inactive_pane($filer{ident $self}->get_pane(! $side{ident $self}));
+
+	return 1;
+}
+
+
+
+sub get_iter {
+	my ($self) = @_;
+	return $self->get_iters->[0];
+}
+
+sub get_iters {
+	my ($self) = @_;
+	my @sel    = $treeselection{ident $self}->get_selected_rows;
+	my @iters  = map { $treemodel{ident $self}->get_iter($_) } @sel;
+	return \@iters;
+}
+
+sub get_fileinfo {
+	my ($self) = @_;
+	my @iters  = @{$self->get_iters};
+	my @fi     = map { $treemodel{ident $self}->get_fileinfo($_) } @iters;
+
+	return \@fi;
+}
+
+sub get_item {
+	my ($self) = @_;
+	return $self->get_items->[0];
+}
+
+sub get_items {
+	my ($self) = @_;
+	my @fi     = @{$self->get_fileinfo};
+	my @items  = map { $_->get_path } @fi;
+	
+	return \@items;
+}
+
+sub get_path_by_treepath {
+	my ($self,$p) = @_;
+	my $iter      = $treemodel{ident $self}->get_iter($p);
+	my $fi        = $treemodel{ident $self}->get_fileinfo($iter);
+	my $path      = $fi->get_path;
+	
+	return $path;
+}
+
+sub count_items {
+	my ($self) = @_;
+	return $treeselection{ident $self}->count_selected_rows;
+}
+
+sub refresh {
+	my ($self) = @_;
+	$self->open_path($filepath{ident $self});
+}
+
+sub remove_selected {
+	my ($self) = @_;
+
+	foreach (@{$self->get_iters}) {
+		my $fi = $treemodel{ident $self}->get_fileinfo($_);
+		
+		if (! $fi->exist) {
+			$treemodel{ident $self}->remove($_);
+		}
+	}
+}
+
+# 
+# Pollute the namespaces with handy util methods
+#
+
+################################################################################
+
+package Gtk2::TreeModel;
+
+sub get_fileinfo {
+	my ($self,$iter) = @_;
+#  	my ($package, $filename, $line) = caller;
+# 	
+# 	print "get_fileinfo: called by: $package, $filename, $line\n";
+	
+	return $self->get($iter, 0);
+}
+
+################################################################################
+
+package Gtk2::TreeStore;
+
+sub insert_with_values {
+	my ($self,$parent_iter,$pos,%cols) = @_;
+	
+	my $iter = $self->insert($parent_iter, $pos);
+	$self->set($iter, %cols);
+		
+	return $iter;
+}
+
+1;

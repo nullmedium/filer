@@ -20,53 +20,44 @@ use Class::Std::Utils;
 use strict;
 use warnings;
 
-use Memoize;
+use Readonly;
+
+use Memoize qw(memoize);
 use File::Basename qw(basename);
 use File::MimeInfo::Magic qw(inodetype mimetype describe);
 use Stat::lsMode qw(format_mode);
 
+use Filer::Stat qw($S_IRUSR $S_IRGRP $S_IROTH $S_IFDIR $S_IXUSR :stat);
 use Filer::Tools;
-
-my $S_IFDIR = 0040000;
-my $S_IXUSR = 00100;
-
-use enum qw(
-	:STAT_
-	DEV
-	INO
-	MODE
-	NLINK
-	UID
-	GID
-	RDEV
-	SIZE
-	ATIME
-	MTIME
-	CTIME
-	BLKSIZE
-	BLOCKS
-);
 
 # attributes;
 my %filepath;
 my %stat;
 my %mimetype;
 
+memoize('new');
+
 sub new {
 	my ($class,$filepath) = @_;
 	my $self = bless anon_scalar(), $class;
 
 	$filepath{ident $self} = $filepath;
-	$stat{ident $self}     = [ lstat($filepath) ];
 	$mimetype{ident $self} = mimetype($filepath);
+	$stat{ident $self}     = [ stat($filepath) ];
+
+ 	# get the mimetype thingy right:
+	# reported to File::MimeInfo maintainer and suggested 
+	# a fix for checking symlinks in inodetype()
+	
+ 	if (-l $filepath) {
+		$mimetype{ident $self} = 'inode/symlink';
+	}
 
 	return $self;
 }
 
 sub DESTROY {
 	my ($self) = @_;
-
-#	print "$self DESTROY: $filepath{ident $self}\n";
 
 	delete $filepath{ident $self};
 	delete $stat{ident $self};
@@ -100,27 +91,28 @@ sub get_stat {
 
 sub get_raw_size {
 	my ($self) = @_;
-	return $stat{ident $self}->[STAT_SIZE];
+#	return $stat{ident $self}->[$STAT_SIZE];
+	return -s $self->get_path;
 }
 
 sub get_raw_mtime {
 	my ($self) = @_;
-	return $stat{ident $self}->[STAT_MTIME];
+	return $stat{ident $self}->[$STAT_MTIME];
 }
 
 sub get_raw_uid {
 	my ($self) = @_;
-	return $stat{ident $self}->[STAT_UID];
+	return $stat{ident $self}->[$STAT_UID];
 }
 
 sub get_raw_gid {
 	my ($self) = @_;
-	return $stat{ident $self}->[STAT_GID];
+	return $stat{ident $self}->[$STAT_GID];
 }
 
 sub get_raw_mode {
 	my ($self) = @_;
-	return $stat{ident $self}->[STAT_MODE];
+	return $stat{ident $self}->[$STAT_MODE];
 }
 
 sub get_size {
@@ -147,6 +139,16 @@ sub get_gid {
 sub get_mode {
 	my ($self) = @_;
 	return format_mode($self->get_raw_mode);
+}
+
+sub exist {
+	my ($self) = @_;
+	return (-e $self->get_path);
+}
+
+sub is_readable {
+	my ($self) = @_;
+	return (-R $self->get_path);
 }
 
 sub is_dir {

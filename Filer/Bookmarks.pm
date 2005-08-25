@@ -132,7 +132,7 @@ sub generate_bookmarks_menu {
 	foreach ($self->get_bookmarks) {
 		$menuitem = new Gtk2::MenuItem($_);
 		$menuitem->signal_connect("activate", sub {
-			$filer{ident $self}->get_active_pane->open_path_helper($_[1]);
+			$filer{ident $self}->get_active_pane->open_path_helper(pop @_);
 		},$_);
 
 		$menuitem->show;

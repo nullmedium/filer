@@ -19,20 +19,20 @@ package Filer::Archive;
 use strict;
 use warnings;
 
+use Readonly;
+
 use File::Basename;
 use File::MimeInfo;
 
-use constant {
-	GZ   => 'application/x-gzip',		   
-	BZ2  => 'application/x-bzip',		   
-	TAR  => 'application/x-tar',		   
-	TGZ  => 'application/x-compressed-tar',    
-	TBZ2 => 'application/x-bzip-compressed-tar',
-	ZIP  => 'application/zip',	   
-	RAR  => 'application/x-rar',		   
-};
+Readonly my $GZ   => 'application/x-gzip';		   
+Readonly my $BZ2  => 'application/x-bzip';		   
+Readonly my $TAR  => 'application/x-tar';		   
+Readonly my $TGZ  => 'application/x-compressed-tar';    
+Readonly my $TBZ2 => 'application/x-bzip-compressed-tar';
+Readonly my $ZIP  => 'application/zip';	   
+Readonly my $RAR  => 'application/x-rar';		   
 
-our @archive_types = (GZ,BZ2,TAR,TGZ,TBZ2,ZIP,RAR);
+our @archive_types = ($GZ,$BZ2,$TAR,$TGZ,$TBZ2,$ZIP,$RAR);
 
 sub is_supported_archive {
 	my $type = pop;
@@ -50,12 +50,12 @@ sub new {
 
 sub create_tar_gz_archive {
 	my ($self,$path,$files) = @_;
-	return $self->create_archive(TGZ, $path, $files);
+	return $self->create_archive($TGZ, $path, $files);
 }
 
 sub create_tar_bz2_archive {
 	my ($self,$path,$files) = @_;
-	return $self->create_archive(TBZ2, $path, $files);
+	return $self->create_archive($TBZ2, $path, $files);
 }
 
 sub create_archive {
@@ -64,11 +64,11 @@ sub create_archive {
 	my @files = map { Filer::Tools->catpath(File::Spec->curdir, basename($_)) } @{$files};
 	my @commandline = ();
 
-	if ($type eq TGZ) {
+	if ($type eq $TGZ) {
 		$archive_file = sprintf("%s.tar.gz", $files->[0]);
 		@commandline = ("tar", "-cz", "-C", $path, "-f", $archive_file, @files);
 	
-	} elsif ($type eq TBZ2) {
+	} elsif ($type eq $TBZ2) {
 		$archive_file = sprintf("%s.tar.bz2", $files->[0]);
 		@commandline = ("tar", "-cj", "-C", $path, "-f", $archive_file, @files);
 	}
@@ -85,13 +85,13 @@ sub extract_archive {
 	foreach my $f (@{$files}) {
 		my $type = mimetype($f);
 
-		my @cmdline =	($type eq GZ)	? ("gzip", "-d", $f)			:
-				($type eq BZ2)	? ("bzip2", "-d", $f)			:
-				($type eq TAR)	? ("tar", "-x", "-C", $path, "-f", $f)	:
-				($type eq TGZ)	? ("tar", "-xz", "-C", $path, "-f", $f)	:
-				($type eq TBZ2)	? ("tar", "-xj", "-C", $path, "-f", $f)	:
-				($type eq ZIP)	? ("unzip", $f, "-d", $path)		:
-				($type eq RAR)	? ("unrar", "x", $f, $path)		: undef;
+		my @cmdline =	($type eq $GZ)	 ? ("gzip", "-d", $f)				:
+				($type eq $BZ2)	 ? ("bzip2", "-d", $f)				:
+				($type eq $TAR)	 ? ("tar", "-x", "-C", $path, "-f", $f)		:
+				($type eq $TGZ)	 ? ("tar", "-xz", "-C", $path, "-f", $f)	:
+				($type eq $TBZ2) ? ("tar", "-xj", "-C", $path, "-f", $f)	:
+				($type eq $ZIP)	 ? ("unzip", $f, "-d", $path)			:
+				($type eq $RAR)	 ? ("unrar", "x", $f, $path)			: undef;
 
 		if (@cmdline) {
 			my $pid = Filer::Tools->start_program(@cmdline);

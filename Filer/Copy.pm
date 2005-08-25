@@ -15,6 +15,7 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::Copy;
+use Class::Std::Utils;
 
 use strict;
 use warnings;
@@ -23,62 +24,104 @@ use Cwd qw(abs_path);
 use File::Basename qw(dirname basename);
 use File::DirWalk;
 
-use English;
-
 use Filer::Constants;
+
+my %SKIPALL;
+my %OVERWRITEALL;
+my %CANCELLED;
+my %progress_dialog;
+my %progress_label;
+my %progressbar_total;
+my %total_bytes;
+my %completed_bytes;
 
 sub new {
 	my ($class) = @_;
-	my $self = bless {}, $class;
+	my $self    = bless {}, $class;
 
-	$self->{SKIPALL} = 0;
-	$self->{OVERWRITEALL} = 0;
-	$self->{CANCELLED} = FALSE;
+	$SKIPALL{ident $self}      = 0;
+	$OVERWRITEALL{ident $self} = 0;
+	$CANCELLED{ident $self}    = $FALSE;
 
-	$self->{progress_dialog} = new Filer::ProgressDialog;
-	$self->{progress_dialog}->dialog->set_title("Copying ...");
-	$self->{progress_dialog}->label1->set_markup("<b>Copying: \nto: </b>");
+	$progress_dialog{ident $self} = new Filer::ProgressDialog;
+	$progress_dialog{ident $self}->dialog->set_title("Copying ...");
+	$progress_dialog{ident $self}->label1->set_markup("<b>Copying: \nto: </b>");
 
-	$self->{progress_label} = $self->{progress_dialog}->label2;
-	$self->{progressbar_total} = $self->{progress_dialog}->add_progressbar;
+	$progress_label{ident $self}    = $progress_dialog{ident $self}->label2;
+	$progressbar_total{ident $self} = $progress_dialog{ident $self}->add_progressbar;
 
-	my $button = $self->{progress_dialog}->dialog->add_button('gtk-cancel' => 'cancel');
+	my $button = $progress_dialog{ident $self}->dialog->add_button('gtk-cancel' => 'cancel');
 	$button->signal_connect("clicked", sub {
-		$self->{CANCELLED} = TRUE;
-		$self->{progress_dialog}->destroy;
+		$CANCELLED{ident $self} = $TRUE;
+		$progress_dialog{ident $self}->destroy;
 	});
 
 	return $self;
 }
 
+sub DESTROY {
+	my ($self) = @_;
+
+	delete $SKIPALL{ident $self};
+	delete $OVERWRITEALL{ident $self};
+	delete $CANCELLED{ident $self};
+	delete $progress_dialog{ident $self};
+	delete $progress_label{ident $self};
+	delete $progressbar_total{ident $self};
+	delete $total_bytes{ident $self};
+	delete $completed_bytes{ident $self};
+}
+
+sub cancelled {
+	my ($self) = @_;
+	return $CANCELLED{ident $self};
+}
+
+sub update_progress_label {
+	my ($self,$str) = @_;
+	$progress_label{ident $self}->set_text($str);
+	while (Gtk2->events_pending) { Gtk2->main_iteration; }
+}
+
+sub update_written_bytes {
+	my ($self,$bytes) = @_;
+	$completed_bytes{ident $self} += $bytes;
+}
+
 sub copy {
 	my ($self,$FILES,$DEST) = @_;
-	$self->{total_bytes} = 0;
-	$self->{completed_bytes} = 0;
 
-	my $dirwalk = new File::DirWalk;
+	$total_bytes{ident $self}     = 0;
+	$completed_bytes{ident $self} = 0;
+
+	my $dirwalk  = new File::DirWalk;
 	my $filecopy = new Filer::FileCopy($self);
 
 	$dirwalk->onFile(sub {
-		$self->{total_bytes} += -s $ARG[0];
+		my $file = pop;
+		$total_bytes{ident $self} += -s $file;
 		return 1;
 	});
 
-	$dirwalk->walk($ARG) for (@{$FILES});
+	for (@{$FILES}) {
+		$dirwalk->walk($_); 
+	}
 
 	$dirwalk->onBeginWalk(sub {
-		return ($self->{CANCELLED} == FALSE) ? File::DirWalk::SUCCESS : File::DirWalk::ABORTED;
+		return ($CANCELLED{ident $self} == $FALSE) ? File::DirWalk::SUCCESS : File::DirWalk::ABORTED;
 	});
 
 	$dirwalk->onLink(sub {
-		symlink(readlink($ARG[0]), Filer::Tools->catpath($DEST, basename($ARG[0]))) || return File::DirWalk::FAILED;
+		my $file = pop;
+		symlink(readlink($file), Filer::Tools->catpath($DEST, basename($file))) || return File::DirWalk::FAILED;
 		return File::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onDirEnter(sub {
-		$DEST = Filer::Tools->catpath($DEST, basename($ARG[0]));
+		my $dir = pop;
+		$DEST   = Filer::Tools->catpath($DEST, basename($dir));
 
-		if ((-e $DEST) and (dirname($ARG[0]) eq dirname($DEST))) {
+		if ((-e $DEST) and (dirname($dir) eq dirname($DEST))) {
 			$DEST = Filer::Tools->suggest_filename_helper($DEST);
 		}
 
@@ -88,42 +131,43 @@ sub copy {
 	});
 
 	$dirwalk->onDirLeave(sub {
-		$DEST = abs_path(Filer::Tools->catpath($DEST, UPDIR));
+		$DEST = abs_path(Filer::Tools->catpath($DEST, $UPDIR));
 		return File::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onFile(sub {
-		my $my_dest = Filer::Tools->catpath($DEST, basename($ARG[0]));
+		my $file    = pop;
+		my $my_dest = Filer::Tools->catpath($DEST, basename($file));
 
 		if (-e $my_dest) {
-			if (dirname($ARG[0]) eq dirname($my_dest)) {
+			if (dirname($file) eq dirname($my_dest)) {
 
 				$my_dest = Filer::Tools->suggest_filename_helper($my_dest);
 
 			} else {
 				# TODO: Ask Overwrite Dialog
 
-				Filer::Dialog->msgbox_error("File $ARG[0] exists at $my_dest!\n");
+				Filer::Dialog->msgbox_error("File $file exists at $my_dest!\n");
 				return File::DirWalk::ABORTED;
 			}
 		}
 
-		return $filecopy->filecopy($ARG[0],$my_dest);
+		return $filecopy->filecopy($file,$my_dest);
  	});
 
 	my $timeout = Glib::Timeout->add(100, sub {
-		return 1 if ($self->{total_bytes} == 0);
-		return 0 if ($self->{CANCELLED} == TRUE);
+		return 1 if ($total_bytes{ident $self} == 0);
+		return 0 if ($CANCELLED{ident $self} == $TRUE);
 
-		my $percent_written = $self->{completed_bytes}/$self->{total_bytes};
+		my $percent_written = $completed_bytes{ident $self}/$total_bytes{ident $self};
 
-		$self->{progressbar_total}->set_text(sprintf("%.0f", ($percent_written * 100)) . "%");
-		$self->{progressbar_total}->set_fraction($percent_written);
+		$progressbar_total{ident $self}->set_text(sprintf("%.0f", ($percent_written * 100)) . "%");
+		$progressbar_total{ident $self}->set_fraction($percent_written);
 
 		return 1;
 	});
 
-	$self->{progress_dialog}->show;
+	$progress_dialog{ident $self}->show;
 
 	foreach my $source (@{$FILES}) {
 		$source =~ s/file:\///g;
@@ -140,7 +184,7 @@ sub copy {
 	}
 
 	Glib::Source->remove($timeout);
-	$self->{progress_dialog}->destroy;
+	$progress_dialog{ident $self}->destroy;
 }
 
 *action = \&copy;

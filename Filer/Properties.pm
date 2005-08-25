@@ -16,40 +16,16 @@
 
 package Filer::Properties;
 
-use Filer::Constants;
-
 use strict;
 use warnings;
 
-my $S_IFMT   = 00170000;
-my $S_IFSOCK = 0140000;
-my $S_IFLNK  = 0120000;
-my $S_IFREG  = 0100000;
-my $S_IFBLK  = 0060000;
-my $S_IFDIR  = 0040000;
-my $S_IFCHR  = 0020000;
-my $S_IFIFO  = 0010000;
-my $S_ISUID  = 0004000;
-my $S_ISGID  = 0002000;
-my $S_ISVTX  = 0001000;
-
-my $S_IRWXU = 00700;
-my $S_IRUSR = 00400;
-my $S_IWUSR = 00200;
-my $S_IXUSR = 00100;
-
-my $S_IRWXG = 00070;
-my $S_IRGRP = 00040;
-my $S_IWGRP = 00020;
-my $S_IXGRP = 00010;
-
-my $S_IRWXO = 00007;
-my $S_IROTH = 00004;
-my $S_IWOTH = 00002;
-my $S_IXOTH = 00001;
+use Filer::Constants;
+use Filer::Stat qw(:mode_t);
 
 sub set_properties_dialog {
-	my ($filer) = pop;
+	my ($filer)     = pop;
+	my $active_pane = $filer->get_active_pane;
+
 	my ($dialog,$table,$label,$checkbutton,$entry);
 	my ($frame,$type_label,$icon_image,$icon_entry,$icon_browse_button);
 	my ($button,$alignment,$hbox,$vbox);
@@ -58,25 +34,41 @@ sub set_properties_dialog {
 	my $group_combo;
 
 	my $properties_mode = 0;
-	my $owner_mode = 0;
-	my $group_mode = 0;
-	my $other_mode = 0;
+	my $owner_mode      = 0;
+	my $group_mode      = 0;
+	my $other_mode      = 0;
 
 	my $fileinfo;
-	my $owner = "";
-	my $group = "";
+	my $owner    = "";
+	my $group    = "";
 	my $multiple = 0;
 
-	if ($filer->get_active_pane->count_items == 1) {
-		$fileinfo = $filer->get_active_pane->get_fileinfo->[0];
+	if ($active_pane->count_items == 1) {
+		$fileinfo = $active_pane->get_fileinfo->[0];
 		$owner = $fileinfo->get_uid;
 		$group = $fileinfo->get_gid;
 	} else {
 		$multiple = 1;
 	}
 
-	my @users = sort split /\n/, `cat /etc/passwd | cut -f 1 -d :`;
-	my @groups = sort split /\n/, `cat /etc/group | cut -f 1 -d :`;
+	my @users = ();
+	my @groups = ();
+
+	open (my $passwd_h, "/etc/passwd") || die "/etc/passwd: $!";
+	while (<$passwd_h>) {
+		chomp;
+		my ($user) = split ":";
+		push @users, $user;
+	}
+	close($passwd_h) || die "/etc/group: $!";
+
+	open (my $group_h, "/etc/group") || die "/etc/group: $!";
+	while (<$group_h>) {
+		chomp;
+		my ($group) = split ":";
+		push @groups, $group;
+	}
+	close($group_h) || die "/etc/group: $!";
 
 	my $mode_clicked = sub {
 		my ($w,$mode_ref,$x) = @_;
@@ -266,31 +258,29 @@ sub set_properties_dialog {
 	$vbox = new Gtk2::VBox(0,0);
 	$frame->add($vbox);
 
-	my ($pos,$i);
-	$pos = 0; $i = 0;
-
 	$owner_combo = Gtk2::ComboBox->new_text;
-	foreach (@users) { $owner_combo->append_text($_); $pos = $i if ($_ eq $owner); $i++;}
-	$owner_combo->set_active($pos) if (!$multiple);
+	$owner_combo->set_popdown_strings(sort @users);
+	$owner_combo->insert_text(0, $owner);
+	$owner_combo->set_active(0);
 	$owner_combo->set_sensitive(($ENV{USER} eq 'root') ? 1 : 0);
 	$vbox->pack_start($owner_combo, 1, 1, 0);
 
-	$pos = 0; $i = 0;
 	$group_combo = Gtk2::ComboBox->new_text;
-	foreach (@groups) { $group_combo->append_text($_); $pos = $i if ($_ eq $group); $i++; }
-	$group_combo->set_active($pos) if (!$multiple);
+	$group_combo->set_popdown_strings(sort @groups);
+	$group_combo->insert_text(0, $group);
+	$group_combo->set_active(0);
 	$vbox->pack_start($group_combo, 1, 1, 0);
 
 	$dialog->show_all;
-	my $r = $dialog->run;
 
-	if ($r eq 'ok') {
-		my @files = @{$filer->get_active_pane->get_items};
-		my $mode = oct(($properties_mode * 1000) + ($owner_mode * 100) +  ($group_mode * 10) + ($other_mode));
-		my $uid = getpwnam($owner_combo->get_active_text);
-		my $gid = getgrnam($group_combo->get_active_text);
+	if ($dialog->run eq 'ok') {
+		my @files = @{$active_pane->get_items};
+		my $mode  = oct(($properties_mode * 1000) + ($owner_mode * 100) +  ($group_mode * 10) + ($other_mode));
+		my $uid   = getpwnam($owner_combo->get_active_text);
+		my $gid   = getgrnam($group_combo->get_active_text);
 
 		eval {
+			package Filer::Properties;
 			chown($uid, $gid, @files);
 			chmod($mode, @files);
 		};

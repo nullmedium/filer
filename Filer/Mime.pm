@@ -20,12 +20,15 @@ use Class::Std::Utils;
 use strict;
 use warnings;
 
+use Readonly;
+
 use YAML qw(LoadFile DumpFile Dump);
 
 use Filer;
 use Filer::Constants;
 
-use enum qw(ICON COMMANDS);
+Readonly my $ICON     => 0;
+Readonly my $COMMANDS => 1;
 
 my $default_mimetypes = {
 	'application/default'			=> [ "$main::libpath/icons/default.png",			[] ],
@@ -80,7 +83,8 @@ my %mime_file;
 sub new {
 	my ($class,$filer) = @_;
 	my $self = bless anon_scalar(), $class;
-	$filer{ident $self} = $filer;
+
+	$filer{ident $self}     = $filer;
 	$mime_file{ident $self} = Filer::Tools->catpath(File::BaseDir->new->xdg_config_home, "filer", "mime.yml");
 
 	if (! -e $mime_file{ident $self}) {
@@ -90,11 +94,11 @@ sub new {
 	}
 
 	foreach (keys %{$mime{ident $self}}) {
-		if (! -e $mime{ident $self}->{$_}->[ICON]) {
-			if (-e $default_mimetypes->{$_}->[ICON]) {
-				$mime{ident $self}->{$_}->[ICON] = $default_mimetypes->{$_}->[ICON];
+		if (! -e $mime{ident $self}->{$_}->[$ICON]) {
+			if (-e $default_mimetypes->{$_}->[$ICON]) {
+				$mime{ident $self}->{$_}->[$ICON] = $default_mimetypes->{$_}->[$ICON];
 			} else {
-				$mime{ident $self}->{$_}->[ICON] = $default_mimetypes->{'application/default'}->[ICON];
+				$mime{ident $self}->{$_}->[$ICON] = $default_mimetypes->{'application/default'}->[$ICON];
 			}
 		}
 	}
@@ -118,19 +122,21 @@ sub get_mimetypes {
 
 sub get_mimetype_groups {
 	my ($self) = @_;
-	my %groups = ();
 
-	foreach ($self->get_mimetypes) {
-		my ($group) = split "/", $_;
-		$groups{$group}++;
-	}
+	my %groups = map { 
+		my ($group) = split "/";
+		$group => 1;
+
+	} $self->get_mimetypes;
 
 	return sort keys %groups;
 }
 
 sub add_mimetype {
 	my ($self,$type) = @_;
-	$mime{ident $self}->{$type} = [ $mime{ident $self}->{'application/default'}->[ICON], [] ];
+
+	$mime{ident $self}->{$type}
+	 = [ $mime{ident $self}->{'application/default'}->[$ICON], [] ];
 }
 
 sub delete_mimetype {
@@ -140,51 +146,41 @@ sub delete_mimetype {
 
 sub get_icon {
 	my ($self,$type) = @_;
-	return $mime{ident $self}->{$type}->[ICON];
-}
 
-sub get_icons {
-	my ($self) = @_;
-	my %icons = map { $_ => $self->get_icon($_) } $self->get_mimetypes;
-	return \%icons;
+	return $mime{ident $self}->{$type}->[$ICON];
 }
 
 sub set_icon {
 	my ($self,$type,$icon) = @_;
-	$mime{ident $self}->{$type}->[ICON] = $icon;
+	$mime{ident $self}->{$type}->[$ICON] = $icon;
 }
 
 sub get_commands {
 	my ($self,$type) = @_;
-	return @{$mime{ident $self}->{$type}->[COMMANDS]};
+	return @{$mime{ident $self}->{$type}->[$COMMANDS]};
 }
 
 sub set_commands {
 	my ($self,$type,$commands) = @_;
-	$mime{ident $self}->{$type}->[COMMANDS] = $commands;
+	$mime{ident $self}->{$type}->[$COMMANDS] = $commands;
 }
 
 sub get_default_command {
 	my ($self,$type) = @_;
-
-	if (wantarray) {
-		return split /\s+/, $mime{ident $self}->{$type}->[COMMANDS]->[0];
-	} else {
-		return $mime{ident $self}->{$type}->[COMMANDS]->[0];
-	}
+	return $mime{ident $self}->{$type}->[$COMMANDS]->[0];
 }
 
 sub set_default_command {
 	my ($self,$type,$command) = @_;
-	$mime{ident $self}->{$type}->[COMMANDS]->[0] = $command;
+	$mime{ident $self}->{$type}->[$COMMANDS]->[0] = $command;
 }
 
 sub set_icon_dialog {
 	my ($self,$type) = @_;
-	my ($dialog,$table,$frame,$label,$type_label,$icon_image,$icon_entry,$icon_browse_button);
-	my ($button,$alignment,$hbox);
+	my $icon         = $self->get_icon($type);
+	my $pixbuf       = Gtk2::Gdk::Pixbuf->new_from_file($icon);
 
-	$dialog = new Gtk2::Dialog(
+	my $dialog = new Gtk2::Dialog(
 		"Set Icon",
 		undef,
 		'modal',
@@ -195,69 +191,67 @@ sub set_icon_dialog {
 	$dialog->set_size_request(450,150);
 	$dialog->set_position('center');
 
-	$table = new Gtk2::Table(2,4);
+	my $table = new Gtk2::Table(2,4);
 	$table->set_homogeneous(0);
 	$table->set_col_spacings(5);
 	$table->set_row_spacings(1);
 	$dialog->vbox->pack_start($table,0,0,5);
 
-	$frame = new Gtk2::Frame;
+	my $frame = new Gtk2::Frame;
 	$frame->set_size_request(50, 50);
 	$frame->set_shadow_type('out');
 	$table->attach($frame, 0, 1, 0, 2, [], [], 0, 0);
 
-	$icon_image = new Gtk2::Image;
-	$icon_image->set_from_pixbuf(Filer::Tools->intelligent_scale(Gtk2::Gdk::Pixbuf->new_from_file($self->get_icon($type)),50));
+	my $icon_image = new Gtk2::Image;
+	$icon_image->set_from_pixbuf($pixbuf->intelligent_scale(50));
 	$icon_image->set_alignment(0.50,0.50);
 	$frame->add($icon_image);
 
-	$label = new Gtk2::Label;
-	$label->set_justify('left');
-	$label->set_text("Type: ");
-	$label->set_alignment(0.0,0.0);
-	$table->attach($label, 1, 2, 0, 1, [ "fill" ], [], 0, 0);
+	my $label1 = new Gtk2::Label;
+	$label1->set_justify('left');
+	$label1->set_text("Type: ");
+	$label1->set_alignment(0.0,0.0);
+	$table->attach($label1, 1, 2, 0, 1, [ "fill" ], [], 0, 0);
 
-	$type_label = new Gtk2::Label;
+	my $type_label = new Gtk2::Label;
 	$type_label->set_justify('right');
 	$type_label->set_text($type);
 	$type_label->set_alignment(0.0,0.0);
 	$table->attach($type_label, 2, 4, 0, 1, [ "expand","fill" ], [], 0, 0);
 
-	$label = new Gtk2::Label;
-	$label->set_justify('left');
-	$label->set_text("Icon:");
-	$label->set_alignment(0.0,0.0);
-	$table->attach($label, 1, 2, 1, 2, [ "fill" ], [], 0, 0);
+	my $label2 = new Gtk2::Label;
+	$label2->set_justify('left');
+	$label2->set_text("Icon:");
+	$label2->set_alignment(0.0,0.0);
+	$table->attach($label2, 1, 2, 1, 2, [ "fill" ], [], 0, 0);
 
-	$frame = new Gtk2::Frame("Preview");
-	my $preview = new Gtk2::Image;
-	$frame->add($preview);
-	$frame->show_all;
-
-	my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($self->get_icon($type));
-	$preview->set_from_pixbuf(Filer::Tools->intelligent_scale($pixbuf,100));
-
-	$icon_browse_button = Gtk2::FileChooserButton->new("Select Icon", 'GTK_FILE_CHOOSER_ACTION_OPEN');
-	$icon_browse_button->set_use_preview_label(0);
-	$icon_browse_button->set_preview_widget($frame);
-	$icon_browse_button->set_preview_widget_active(1);
-
+	# Filter pixbuf formats
 	my $filter = new Gtk2::FileFilter;
 	$filter->add_pixbuf_formats;
+
+	# Preview part in FileChooser
+	my $preview = new Gtk2::Image;
+	$preview->set_from_pixbuf($pixbuf->intelligent_scale(100));
+
+	my $icon_browse_button = Gtk2::FileChooserButton->new("Select Icon", 'GTK_FILE_CHOOSER_ACTION_OPEN');
 	$icon_browse_button->set_filter($filter);
-
+	$icon_browse_button->set_filename($icon);
+	$icon_browse_button->set_use_preview_label(1);
+	$icon_browse_button->set_preview_widget($preview);
+	$icon_browse_button->set_preview_widget_active(1);
 	$icon_browse_button->signal_connect("update-preview", sub {
-		my ($w,$preview) = @_;
-		my $filename = $w->get_preview_filename;
+		my ($dialog)  = @_;
+		my $filename  = $dialog->get_preview_filename;
 
-		return if (-d $filename);
+		return if (! defined $filename or -d $filename);
 
-		my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($filename);
-		$preview->set_from_pixbuf(Filer::Tools->intelligent_scale($pixbuf,100));
-		$icon_image->set_from_pixbuf($pixbuf);
-	}, $preview);
+		my $preview   = $dialog->get_preview_widget;
+		my $pixbuf    = Gtk2::Gdk::Pixbuf->new_from_file($filename);
 
-	$icon_browse_button->set_filename($self->get_icon($type));
+		$icon_image->set_from_pixbuf($pixbuf->intelligent_scale(50));
+		$preview->set_from_pixbuf($pixbuf->intelligent_scale(100));
+	});
+
  	$table->attach($icon_browse_button, 2, 3, 1, 2, [ "expand","fill" ], [], 0, 0);
 
 	$dialog->show_all;
@@ -277,9 +271,8 @@ sub file_association_dialog {
 sub run_dialog {
 	my ($self,$fileinfo) = @_;
 	my $type = $fileinfo->get_mimetype;
-	my ($dialog,$table,$label,$button,$type_label,$cmd_browse_button,$remember_checkbutton,$run_terminal_checkbutton,$command_combo);
 
-	$dialog = new Gtk2::Dialog(
+	my $dialog = new Gtk2::Dialog(
 		"Open With",
 		undef,
 		'modal',
@@ -289,36 +282,36 @@ sub run_dialog {
 	$dialog->set_has_separator(1);
 	$dialog->set_position('center');
 
-	$table = new Gtk2::Table(3,3);
+	my $table = new Gtk2::Table(3,3);
 	$table->set_homogeneous(0);
 	$table->set_col_spacings(5);
 	$table->set_row_spacings(1);
 	$dialog->vbox->pack_start($table,0,0,5);
 
-	$label = new Gtk2::Label;
-	$label->set_justify('left');
-	$label->set_text("Type: ");
-	$label->set_alignment(0.0,0.0);
-	$table->attach($label, 0, 1, 0, 1, [ "fill" ], [], 0, 0);
+	my $label1 = new Gtk2::Label;
+	$label1->set_justify('left');
+	$label1->set_text("Type: ");
+	$label1->set_alignment(0.0,0.0);
+	$table->attach($label1, 0, 1, 0, 1, [ "fill" ], [], 0, 0);
 
-	$type_label = new Gtk2::Label;
+	my $type_label = new Gtk2::Label;
 	$type_label->set_justify('left');
 	$type_label->set_text($type);
 	$type_label->set_alignment(0.0,0.0);
 	$table->attach($type_label, 1, 3, 0, 1, [ "expand","fill" ], [], 0, 0);
 
-	$label = new Gtk2::Label;
-	$label->set_justify('left');
-	$label->set_text("Command:");
-	$label->set_alignment(0.0,0.0);
-	$table->attach($label, 0, 1, 1, 2, [ "fill" ], [], 0, 0);
+	my $label2 = new Gtk2::Label;
+	$label2->set_justify('left');
+	$label2->set_text("Command:");
+	$label2->set_alignment(0.0,0.0);
+	$table->attach($label2, 0, 1, 1, 2, [ "fill" ], [], 0, 0);
 
-	$command_combo = Gtk2::ComboBoxEntry->new_text;
+	my $command_combo = Gtk2::ComboBoxEntry->new_text;
 	foreach ($self->get_commands($type)) { $command_combo->append_text($_) }
 	$command_combo->set_active(0);
 	$table->attach($command_combo, 1, 2, 1, 2, [ "expand","fill" ], [], 0, 0);
 
-	$cmd_browse_button = new Gtk2::Button;
+	my $cmd_browse_button = new Gtk2::Button;
 	$cmd_browse_button->add(Gtk2::Image->new_from_stock('gtk-open', 'button'));
 	$cmd_browse_button->signal_connect("clicked", sub {
 		my $fs = new Gtk2::FileChooserDialog(
@@ -326,34 +319,34 @@ sub run_dialog {
 			undef,
 			'GTK_FILE_CHOOSER_ACTION_OPEN',
 			'gtk-cancel' => 'cancel',
-			'gtk-ok' => 'ok'
+			'gtk-ok'     => 'ok'
 		);
 
-		$fs->set_filename($command_combo->get_child->get_text);
+		$fs->set_filename($command_combo->get_active_text);
 
 		if ($fs->run eq 'ok') {
-			$command_combo->get_child->set_text($fs->get_filename);
+			$command_combo->prepend_text($fs->get_filename);
+			$command_combo->set_active(0);
 		}
-
 
 		$fs->destroy;
 	});
 	$table->attach($cmd_browse_button, 2, 3, 1, 2, [ "fill" ], [], 0, 0);
 
-	$remember_checkbutton = new Gtk2::CheckButton("Remember application association for this type of file (sets default)");
+	my $remember_checkbutton = new Gtk2::CheckButton("Remember application association for this type of file (sets default)");
 	$dialog->vbox->pack_start($remember_checkbutton, 0,1,0);
 
-	$run_terminal_checkbutton = new Gtk2::CheckButton("Run in Terminal");
+	my $run_terminal_checkbutton = new Gtk2::CheckButton("Run in Terminal");
 	$dialog->vbox->pack_start($run_terminal_checkbutton, 0,1,0);
 
-	$button = Filer::Dialog::mixed_button_new('gtk-ok',"_Run");
+	my $button = Filer::Dialog::mixed_button_new('gtk-ok',"_Run");
 	$dialog->add_action_widget($button, 'ok');
-
+	
 	$dialog->show_all;
 
 	if ($dialog->run eq 'ok') {
 		my $command = $command_combo->get_active_text;
-		my $file = $fileinfo->get_path;
+		my $file    = $fileinfo->get_path;
 
 		if ($remember_checkbutton->get_active) {
 			$self->set_default_command($type,$command);

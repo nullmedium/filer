@@ -1,3 +1,4 @@
+
 #     Copyright (C) 2004-2005 Jens Luedicke <jens.luedicke@gmail.com>
 #
 #     This program is free software; you can redistribute it and/or modify
@@ -15,21 +16,28 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::FileCopy;
+use Class::Std::Utils;
 
 use strict;
 use warnings;
 
 use Fcntl;
 
-use constant JOB => 0;
+my %job;
 
 sub new {
 	my ($class,$job) = @_;
-	my $self = bless [], $class;
+	my $self = bless anon_scalar(), $class;
 
-	$self->[JOB] = $job;
+	$job{ident $self} = $job;
 
 	return $self;
+}
+
+sub DESTROY {
+	my ($self) = @_;
+
+	delete $job{ident $self};
 }
 
 sub filecopy {
@@ -37,12 +45,12 @@ sub filecopy {
 
 	return if ($source eq $dest);
 
-	my @stat = stat($source);
-	my $mode = $stat[2];
+	my @stat     = stat($source);
+	my $mode     = $stat[2];
 	my $buf_size = 4 * $stat[11];
-	my $buf = "";
+	my $buf      = "";
 
-	$self->[JOB]->{progress_label}->set_text("$source\n$dest");
+	$job{ident $self}->update_progress_label("$source\n$dest");
 	while (Gtk2->events_pending) { Gtk2->main_iteration; }
 
 	sysopen(my $in_fh, $source, O_RDONLY);
@@ -50,14 +58,13 @@ sub filecopy {
 
 	my ($r,$w,$t);
 
-#	while (($r = sysread($in_fh, $buf, -s $in_fh)) && !$self->[JOB]->{CANCELLED}) {
-	while (($r = sysread($in_fh, $buf, $buf_size)) && !$self->[JOB]->{CANCELLED}) {
+	while (($r = sysread($in_fh, $buf, $buf_size)) && !$job{ident $self}->cancelled) {
 
 		for ($w = 0; $w < $r; $w += $t) {
 			$t = syswrite($out_fh, $buf, $r - $w, $w)
 				or return File::DirWalk::FAILED;
 
-			$self->[JOB]->{completed_bytes} += $t;
+			$job{ident $self}->update_written_bytes($t);
 			while (Gtk2->events_pending) { Gtk2->main_iteration; }
 		}
 	}

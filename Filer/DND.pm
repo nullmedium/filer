@@ -19,7 +19,9 @@ package Filer::DND;
 use strict;
 use warnings;
 
-use constant TARGET_URI_LIST => 0;
+use Readonly; 
+
+Readonly my $TARGET_URI_LIST => 0;
 
 sub new {
 	my ($class,$filer,$filepane) = @_;
@@ -32,13 +34,13 @@ sub new {
 
 sub target_table {
 	my ($self) = @_;
-	return ({'target' => "text/uri-list", 'flags' => [], 'info' => TARGET_URI_LIST});
+	return ({'target' => "text/uri-list", 'flags' => [], 'info' => $TARGET_URI_LIST});
 }
 
 sub filepane_treeview_drag_data_get {
 	my ($self,$widget,$context,$data,$info,$time) = @_;
 
-	if ($info == TARGET_URI_LIST) {
+	if ($info == $TARGET_URI_LIST) {
 		if ($self->{filepane}->count_items > 0) {
 			my $d = join "\r\n", @{$self->{filepane}->get_items};
 			$data->set($data->target, 8, $d);
@@ -65,7 +67,9 @@ sub filepane_treeview_drag_data_received {
 			$path = $self->{filepane}->get_pwd;
 		}
 
-		if ($self->{filer}->get_active_pane->get_pwd ne $path) {
+#		print $self->{filer}->get_active_pane->get_pwd, " <=> ", $path, "\n";
+
+#		if ($self->{filer}->get_active_pane->get_pwd ne $path) {
 			if ($action eq "copy") {
 				if ($self->{filer}->get_config->get_option("ConfirmCopy") == 1) {
 					if ($self->{filer}->get_active_pane->count_items == 1) {
@@ -98,18 +102,24 @@ sub filepane_treeview_drag_data_received {
 
 			$do->action(\@files,$path);
 
-			if ($action eq "move") {
-				$self->{filer}->get_active_pane->remove_selected;
-			}
+# # 			if ($action eq "move") {
+# # 				$self->{filer}->get_active_pane->remove_selected;
+# # 			}
+# # 
+# # 			$self->{filer}->refresh_inactive_pane;
+# 			
+# 			$self->{filer}->refresh_cb;
 
-			$self->{filer}->refresh_inactive_pane;
-
+			$self->{filepane}->refresh;			
+			
 			$context->finish (1, 0, $time);
-			return;
-		}
-
- 		$context->finish (0, 0, $time);
+# 			return;
+# 		}
+# 
+#  		$context->finish (0, 0, $time);
 	}
+
+	$context->finish (0, 0, $time);
 }
 
 1;

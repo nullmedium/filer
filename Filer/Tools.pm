@@ -23,7 +23,7 @@ sub REAPER {
 	# we will leave the unreaped child as a zombie. And the next time
 	# two children die we get another zombie. And so on.
 	while (($child = waitpid(-1,WNOHANG)) > 0) {
-	   $Kid_Status{$child} = $?;
+		$Kid_Status{$child} = $?;
 	}
 
 	$SIG{CHLD} = \&REAPER;  # still loathe sysV
@@ -51,7 +51,9 @@ sub wait_for_pid {
 	my $pid = pop;
 
 	while (kill 0, $pid) {
-		while (Gtk2->events_pending) { Gtk2->main_iteration }
+		while (Gtk2->events_pending) {
+			Gtk2->main_iteration
+		}
 	}
 }
 
@@ -78,10 +80,10 @@ sub _mkdir {
 }
 
 sub suggest_filename_helper {
-	my $filename = pop;
+	my $filename  = pop;
 	my $suggested = "";
-	my $suffix = "";
-	my $i = 1;
+	my $suffix    = "";
+	my $i         = 1;
 
 	if (-f $filename) {
 		if ($filename =~ /((\..+)+)$/) {
@@ -98,19 +100,19 @@ sub suggest_filename_helper {
 		}
 	}
 
-	if ($filename =~ /(\s+\(copy\))$/) {
+	if ($filename =~ /(_\(copy\))$/) {
 		my $r = $1;
 		$r =~ s/\(/\\(/g;
 		$r =~ s/\)/\\)/g;
 		$filename =~ s/$r//g;
 		$i = 2;
-	} elsif ($filename =~ /(\s+\(another copy\))$/) {
+	} elsif ($filename =~ /(_\(another copy\))$/) {
 		my $r = $1;
 		$r =~ s/\(/\\(/g;
 		$r =~ s/\)/\\)/g;
 		$filename =~ s/$r//g;
 		$i = 3;
-	} elsif ($filename =~ /(\s+\(3rd copy\))$/) {
+	} elsif ($filename =~ /(_\(3rd copy\))$/) {
 		my $r = $1;
 		$r =~ s/\(/\\(/g;
 		$r =~ s/\)/\\)/g;
@@ -120,13 +122,13 @@ sub suggest_filename_helper {
 
 	while (1) {
 		if ($i == 1) {
-			$suggested = "$filename (copy)";
+			$suggested = "$filename\_(copy)";
 		} elsif ($i == 2) {
-			$suggested = "$filename (another copy)";
+			$suggested = "$filename\_(another_copy)";
 		} elsif ($i == 3) {
-			$suggested = "$filename (3rd copy)";
+			$suggested = "$filename\_(3rd_copy)";
 		} else {
-			$suggested = "$filename ($i" . "th" . " copy)";
+			$suggested = "$filename\_($i" . "th" . "_copy)";
 		}
 
 		last if (! -e "$suggested$suffix");
@@ -150,18 +152,22 @@ sub calculate_size {
 	return $size;	
 }
 
+# Utility functions for Gtk+ classes:
+
+package Gtk2::Gdk::Pixbuf;
+
 sub intelligent_scale {
-	my $scale = pop;
-	my $pixbuf = pop;
-	my $scaled;
+	my ($self,$scale) = @_;
 	my $w;
 	my $h;
 
-	my $ow = $pixbuf->get_width;
-	my $oh = $pixbuf->get_height;
+	my $ow = $self->get_width;
+	my $oh = $self->get_height;
 
 	if ($ow <= $scale and $oh <= $scale) {
-		$scaled = $pixbuf;
+
+		return $self;
+
 	} else {
 		if ($ow > $oh) {
 			$w = $scale;
@@ -171,10 +177,18 @@ sub intelligent_scale {
 			$w = $scale * ($ow/$ow);
 		}
 
-		$scaled = $pixbuf->scale_simple($w, $h, 'GDK_INTERP_BILINEAR');
+		return $self->scale_simple($w, $h, 'GDK_INTERP_BILINEAR');
 	}
+}
 
-	return $scaled;
+package Gtk2::ComboBox;
+
+sub set_popdown_strings {
+	my ($self,@strings) = @_;
+	
+	foreach (@strings) {
+		$self->append_text($_);
+	}
 }
 
 1;
