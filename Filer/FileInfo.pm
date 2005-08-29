@@ -24,11 +24,14 @@ use Readonly;
 
 use Memoize qw(memoize);
 use File::Basename qw(basename);
-use File::MimeInfo::Magic qw(inodetype mimetype describe);
+use File::MimeInfo::Magic qw(mimetype describe);
 use Stat::lsMode qw(format_mode);
 
 use Filer::Stat qw($S_IRUSR $S_IRGRP $S_IROTH $S_IFDIR $S_IXUSR :stat);
 use Filer::Tools;
+
+# class attributes:
+my $mimetype_icons; 
 
 # attributes;
 my %filepath;
@@ -36,6 +39,11 @@ my %stat;
 my %mimetype;
 
 memoize('new');
+
+sub set_mimetype_icons {
+	my ($self,$icons) = @_;
+	$mimetype_icons = $icons; 
+}
 
 sub new {
 	my ($class,$filepath) = @_;
@@ -49,11 +57,25 @@ sub new {
 	# reported to File::MimeInfo maintainer and suggested 
 	# a fix for checking symlinks in inodetype()
 	
- 	if (-l $filepath) {
-		$mimetype{ident $self} = 'inode/symlink';
-	}
+#  	if (-l $filepath) {
+# 		$mimetype{ident $self} = 'inode/symlink';
+# 	}
 
 	return $self;
+}
+
+sub rename {
+	my ($self,$newname) = @_;
+	
+	if (CORE::rename($filepath{ident $self}, $newname)) {
+		$filepath{ident $self} = $newname;
+		$mimetype{ident $self} = mimetype($filepath{ident $self});
+		$stat{ident $self}     = [ stat($filepath{ident $self}) ];
+
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 sub DESTROY {
@@ -77,6 +99,11 @@ sub get_basename {
 sub get_mimetype {
 	my ($self) = @_;
 	return $mimetype{ident $self};
+}
+
+sub get_mimetype_icon {
+	my ($self) = @_;
+	return ($mimetype_icons->{$self->get_mimetype} || $mimetype_icons->{'application/default'});
 }
 
 sub get_mimetype_description {
@@ -153,7 +180,8 @@ sub is_readable {
 
 sub is_dir {
 	my ($self) = @_;
-	return ($self->get_raw_mode & $S_IFDIR);
+#	return ($self->get_raw_mode & $S_IFDIR);
+	return ($mimetype{ident $self} eq "inode/directory");
 }
 
 sub is_executable {

@@ -75,18 +75,18 @@ sub new {
 	return $self;
 }
 
-sub DESTROY {
-	my ($self) = @_;
-	
-	delete $VERSION{ident $self};
-	delete $config{ident $self};
-	delete $mime{ident $self};
-	delete $mimeicons{ident $self};
-	delete $widgets{ident $self};
-	delete $pane{ident $self};
-	delete $active_pane{ident $self};
-	delete $inactive_pane{ident $self};
-}
+# sub DESTROY {
+# 	my ($self) = @_;
+# 	
+# 	delete $VERSION{ident $self};
+# 	delete $config{ident $self};
+# 	delete $mime{ident $self};
+# 	delete $mimeicons{ident $self};
+# 	delete $widgets{ident $self};
+# 	delete $pane{ident $self};
+# 	delete $active_pane{ident $self};
+# 	delete $inactive_pane{ident $self};
+# }
 
 sub get_version {
 	my ($self) = @_;
@@ -119,6 +119,8 @@ sub init_mimeicons {
 	} $mime{ident $self}->get_mimetypes;
 
 	$mimeicons{ident $self} = \%icons;	
+
+	Filer::FileInfo->set_mimetype_icons($mimeicons{ident $self});
 }
 
 sub get_mime {
@@ -622,15 +624,15 @@ sub refresh_active_pane {
 sub refresh_inactive_pane {
 	my ($self) = @_;
 
-	if ($active_pane{ident $self}->get_type eq $inactive_pane{ident $self}->get_type) {
-		if ($active_pane{ident $self}->get_pwd eq $inactive_pane{ident $self}->get_pwd) {
-			$inactive_pane{ident $self}->set_model($active_pane{ident $self}->get_model);
-		} else {
-			$inactive_pane{ident $self}->refresh;
-		}
-	} else {
+# 	if ($active_pane{ident $self}->get_type eq $inactive_pane{ident $self}->get_type) {
+# 		if ($active_pane{ident $self}->get_pwd eq $inactive_pane{ident $self}->get_pwd) {
+# 			$inactive_pane{ident $self}->set_model($active_pane{ident $self}->get_model);
+# 		} else {
+# 			$inactive_pane{ident $self}->refresh;
+# 		}
+# 	} else {
 		$inactive_pane{ident $self}->refresh;
-	}
+# 	}
 }
 
 sub go_home_cb {
@@ -745,7 +747,7 @@ sub rename_cb {
 
 	if ($dialog->run eq 'ok') {
 		my $old_pwd = $active_pane{ident $self}->get_pwd;
-		my $old     = $active_pane{ident $self}->get_item;
+		my $old     = $active_pane{ident $self}->get_fileinfo->[0];
 		my $new;
 
 		if ($active_pane{ident $self}->get_type eq "TREE") {
@@ -754,8 +756,7 @@ sub rename_cb {
 			$new = Filer::Tools->catpath($old_pwd, $entry->get_text);
 		}
 
-		if (rename($old,$new)) {
-			$active_pane{ident $self}->set_item(new Filer::FileInfo($new));
+		if ($old->rename($new)) {
 			$self->refresh_inactive_pane;
 		} else {
 			Filer::Dialog->msgbox_error("Rename failed: $!");

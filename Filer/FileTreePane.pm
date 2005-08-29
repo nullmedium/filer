@@ -343,7 +343,7 @@ sub DirRead {
 		or return Filer::Dialog->msgbox_error("$dir: $!");
 
 	my @dir_contents =
-		map { Filer::FileInfo->new(Filer::Tools->catpath($dir, $_)) }
+		map { Filer::FileInfo->new("$dir/$_") }
 		grep { -d "$dir/$_" and (!/^\.{1,2}\Z(?!\n)/s) and (!/^\./ and !$show_hidden or $show_hidden) } 
 		sort readdir($dirh);
 
@@ -351,7 +351,7 @@ sub DirRead {
 
 	foreach my $fi (@dir_contents) {
 		my $type     = $fi->get_mimetype;
-		my $icon     = $mimeicons->{$type};
+		my $icon     = $fi->get_mimetype_icon;
 		my $basename = $fi->get_basename;
 
 		my $iter = $treemodel{ident $self}->insert_with_values($parent_iter, -1,

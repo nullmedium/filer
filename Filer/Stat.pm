@@ -1,51 +1,27 @@
 package Filer::Stat;
+use base qw(Exporter);
 
 use Readonly;
 
-require Exporter;
-our @ISA = qw(Exporter);
-our @EXPORT_OK = qw(
-	$S_IFMT  $S_IFSOCK $S_IFLNK $S_IFREG $S_IFBLK $S_IFDIR $S_IFCHR $S_IFIFO
-	$S_ISUID $S_ISGID $S_ISVTX $S_IRWXU $S_IRUSR $S_IWUSR $S_IXUSR 
-	$S_IRWXG $S_IRGRP $S_IWGRP $S_IXGRP $S_IRWXO $S_IROTH $S_IWOTH $S_IXOTH 
-	$STAT_DEV
-	$STAT_INO
-	$STAT_MODE
-	$STAT_NLINK
-	$STAT_UID
-	$STAT_GID
-	$STAT_RDEV
-	$STAT_SIZE
-	$STAT_ATIME
-	$STAT_MTIME
-	$STAT_CTIME
-	$STAT_BLKSIZE
-	$STAT_BLOCKS 
+my @mode_t = qw(
+$S_IFMT  $S_IFSOCK $S_IFLNK $S_IFREG $S_IFBLK $S_IFDIR $S_IFCHR $S_IFIFO $S_ISUID $S_ISGID $S_ISVTX
+$S_IRWXU $S_IRUSR $S_IWUSR $S_IXUSR
+$S_IRWXG $S_IRGRP $S_IWGRP $S_IXGRP 
+$S_IRWXO $S_IROTH $S_IWOTH $S_IXOTH 
 );
+
+my @stat = qw(
+$STAT_DEV $STAT_INO $STAT_MODE $STAT_NLINK $STAT_UID $STAT_GID $STAT_RDEV $STAT_SIZE
+$STAT_ATIME $STAT_MTIME $STAT_CTIME $STAT_BLKSIZE $STAT_BLOCKS
+);
+
+my @symbols = ();
+push @symbols, @mode_t, @stat;
+
+our @EXPORT_OK   = @symbols;
 our %EXPORT_TAGS = (
-	'mode_t' => [qw(
-		$S_IFMT  $S_IFSOCK $S_IFLNK $S_IFREG
-		$S_IFBLK $S_IFDIR $S_IFCHR $S_IFIFO
-		$S_ISUID $S_ISGID $S_ISVTX 
-		$S_IRWXU $S_IRUSR $S_IWUSR $S_IXUSR
-		$S_IRWXG $S_IRGRP $S_IWGRP $S_IXGRP 
-		$S_IRWXO $S_IROTH $S_IWOTH $S_IXOTH 
-	)],
-	'stat' => [qw(
-		$STAT_DEV
-		$STAT_INO
-		$STAT_MODE
-		$STAT_NLINK
-		$STAT_UID
-		$STAT_GID
-		$STAT_RDEV
-		$STAT_SIZE
-		$STAT_ATIME
-		$STAT_MTIME
-		$STAT_CTIME
-		$STAT_BLKSIZE
-		$STAT_BLOCKS 
-	)]
+	'mode_t' => \@mode_t,
+	'stat'   => \@stat,
 );
 
 Readonly $S_IFMT   => 00170000;

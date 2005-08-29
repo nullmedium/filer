@@ -1,9 +1,8 @@
 package Filer::Constants;
+use base qw(Exporter);
 
 use Readonly;
 
-require Exporter; 
-our @ISA = qw(Exporter);
 our @EXPORT = qw($LEFT $RIGHT $NORTON_COMMANDER_MODE $EXPLORER_MODE $TRUE $FALSE $UPDIR $TMPDIR);
 
 Readonly $LEFT  => 0;

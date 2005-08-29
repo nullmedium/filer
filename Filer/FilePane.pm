@@ -15,10 +15,8 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::FilePane;
+use base qw(Filer::FilePaneInterface);
 use Class::Std::Utils;
-
-require Exporter;
-our @ISA = qw(Exporter Filer::FilePaneInterface);
 
 use strict;
 use warnings;
@@ -30,8 +28,7 @@ use File::Basename;
 use Filer::Constants;
 use Filer::DND;
 
-# use Filer::ListStore;
-# use Filer::ListStoreConstants;
+use Filer::ListStore;
 use Filer::FilePaneInterface;
 
 # attributes:
@@ -79,19 +76,10 @@ sub new {
 	$navigation_box{ident $self} = new Gtk2::HBox(0,0);
 	$vbox{ident $self}->pack_start($navigation_box{ident $self}, 0, 1, 0);
 
- 	$treemodel{ident $self} = new Gtk2::ListStore(qw(Glib::Scalar Glib::Object Glib::String Glib::String Glib::String Glib::String Glib::String));
+# 	$treemodel{ident $self} = new Gtk2::ListStore(qw(Glib::Scalar Glib::Object Glib::String Glib::String Glib::String Glib::String Glib::String));
+	$treemodel{ident $self} = new Filer::ListStore; 
 
-# 	$treefilter{ident $self} = Gtk2::TreeModelFilter->new($treemodel{ident $self});
-# 	$treefilter{ident $self}->set_visible_func(sub {
-# 		my ($model,$iter) = @_;
-# 		my $show_hidden   = $filer{ident $self}->get_config->get_option('ShowHiddenFiles');
-# 		my $name          = $model->get($iter, $COL_NAME);
-# 		my $show          = ($name !~ /^\./ and !$show_hidden or $show_hidden);
-# 
-# 		return $show;
-# 	});
-
-	$treeview{ident $self} = new Gtk2::TreeView($treemodel{ident $self});
+	$treeview{ident $self} = Gtk2::TreeView->new($treemodel{ident $self});
 	$treeview{ident $self}->set_rules_hint(1);
 	$treeview{ident $self}->set_enable_search(1);
 	$treeview{ident $self}->signal_connect("grab-focus", sub { $self->treeview_grab_focus_cb(@_) });
@@ -116,52 +104,52 @@ sub new {
 	$vbox{ident $self}->pack_start($scrolled_window, 1, 1, 0);
 	$scrolled_window->add($treeview{ident $self});
 
-	my $sorts = {
-		$COL_NAME => sub {
-			my ($a,$b) = @_;
-			return ($a->get_basename cmp $b->get_basename);
-		},
-
-		$COL_SIZE => sub {
-			my ($a,$b) = @_;
-			return ($a->get_raw_size <=> $b->get_raw_size);
-		}, 
-	
-		$COL_TYPE => sub {
-			my ($a,$b) = @_;
-			return ($a->get_mimetype cmp $b->get_mimetype);
-		},
-
-		$COL_MODE => sub {
-			my ($a,$b) = @_;
-			return ($a->get_raw_mode <=> $b->get_raw_mode);
-		},
-
-		$COL_DATE => sub {
-			my ($a,$b) = @_;
-			return ($a->get_raw_mtime <=> $b->get_raw_mtime);
-		},
-	};
-
-	my $sort_func = sub {
-		my ($model,$a,$b) = @_;
-		my ($sort_column_id,$order) = $model->get_sort_column_id;
-
-		my $fi1 = $model->get_fileinfo($a);
-		my $fi2 = $model->get_fileinfo($b);
-
-		if (($fi1->is_dir) and !($fi2->is_dir)) {
-			return ($order eq "ascending") ? -1 : 1;
-
-		} elsif (!($fi1->is_dir) and ($fi2->is_dir)) {
-			return ($order eq "ascending") ? 1 : -1;
-		}
-		
-		# if $sort_column_id == $COL_NAME:
-		# $sorts->{$sort_column_id}->($fi1,$fi2) will _never_ return 0
-		# note: there are no two equal filenames...
-		return ($sorts->{$sort_column_id}->($fi1,$fi2) || $sorts->{$COL_NAME}->($fi1,$fi2));
-	};
+# 	my $sorts = {
+# 		$COL_NAME => sub {
+# 			my ($a,$b) = @_;
+# 			return ($a->get_basename cmp $b->get_basename);
+# 		},
+# 
+# 		$COL_SIZE => sub {
+# 			my ($a,$b) = @_;
+# 			return ($a->get_raw_size - $b->get_raw_size);
+# 		}, 
+# 	
+# 		$COL_TYPE => sub {
+# 			my ($a,$b) = @_;
+# 			return ($a->get_mimetype cmp $b->get_mimetype);
+# 		},
+# 
+# 		$COL_MODE => sub {
+# 			my ($a,$b) = @_;
+# 			return ($a->get_raw_mode - $b->get_raw_mode);
+# 		},
+# 
+# 		$COL_DATE => sub {
+# 			my ($a,$b) = @_;
+# 			return ($a->get_raw_mtime - $b->get_raw_mtime);
+# 		},
+# 	};
+# 
+# 	my $sort_func = sub {
+# 		my ($model,$a,$b) = @_;
+# 		my ($sort_column_id,$order) = $model->get_sort_column_id;
+# 
+# 		my $fi1 = $model->get_fileinfo($a);
+# 		my $fi2 = $model->get_fileinfo($b);
+# 
+# 		if (($fi1->is_dir) and !($fi2->is_dir)) {
+# 			return ($order eq "ascending") ? -1 : 1;
+# 
+# 		} elsif (!($fi1->is_dir) and ($fi2->is_dir)) {
+# 			return ($order eq "ascending") ? 1 : -1;
+# 		}
+# 		
+# 		# if $sort_column_id == $COL_NAME:
+# 		# $sorts->{$sort_column_id}->($fi1,$fi2) will _never_ return 0
+# 		# note: there are no two equal filenames...
+# 		return ($sorts->{$sort_column_id}->($fi1,$fi2) || $sorts->{$COL_NAME}->($fi1,$fi2));
+# 	};
 
 	# a column with a pixbuf renderer and a text renderer
 	my $col = new Gtk2::TreeViewColumn;
@@ -178,22 +166,22 @@ sub new {
 	$col->pack_start($cell1, 1);
 	$col->add_attribute($cell1, text => $COL_NAME);
 
-	$treemodel{ident $self}->set_sort_func($COL_NAME, $sort_func);
+#	$treemodel{ident $self}->set_sort_func($COL_NAME, $sort_func);
 	$treeview{ident $self}->append_column($col);
 
-	my @cols = qw(Fileinfo Icon Name Size Type Mode Date);
+	my @cols = qw(Fileinfo Icon Name Size Mode Type Date);
 
 	for (my $n = $COL_SIZE; $n <= $#cols; $n++) {
 		my $cell = new Gtk2::CellRendererText;
 		my $col = Gtk2::TreeViewColumn->new_with_attributes($cols[$n], $cell, text => $n);
 		$col->set_sort_column_id($n);
-		$col->set_sort_indicator(1);
+ 		$col->set_sort_indicator(1);
 		$col->set_sizing('GTK_TREE_VIEW_COLUMN_AUTOSIZE');
-		$treemodel{ident $self}->set_sort_func($n, $sort_func);
+#		$treemodel{ident $self}->set_sort_func($n, $sort_func);
 		$treeview{ident $self}->append_column($col);
 	}
 
-	$treemodel{ident $self}->set_sort_column_id($COL_NAME,'ascending');
+#	$treemodel{ident $self}->set_sort_column_id($COL_NAME,'ascending');
 
 	$status{ident $self} = new Gtk2::Label;
 	$status{ident $self}->set_alignment(0.0,0.5);
@@ -401,20 +389,18 @@ sub treeview_event_cb {
 	return 0;
 }
 
-sub set_model {
-	my ($self,$model) = @_;
-
-	$treemodel{ident $self}->clear;
-
-	$model->foreach(sub {
-		my ($model,$path,$iter) = @_;
-
-		my %cols = map { $_ => $model->get($iter, $_) } (0 .. 6);
-		$treemodel{ident $self}->insert_with_values(-1, %cols);
-
-		return 0;
-	});
-}
+# sub set_model {
+# 	my ($self,$model) = @_;
+# 
+# 	$model->foreach(sub {
+# 		my ($model,$path,$iter) = @_;
+# 
+# 		my %cols = map { $_ => $model->get($iter, $_) } (0 .. 6);
+# 		$treemodel{ident $self}->insert_with_values(-1, %cols);
+# 
+# 		return 0;
+# 	});
+# }
 
 sub get_pwd {
 	my ($self) = @_;
@@ -424,25 +410,6 @@ sub get_pwd {
 sub get_updir {
 	my ($self) = @_;
 	return abs_path(Filer::Tools->catpath($filepath{ident $self}, $UPDIR));
-}
-
-sub set_item {
-	my ($self,$fi) = @_;
-
-	my $basename = $fi->get_basename;
-	my $size     = $fi->get_size;
-	my $mode     = $fi->get_mode;
-	my $type     = $fi->get_mimetype;
-	my $time     = $fi->get_mtime;
-
-	$treemodel{ident $self}->set($self->get_iter,
-		$COL_FILEINFO, $fi,
-		$COL_NAME,     $basename,
-		$COL_SIZE,     $size,
-		$COL_MODE,     $mode,
-		$COL_TYPE,     $type,
-		$COL_DATE,     $time,
-	);
 }
 
 sub update_navigation_buttons {
@@ -561,15 +528,14 @@ sub open_path {
 	}
 
 	my $show_hidden  = $filer{ident $self}->get_config->get_option('ShowHiddenFiles');
-	my $mimeicons    = $filer{ident $self}->get_mimeicons;
-	my $default_icon = $mimeicons->{'application/default'};
 
 	opendir (my $dirh, $filepath) 
 		or return Filer::Dialog->msgbox_error("$filepath: $!");
 
 	my @dir_contents =
-		map { Filer::FileInfo->new(Filer::Tools->catpath($filepath, $_)); }
-		grep { (!/^\.{1,2}\Z(?!\n)/s) and (!/^\./ and !$show_hidden or $show_hidden) } 
+		map { Filer::FileInfo->new("$filepath/$_") }
+#		map { Filer::FileInfo->new(Filer::Tools->catpath($filepath, $_)); }
+		grep { (!/^\.{1,2}\Z(?!\n)/s) and ((!/^\./ and !$show_hidden) or $show_hidden) } 
 #		grep { (!/^\.{1,2}\Z(?!\n)/s) }
 		readdir($dirh);
 	closedir($dirh);
@@ -583,32 +549,25 @@ sub open_path {
 	$treemodel{ident $self}->clear;
 
 	foreach my $fi (@dir_contents) {
-		my $type     = $fi->get_mimetype;
-		my $icon     = $mimeicons->{$type};
-		my $basename = $fi->get_basename;
-		my $size     = $fi->get_size;
-		my $mode     = $fi->get_mode;
-		my $time     = $fi->get_mtime;
 
-# 		use Filer::Scalar;
-# 		tie my $basename, "Filer::Scalar";
+# 		my $type     = $fi->get_mimetype;
+# 		my $icon     = $mimeicons->{$type};
+# 		my $basename = $fi->get_basename;
+# 		my $size     = $fi->get_size;
+# 		my $mode     = $fi->get_mode;
+# 		my $time     = $fi->get_mtime;
 # 
-# 		$basename = \$fi->get_basename;
+# 		$treemodel{ident $self}->insert_with_values(-1,
+# 			$COL_FILEINFO, $fi,
+# 			$COL_ICON,     $icon || $default_icon,
+# 			$COL_NAME,     $basename,
+# 			$COL_SIZE,     $size,
+# 			$COL_MODE,     $mode,
+# 			$COL_TYPE,     $type,
+# 			$COL_DATE,     $time,
+# 		);
 
-		$treemodel{ident $self}->insert_with_values(-1,
-			$COL_FILEINFO, $fi,
-			$COL_ICON,     $icon || $default_icon,
-			$COL_NAME,     $basename,
-			$COL_SIZE,     $size,
-			$COL_MODE,     $mode,
-			$COL_TYPE,     $type,
-			$COL_DATE,     $time,
-		);
-
-#  		my $type     = $fi->get_mimetype;
-#  		my $icon     = $mimeicons->{$type};
-# 
-# 		$treemodel{ident $self}->append_fileinfo($icon, $fi);
+		$treemodel{ident $self}->append_fileinfo($fi);
 
 		if ($fi->is_dir) {
 			$dirs_count++;
@@ -622,6 +581,8 @@ sub open_path {
 	$path_combo{ident $self}->insert_text(0, $filepath{ident $self});
 	$path_combo{ident $self}->set_active(0);
 	$status{ident $self}->set_text("$dirs_count directories and $files_count files: " . Filer::Tools->calculate_size($total_size));
+
+	$treemodel{ident $self}->sort;
 
 	$t1 = [gettimeofday];
 	$elapsed = tv_interval($t0,$t1);

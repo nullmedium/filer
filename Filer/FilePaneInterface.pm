@@ -1,43 +1,40 @@
 package Filer::FilePaneInterface;
-
+use base qw(Exporter);
 use Class::Std::Utils;
+use Filer::ListStoreConstants;
 
-use Readonly;
+our @EXPORT = qw(
+$COL_FILEINFO
+$COL_ICON
+$COL_NAME
+$COL_SIZE
+$COL_MODE
+$COL_TYPE
+$COL_DATE
+%filer
+%filepath
+%side
+%vbox
+%treeview
+%treemodel
+%treeselection
+%treefilter
+%mouse_motion_select
+%mouse_motion_y_pos_old
+);
 
-my %filer;
-my %filepath;
-my %side;
-my %vbox;
-my %treeview;
-my %treemodel;
-my %treeselection;
-my %treefilter;
-my %mouse_motion_select;
-my %mouse_motion_y_pos_old;
+# attributes
 
-sub import {
-	my $class = caller();
-
-	*{ "$class\::COL_FILEINFO" }    = \0;
-	*{ "$class\::COL_ICON"     }    = \1;
-	*{ "$class\::COL_NAME"     }    = \2;
-	*{ "$class\::COL_SIZE"     }    = \3;
-	*{ "$class\::COL_MODE"     }    = \4;
-	*{ "$class\::COL_TYPE"     }    = \5;
-	*{ "$class\::COL_DATE"     }    = \6;
-
-	*{ "$class\::filer"         } = \%filer;
-	*{ "$class\::filepath"      } = \%filepath;
-	*{ "$class\::side"          } = \%side;
-	*{ "$class\::vbox"          } = \%vbox;
-	*{ "$class\::treeview"      } = \%treeview;
-	*{ "$class\::treemodel"     } = \%treemodel;
-	*{ "$class\::treeselection" } = \%treeselection;
-	*{ "$class\::treefilter"    } = \%treefilter;
-
-	*{ "$class\::mouse_motion_select"    } = \%mouse_motion_select;
-	*{ "$class\::mouse_motion_y_pos_old" } = \%mouse_motion_y_pos_old;
-}
+%filer                  = {};
+%filepath               = {};
+%side                   = {};
+%vbox                   = {};
+%treeview               = {};
+%treemodel              = {};
+%treeselection          = {};
+%treefilter             = {};
+%mouse_motion_select    = {};
+%mouse_motion_y_pos_old = {};
 
 # API methods shared between Filer::FilePane and Filer::FileTreePane
 
@@ -106,7 +103,7 @@ sub get_items {
 	my ($self) = @_;
 	my @fi     = @{$self->get_fileinfo};
 	my @items  = map { $_->get_path } @fi;
-	
+
 	return \@items;
 }
 
@@ -115,7 +112,7 @@ sub get_path_by_treepath {
 	my $iter      = $treemodel{ident $self}->get_iter($p);
 	my $fi        = $treemodel{ident $self}->get_fileinfo($iter);
 	my $path      = $fi->get_path;
-	
+
 	return $path;
 }
 
@@ -132,16 +129,22 @@ sub refresh {
 sub remove_selected {
 	my ($self) = @_;
 
-	foreach (@{$self->get_iters}) {
-		my $fi = $treemodel{ident $self}->get_fileinfo($_);
-		
+	while (1) {
+		my @sel  = $treeselection{ident $self}->get_selected_rows;
+		my $path = pop @sel;
+
+		last if (! defined $path);
+
+		my $iter = $treemodel{ident $self}->get_iter($path);
+		my $fi   = $treemodel{ident $self}->get_fileinfo($iter);
+
 		if (! $fi->exist) {
-			$treemodel{ident $self}->remove($_);
+			$treemodel{ident $self}->remove($iter);
 		}
 	}
 }
 
-# 
+#
 # Pollute the namespaces with handy util methods
 #
 
@@ -152,9 +155,9 @@ package Gtk2::TreeModel;
 sub get_fileinfo {
 	my ($self,$iter) = @_;
 #  	my ($package, $filename, $line) = caller;
-# 	
+#
 # 	print "get_fileinfo: called by: $package, $filename, $line\n";
-	
+
 	return $self->get($iter, 0);
 }
 
@@ -164,10 +167,10 @@ package Gtk2::TreeStore;
 
 sub insert_with_values {
 	my ($self,$parent_iter,$pos,%cols) = @_;
-	
+
 	my $iter = $self->insert($parent_iter, $pos);
 	$self->set($iter, %cols);
-		
+
 	return $iter;
 }
 

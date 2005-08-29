@@ -46,6 +46,8 @@ sub filepane_treeview_drag_data_get {
 			$data->set($data->target, 8, $d);
 		}
 	}
+
+	return 1;
 }
 
 sub filepane_treeview_drag_data_received {
