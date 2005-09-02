@@ -281,8 +281,8 @@ sub show_popup_menu {
 			foreach ($filer{ident $self}->get_mime->get_commands($type)) {
 				$item = new Gtk2::MenuItem(basename($_));
 				$item->signal_connect("activate", sub {
-					my @c = split /(!\\)\s+/, pop @_;
-					Filer::Tools->start_program(@c,$self->get_item);
+					my $command = pop;
+					Filer::Tools->start_program($command,$self->get_item);
 				}, $_);
 				$commands_menu->add($item);
 			}
@@ -388,19 +388,6 @@ sub treeview_event_cb {
 
 	return 0;
 }
-
-# sub set_model {
-# 	my ($self,$model) = @_;
-# 
-# 	$model->foreach(sub {
-# 		my ($model,$path,$iter) = @_;
-# 
-# 		my %cols = map { $_ => $model->get($iter, $_) } (0 .. 6);
-# 		$treemodel{ident $self}->insert_with_values(-1, %cols);
-# 
-# 		return 0;
-# 	});
-# }
 
 sub get_pwd {
 	my ($self) = @_;
@@ -528,61 +515,18 @@ sub open_path {
 	}
 
 	my $show_hidden  = $filer{ident $self}->get_config->get_option('ShowHiddenFiles');
-
-	opendir (my $dirh, $filepath) 
-		or return Filer::Dialog->msgbox_error("$filepath: $!");
-
-	my @dir_contents =
-		map { Filer::FileInfo->new("$filepath/$_") }
-#		map { Filer::FileInfo->new(Filer::Tools->catpath($filepath, $_)); }
-		grep { (!/^\.{1,2}\Z(?!\n)/s) and ((!/^\./ and !$show_hidden) or $show_hidden) } 
-#		grep { (!/^\.{1,2}\Z(?!\n)/s) }
-		readdir($dirh);
-	closedir($dirh);
+	my $vfs          = new Filer::VFS(path => $filepath, hidden => $show_hidden);
+	my $dir_contents = $vfs->get_all;
 
 	$filepath{ident $self} = $filepath;
 
-	my $total_size  = 0;
-	my $dirs_count  = 0;
-	my $files_count = 0;
-
-	$treemodel{ident $self}->clear;
-
-	foreach my $fi (@dir_contents) {
-
-# 		my $type     = $fi->get_mimetype;
-# 		my $icon     = $mimeicons->{$type};
-# 		my $basename = $fi->get_basename;
-# 		my $size     = $fi->get_size;
-# 		my $mode     = $fi->get_mode;
-# 		my $time     = $fi->get_mtime;
-# 
-# 		$treemodel{ident $self}->insert_with_values(-1,
-# 			$COL_FILEINFO, $fi,
-# 			$COL_ICON,     $icon || $default_icon,
-# 			$COL_NAME,     $basename,
-# 			$COL_SIZE,     $size,
-# 			$COL_MODE,     $mode,
-# 			$COL_TYPE,     $type,
-# 			$COL_DATE,     $time,
-# 		);
-
-		$treemodel{ident $self}->append_fileinfo($fi);
-
-		if ($fi->is_dir) {
-			$dirs_count++;
-		} else {
-			$files_count++;
-		}
-
-		$total_size += $fi->get_raw_size;
-	}
+	$treemodel{ident $self}->insert_fileinfo_list($dir_contents);
 
 	$path_combo{ident $self}->insert_text(0, $filepath{ident $self});
 	$path_combo{ident $self}->set_active(0);
-	$status{ident $self}->set_text("$dirs_count directories and $files_count files: " . Filer::Tools->calculate_size($total_size));
 
-	$treemodel{ident $self}->sort;
+	my $status = sprintf("%d directories and %d files: %s", $vfs->dirs_count, $vfs->files_count, $vfs->total_size);
+	$status{ident $self}->set_text($status);
 
 	$t1 = [gettimeofday];
 	$elapsed = tv_interval($t0,$t1);

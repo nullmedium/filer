@@ -1,4 +1,4 @@
-package Filer::ListStoreConstants;
+package Filer::FilePaneConstants;
 use base qw(Exporter);
 
 use Readonly;

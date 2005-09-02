@@ -36,6 +36,8 @@ use Stat::lsMode;
 
 use Filer::Constants;
 
+require Filer::VFS;
+
 require Filer::Config;
 require Filer::Bookmarks;
 require Filer::FileInfo;
@@ -623,16 +625,7 @@ sub refresh_active_pane {
 
 sub refresh_inactive_pane {
 	my ($self) = @_;
-
-# 	if ($active_pane{ident $self}->get_type eq $inactive_pane{ident $self}->get_type) {
-# 		if ($active_pane{ident $self}->get_pwd eq $inactive_pane{ident $self}->get_pwd) {
-# 			$inactive_pane{ident $self}->set_model($active_pane{ident $self}->get_model);
-# 		} else {
-# 			$inactive_pane{ident $self}->refresh;
-# 		}
-# 	} else {
-		$inactive_pane{ident $self}->refresh;
-# 	}
+	$inactive_pane{ident $self}->refresh;
 }
 
 sub go_home_cb {

@@ -1,7 +1,7 @@
 package Filer::FilePaneInterface;
 use base qw(Exporter);
 use Class::Std::Utils;
-use Filer::ListStoreConstants;
+use Filer::FilePaneConstants;
 
 our @EXPORT = qw(
 $COL_FILEINFO

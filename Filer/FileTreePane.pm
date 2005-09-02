@@ -306,7 +306,7 @@ sub refresh {
 
 		if ($treeview{ident $self}->row_expanded($path)) {
 			$treeview{ident $self}->collapse_row($path);
-			$treeview{ident $self}->expand_row($path, 0);
+			$treeview{ident $self}->expand_row($path, 2);
 		}
 	}
 }
@@ -316,17 +316,20 @@ sub CreateRootNodes {
 	my $mimeicons = $filer{ident $self}->get_mimeicons;
 	my $iter;
 
+	my $root = Filer::VFS->get_rootdir;
+	my $home = Filer::VFS->get_homedir;
+
 	$iter = $treemodel{ident $self}->insert_with_values(undef, -1,
-		$COL_FILEINFO, new Filer::FileInfo(File::Spec->rootdir),
-		$COL_ICON,     $mimeicons->{'inode/directory'},
+		$COL_FILEINFO, $root,
+		$COL_ICON,     $root->get_mimetype_icon,
 		$COL_NAME,     "Filesystem",
 	);
 
 	$treemodel{ident $self}->insert($iter, -1);
 
 	$iter = $treemodel{ident $self}->insert_with_values(undef, -1,
-		$COL_FILEINFO, new Filer::FileInfo($ENV{HOME}),
-		$COL_ICON,     $mimeicons->{'inode/directory'},
+		$COL_FILEINFO, $home,
+		$COL_ICON,     $home->get_mimetype_icon,
 		$COL_NAME,     "Home",
 	);
 
@@ -337,19 +340,11 @@ sub DirRead {
 	my ($self,$dir,$parent_iter) = @_;
 
 	my $show_hidden = $filer{ident $self}->get_config->get_option('ShowHiddenFiles');
-	my $mimeicons   = $filer{ident $self}->get_mimeicons;
 
-	opendir (my $dirh, $dir) 
-		or return Filer::Dialog->msgbox_error("$dir: $!");
+	my $vfs          = new Filer::VFS(path => $dir, hidden => $show_hidden);
+	my $dir_contents = $vfs->get_dirs;
 
-	my @dir_contents =
-		map { Filer::FileInfo->new("$dir/$_") }
-		grep { -d "$dir/$_" and (!/^\.{1,2}\Z(?!\n)/s) and (!/^\./ and !$show_hidden or $show_hidden) } 
-		sort readdir($dirh);
-
-	closedir($dirh);
-
-	foreach my $fi (@dir_contents) {
+	foreach my $fi (@{$dir_contents}) {
 		my $type     = $fi->get_mimetype;
 		my $icon     = $fi->get_mimetype_icon;
 		my $basename = $fi->get_basename;

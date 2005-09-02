@@ -157,7 +157,12 @@ sub set_icon {
 
 sub get_commands {
 	my ($self,$type) = @_;
-	return @{$mime{ident $self}->{$type}->[$COMMANDS]};
+
+	if (defined $mime{ident $self}->{$type}->[$COMMANDS]) {
+		return @{$mime{ident $self}->{$type}->[$COMMANDS]};
+	} else {
+		return ();
+	}
 }
 
 sub set_commands {

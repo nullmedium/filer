@@ -27,7 +27,7 @@ use File::Basename qw(basename);
 use File::MimeInfo::Magic qw(mimetype describe);
 use Stat::lsMode qw(format_mode);
 
-use Filer::Stat qw($S_IRUSR $S_IRGRP $S_IROTH $S_IFDIR $S_IXUSR :stat);
+use Filer::Stat qw(:stat);
 use Filer::Tools;
 
 # class attributes:
@@ -35,8 +35,9 @@ my $mimetype_icons;
 
 # attributes;
 my %filepath;
-my %stat;
+my %basename;
 my %mimetype;
+my %stat;
 
 memoize('new');
 
@@ -50,16 +51,6 @@ sub new {
 	my $self = bless anon_scalar(), $class;
 
 	$filepath{ident $self} = $filepath;
-	$mimetype{ident $self} = mimetype($filepath);
-	$stat{ident $self}     = [ stat($filepath) ];
-
- 	# get the mimetype thingy right:
-	# reported to File::MimeInfo maintainer and suggested 
-	# a fix for checking symlinks in inodetype()
-	
-#  	if (-l $filepath) {
-# 		$mimetype{ident $self} = 'inode/symlink';
-# 	}
 
 	return $self;
 }
@@ -69,22 +60,22 @@ sub rename {
 	
 	if (CORE::rename($filepath{ident $self}, $newname)) {
 		$filepath{ident $self} = $newname;
-		$mimetype{ident $self} = mimetype($filepath{ident $self});
-		$stat{ident $self}     = [ stat($filepath{ident $self}) ];
-
 		return 1;
 	} else {
 		return 0;
 	}
 }
 
-sub DESTROY {
-	my ($self) = @_;
-
-	delete $filepath{ident $self};
-	delete $stat{ident $self};
-	delete $mimetype{ident $self};
-}
+# sub DESTROY {
+# 	my ($self) = @_;
+# 
+# 	print "DESTROY: $self\n";
+# 
+# 	delete $filepath{ident $self};
+# 	delete $basename{ident $self};
+# 	delete $mimetype{ident $self};
+# 	delete $stat{ident $self};
+# }
 
 sub get_path {
 	my ($self) = @_;
@@ -93,53 +84,52 @@ sub get_path {
 
 sub get_basename {
 	my ($self) = @_;
-	return basename($self->get_path);
+	$basename{ident $self} ||= basename($filepath{ident $self});
 }
 
 sub get_mimetype {
 	my ($self) = @_;
-	return $mimetype{ident $self};
+	$mimetype{ident $self} ||= ($self->is_symlink) ? 'inode/symlink' : mimetype($filepath{ident $self});
 }
 
 sub get_mimetype_icon {
 	my ($self) = @_;
-	return ($mimetype_icons->{$self->get_mimetype} || $mimetype_icons->{'application/default'});
+	($mimetype_icons->{$self->get_mimetype} || $mimetype_icons->{'application/default'});
 }
 
 sub get_mimetype_description {
 	my ($self) = @_;
-	return describe($self->get_mimetype);
+	describe($self->get_mimetype);
 }
 
 sub get_stat {
 	my ($self) = @_;
-	return $stat{ident $self};
+	[ stat($filepath{ident $self}) ];
 }
 
 sub get_raw_size {
 	my ($self) = @_;
-#	return $stat{ident $self}->[$STAT_SIZE];
-	return -s $self->get_path;
+	return $self->get_stat->[$STAT_SIZE];
 }
 
 sub get_raw_mtime {
 	my ($self) = @_;
-	return $stat{ident $self}->[$STAT_MTIME];
+	return $self->get_stat->[$STAT_MTIME];
 }
 
 sub get_raw_uid {
 	my ($self) = @_;
-	return $stat{ident $self}->[$STAT_UID];
+	return $self->get_stat->[$STAT_UID];
 }
 
 sub get_raw_gid {
 	my ($self) = @_;
-	return $stat{ident $self}->[$STAT_GID];
+	return $self->get_stat->[$STAT_GID];
 }
 
 sub get_raw_mode {
 	my ($self) = @_;
-	return $stat{ident $self}->[$STAT_MODE];
+	return $self->get_stat->[$STAT_MODE];
 }
 
 sub get_size {
@@ -149,7 +139,7 @@ sub get_size {
 
 sub get_mtime {
 	my ($self) = @_;
-	my $time = localtime($self->get_raw_mtime);
+	my $time = localtime($self->get_raw_mtime || 0);
 	return $time;
 }
 
@@ -170,28 +160,54 @@ sub get_mode {
 
 sub exist {
 	my ($self) = @_;
-	return (-e $self->get_path);
+	return (-e $filepath{ident $self});
 }
 
 sub is_readable {
 	my ($self) = @_;
-	return (-R $self->get_path);
+	return (-R $filepath{ident $self});
+}
+
+sub is_symlink {
+	my ($self) = @_;
+	return (-l $filepath{ident $self});
 }
 
 sub is_dir {
 	my ($self) = @_;
-#	return ($self->get_raw_mode & $S_IFDIR);
-	return ($mimetype{ident $self} eq "inode/directory");
+	return (-d $filepath{ident $self});
 }
 
 sub is_executable {
 	my ($self) = @_;
-	return ($self->get_raw_mode & $S_IXUSR);
+	return (-x $filepath{ident $self});
 }
 
 sub is_hidden {
 	my ($self) = @_;
 	return ($self->get_basename =~ /^\./);
+}
+
+use Filer::FilePaneConstants;
+
+sub get_by_column {
+	my ($self,$column) = @_;
+
+	return  ($column == $COL_FILEINFO) ? $self                           :
+		($column == $COL_ICON)     ? $self->get_mimetype_icon        :
+		($column == $COL_NAME)     ? $self->get_basename             :
+		($column == $COL_SIZE)     ? $self->get_size                 :
+		($column == $COL_TYPE)     ? $self->get_mimetype_description :
+		($column == $COL_MODE)     ? $self->get_mode                 : $self->get_mtime;
+}
+	
+sub get_raw_by_column {
+	my ($self,$column) = @_;
+
+	return  ($column == $COL_NAME) ?  $self->get_basename : 
+		($column == $COL_SIZE) ? $self->get_raw_size  : 
+		($column == $COL_TYPE) ? $self->get_mimetype  : 
+		($column == $COL_MODE) ? $self->get_raw_mode  : $self->get_raw_mtime;
 }
 
 1;

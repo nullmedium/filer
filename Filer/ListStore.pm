@@ -8,7 +8,7 @@ use Gtk2;
 use Readonly;
 use List::Object;
 
-use Filer::ListStoreConstants;
+use Filer::FilePaneConstants;
 
 #
 #  here we register our new type and its interfaces with the type system.
@@ -131,10 +131,8 @@ sub GET_PATH {
 	die "no iter" unless $iter;
 
 	my $pos    = $iter->[1];
-	my $record = $iter->[2];
-	my $path   = Gtk2::TreePath->new;
+	my $path   = Gtk2::TreePath->new_from_indices($pos);
 
-	$path->append_index($pos);
 	return $path;
 }
 
@@ -155,31 +153,7 @@ sub GET_VALUE {
 
 	die "bad iter" if ($pos >= $self->{list}->count);
 
-#	return ${$record->[$column]};
-
-	my $fileinfo = $record;
-
-	if ($column == $COL_FILEINFO) {
-		return $fileinfo;
-
-	} elsif ($column == $COL_ICON) {
-		return $fileinfo->get_mimetype_icon;
-
-	} elsif ($column == $COL_NAME) {
-		return $fileinfo->get_basename;
-
-	} elsif ($column == $COL_SIZE) {
-		return $fileinfo->get_size;
-
-	} elsif ($column == $COL_TYPE) {
-		return $fileinfo->get_mimetype;
-
-	} elsif ($column == $COL_MODE) {
-		return $fileinfo->get_mode;
-
-	} elsif ($column == $COL_DATE) {
-		return $fileinfo->get_mtime;
-	}
+	return $record->get_by_column($column);
 }
 
 #
@@ -283,7 +257,7 @@ sub ITER_NTH_CHILD {
 
 	my $record = $self->{list}->get($n);
 
-	die "no record" unless $record;
+	die "no record" if (! $record);
 
 	return [ $self->{stamp}, $n, $record, undef ];
 }
@@ -317,37 +291,9 @@ sub ITER_PARENT {
 # Gtk2::TreeSortable methods:
 ################################################################################
 
-my $sorts = {
-	$COL_NAME => \&sort_by_name,
-	$COL_SIZE => \&sort_by_size,
-	$COL_TYPE => \&sort_by_type,
-	$COL_MODE => \&sort_by_mode,
-	$COL_DATE => \&sort_by_date,
-};
+sub sort_dirs_first {
+	my ($self,@array) = @_; 
 
-sub sort_by_name {
-	my ($a,$b) = @_;
-	return ($a->get_basename cmp $b->get_basename);
-}
-
-sub sort_by_size {
-	my ($a,$b) = @_;
-	return ($a->get_raw_size - $b->get_raw_size);
-} 
-
-sub sort_by_type {
-	my ($a,$b) = @_;
-	return ($a->get_mimetype cmp $b->get_mimetype);
-}
-
-sub sort_by_mode {
-	my ($a,$b) = @_;
-	return ($a->get_raw_mode - $b->get_raw_mode);
-}
-
-sub sort_by_date {
-	my ($a,$b) = @_;
-	return ($a->get_raw_mtime - $b->get_raw_mtime);
 }
 
 sub sort {
@@ -355,50 +301,42 @@ sub sort {
 
 	return if ($self->{list}->count == 0);
 
-	my $id    = $self->{sort_column_id};
-	my $order = $self->{sort_order};
+	my ($t0,$t1,$elapsed);
+ 	use Time::HiRes qw(gettimeofday tv_interval);
+ 	$t0 = [gettimeofday];
+	
+	my $col  = $self->{sort_column_id};
+	my $r    = ($self->{sort_order} eq "ascending") ? -1 : 1;
+	my $cond = (($self->{sort_column_id} == $COL_NAME)
+		 || ($self->{sort_column_id} == $COL_TYPE));
 
-	use sort '_mergesort';
-
-# 	my ($t0,$t1,$elapsed);
-#  	use Time::HiRes qw(gettimeofday tv_interval);
-#  	$t0 = [gettimeofday];
-
-	my @array     = $self->{list}->array;
-	my @order     = (0 .. $#array);
-
-	my @new_order = CORE::sort {
-		my $f1;
-		my $f2;
-
-		if ($order eq "ascending") {
-			$f1 = $array[$a];
-			$f2 = $array[$b];
-		} else {
-			$f1 = $array[$b];
-			$f2 = $array[$a];
+ 	my @array =
+ 		map  $_->[0] =>
+		sort {
+			(( $a->[3]) && (!$b->[3])) ?  $r : # dir, file
+			((!$a->[3]) && ( $b->[3])) ? -$r : # files, dir
+			(($cond)                           # use numeric or string compare?
+			? $a->[1] cmp $b->[1]
+			: $a->[1] <=> $b->[1]
+			) || $a->[2] cmp $b->[2]           # sub-sort on filename
 		}
+		map  [ $_, $_->get_raw_by_column($col), $_->get_basename, $_->is_dir ] =>
+		$self->{list}->array;
 
-		if (($f1->is_dir) and (!$f2->is_dir)) {
-			return ($order eq "ascending") ? -1 : 1;
+	@array = ($self->{sort_order} eq "ascending") ? @array : reverse @array;
 
-		} elsif ((!$f1->is_dir) and ($f2->is_dir)) {
-			return ($order eq "ascending") ? 1 : -1;
-		}
+	$t1 = [gettimeofday];
+	$elapsed = tv_interval($t0,$t1);
+	print "time to sort: $elapsed\n";
 
-		my $res = $sorts->{$id}->($f1,$f2) || $sorts->{$COL_NAME}->($f1,$f2);
-		return $res;
-	} @order;
+	$self->{list} = List::Object->new(
+				type        => 'Filer::FileInfo',
+				list        => \@array,
+				allow_undef => 0
+			);
 
-# 	$t1 = [gettimeofday];
-# 	$elapsed = tv_interval($t0,$t1);
-# 	print "time to sort: $elapsed\n";
-
-	$self->{list}->clear;
-	$self->{list}->push(@array[@new_order]);
-
-	my $path = Gtk2::TreePath->new;
-	$self->rows_reordered($path, undef, @new_order);
+# 	my $path = Gtk2::TreePath->new;
+# 	$self->rows_reordered($path, undef, @new_order);
 }
 
 sub GET_SORT_COLUMN_ID {
@@ -414,7 +352,6 @@ sub SET_SORT_COLUMN_ID {
 	$self->{sort_order}     = $order;
 
 	$self->sort;
-
 	$self->sort_column_changed;
 }
 
@@ -435,19 +372,10 @@ sub HAS_DEFAULT_SORT_FUNC {
 
 sub drag_data_received {
 #	my ($self,$dest,$selection_data) = @_;
-	print "@_\n";
-	
-	print "drag_data_received: $dest\n";
-
-	return FALSE;	
 }
 
 sub row_drop_possible {
 #	my ($self,$dest_path,$selection_data) = @_;
-	
-	print "@_\n";
-
-	return FALSE;		
 }
 
 ################################################################################
@@ -461,77 +389,22 @@ sub row_drop_possible {
 #      something.
 #
 
-sub set {
-	my ($self,$treeiter,$fi) = @_;
-
-	# Convert the Gtk2::TreeIter to a more useable array reference.
-	# Note that the model's stamp must be passed in as an argument.
-	# This is so we can avoid trying to extract the guts of an iter
-	# that we did not create in the first place.
-	my $iter = $treeiter->to_arrayref($self->{stamp});
-	
-	my $record = $iter->[2];
-	$record = $fi;
-
-	$self->row_changed($self->get_path($treeiter), $treeiter);
-}
-
-sub append_fileinfo {
-	my ($self,$fi) = @_;
-
-# 	my $icon     = $fi->get_mimetype_icon;
-# 	my $basename = $fi->get_basename;
-# 	my $size     = $fi->get_size;
-# 	my $mode     = $fi->get_mode;
-# 	my $type     = $fi->get_mimetype;
-# 	my $time     = $fi->get_mtime;
+# sub set {
+# 	my ($self,$treeiter,%vals) = @_;
 # 
-# 	my $newrecord = [];
-# 	$newrecord->[$COL_FILEINFO] = \$fi;
-# 	$newrecord->[$COL_ICON]     = \$icon;
-# 	$newrecord->[$COL_NAME]     = \$basename;
-# 	$newrecord->[$COL_SIZE]     = \$size;
-# 	$newrecord->[$COL_MODE]     = \$mode;
-# 	$newrecord->[$COL_TYPE]     = \$type;
-# 	$newrecord->[$COL_DATE]     = \$time;
-	
-# 	$self->{list}->add($newrecord);
-	$self->{list}->add($fi);
-
-	my $pos = ($self->{list}->count - 1);
-
-	# inform the tree view and other interested objects
-	# (e.g. tree row references) that we have inserted
-	# a new row, and where it was inserted
-
-	my $path = Gtk2::TreePath->new;
-	$path->append_index($pos);
-	$self->row_inserted($path, $self->get_iter($path));
-}
-
-# sub insert_with_values {
-# 	my ($self,$pos,%cols) = @_;
-# 
-# 	my $newrecord = [];
-# 
-# 	while (my ($col, $val) = each %vals) {
-# 		die if ($col > $self->{n_columns});
-# 		$newrecord->[$col] = $val;
-# 	}
-# 
-# 	$newrecord->[$COL_FILEINFO] = \$fi;
-# 	$newrecord->[$COL_ICON]     = \$icon;
-# 	$newrecord->[$COL_NAME]     = \$basename;
-# 	$newrecord->[$COL_SIZE]     = \$size;
-# 	$newrecord->[$COL_MODE]     = \$mode;
-# 	$newrecord->[$COL_TYPE]     = \$type;
-# 	$newrecord->[$COL_DATE]     = \$time;
+# 	# Convert the Gtk2::TreeIter to a more useable array reference.
+# 	# Note that the model's stamp must be passed in as an argument.
+# 	# This is so we can avoid trying to extract the guts of an iter
+# 	# that we did not create in the first place.
+# 	my $iter = $treeiter->to_arrayref($self->{stamp});
 # 	
-# 	if ($pos == -1) {
-# 		$self->{list}->add($newrecord);
-# 	} else {
-# 		$self->{list}->set($pos,$newrecord);
-# 	}
+# 	$self->row_changed($self->get_path($treeiter), $treeiter);
+# }
+
+# sub append_fileinfo {
+# 	my ($self,$fi) = @_;
+# 
+# 	$self->{list}->add($fi);
 # 
 # 	my $pos = ($self->{list}->count - 1);
 # 
@@ -539,25 +412,51 @@ sub append_fileinfo {
 # 	# (e.g. tree row references) that we have inserted
 # 	# a new row, and where it was inserted
 # 
-# 	my $path = Gtk2::TreePath->new;
-# 	$path->append_index($pos);
+# 	my $path = Gtk2::TreePath->new_from_indices($pos);
 # 	$self->row_inserted($path, $self->get_iter($path));
-# 
-# 	return $self->get_iter($path);
 # }
+
+sub clear {
+	my ($self) = @_;
+
+	my $last = ($self->{list}->count - 1);
+	undef $self->{list};
+	
+	for (my $i = $last; $i >= 0; $i--) {
+		my $path = Gtk2::TreePath->new_from_indices($i);
+		$self->row_deleted($path);
+	}
+	
+	return 1;
+}
+
+sub insert_fileinfo_list {
+	my ($self,$list) = @_;
+
+	$self->clear;
+
+	$self->{list} = List::Object->new(
+				type        => 'Filer::FileInfo',
+				list        => $list,
+				allow_undef => 0
+			);
+
+	for (my $i = 0; $i < $self->{list}->count; $i++) {
+		my $path = Gtk2::TreePath->new_from_indices($i);
+		my $iter = $self->get_iter($path);
+		$self->row_inserted($path,$iter);
+	}
+
+	$self->sort;
+}
 
 sub foreach {
 	my ($self,$func,$data) = @_;
 
-	my $last = ($self->{list}->count - 1);
-	
-	for (my $i = 0; $i <= $last; $i++) {
-		my $path = Gtk2::TreePath->new;
-		$path->append_index($i);
-
+	for (my $i = 0; $i < $self->{list}->count; $i++) {
+		my $path = Gtk2::TreePath->new_from_indices($i);
 		my $iter = $self->get_iter($path);
-
-		my $r = $func->($self,$path,$iter,$data);
+		my $r    = $func->($self,$path,$iter,$data);
 
 		last if ($r);
 	}
@@ -572,22 +471,6 @@ sub remove {
 
 	$self->{list}->remove($pos);
 	$self->row_deleted($path);
-}
-
-sub clear {
-	my ($self) = @_;
-
-	my $last = ($self->{list}->count - 1);
-	
-	for (my $i = $last; $i >= 0; $i--) {
-		my $path = Gtk2::TreePath->new;
-		$path->append_index($i);
-		$self->row_deleted($path);
-
-		$self->{list}->remove($i);
-	}
-	
-	return 1;
 }
 
 1;

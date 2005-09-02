@@ -61,16 +61,16 @@ sub create_tar_bz2_archive {
 sub create_archive {
 	my ($self,$type,$path,$files) = @_;
 	my $archive_file = "";
-	my @files = map { Filer::Tools->catpath(File::Spec->curdir, basename($_)) } @{$files};
-	my @commandline = ();
+	my @files        = map { Filer::Tools->catpath(File::Spec->curdir, basename($_)) } @{$files};
+	my @commandline  = ();
 
 	if ($type eq $TGZ) {
 		$archive_file = sprintf("%s.tar.gz", $files->[0]);
-		@commandline = ("tar", "-cz", "-C", $path, "-f", $archive_file, @files);
+		@commandline  = ("tar", "-cz", "-C", $path, "-f", $archive_file, @files);
 	
 	} elsif ($type eq $TBZ2) {
 		$archive_file = sprintf("%s.tar.bz2", $files->[0]);
-		@commandline = ("tar", "-cj", "-C", $path, "-f", $archive_file, @files);
+		@commandline  = ("tar", "-cj", "-C", $path, "-f", $archive_file, @files);
 	}
 
 	my $pid = Filer::Tools->start_program(@commandline);
@@ -85,13 +85,13 @@ sub extract_archive {
 	foreach my $f (@{$files}) {
 		my $type = mimetype($f);
 
-		my @cmdline =	($type eq $GZ)	 ? ("gzip", "-d", $f)				:
-				($type eq $BZ2)	 ? ("bzip2", "-d", $f)				:
-				($type eq $TAR)	 ? ("tar", "-x", "-C", $path, "-f", $f)		:
-				($type eq $TGZ)	 ? ("tar", "-xz", "-C", $path, "-f", $f)	:
-				($type eq $TBZ2) ? ("tar", "-xj", "-C", $path, "-f", $f)	:
-				($type eq $ZIP)	 ? ("unzip", $f, "-d", $path)			:
-				($type eq $RAR)	 ? ("unrar", "x", $f, $path)			: undef;
+		my @cmdline =	($type eq $TAR)	 ? ("tar", "-x", "-C", $path, "-f", $f)	 :
+				($type eq $TGZ)	 ? qw(tar -xz -C $path -f $f) :
+				($type eq $TBZ2) ? ("tar", "-xj", "-C", $path, "-f", $f) :
+				($type eq $GZ)	 ? ("gzip", "-d", $f)                    :
+				($type eq $BZ2)	 ? ("bzip2", "-d", $f)                   :
+				($type eq $ZIP)	 ? ("unzip", $f, "-d", $path)            :
+				($type eq $RAR)	 ? ("unrar", "x", $f, $path)             : undef;
 
 		if (@cmdline) {
 			my $pid = Filer::Tools->start_program(@cmdline);

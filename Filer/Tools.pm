@@ -102,7 +102,9 @@ sub suggest_filename_helper {
 
 	if ($filename =~ /(_\(copy\))$/) {
 		my $r = $1;
-		$r =~ s/\(/\\(/g;
+#		$r =~ s/\(/\\(/g;
+#		$r =~ s/\)/\\)/g;
+		$r =~ s/\(|\)/\\(|/g;
 		$r =~ s/\)/\\)/g;
 		$filename =~ s/$r//g;
 		$i = 2;
@@ -140,6 +142,8 @@ sub suggest_filename_helper {
 
 sub calculate_size {
 	my $size = pop;
+
+	$size ||= 0;
 
 	if ($size >= 1073741824) {
 		return sprintf("%.2f GB", $size/1073741824);
