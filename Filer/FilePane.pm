@@ -76,10 +76,11 @@ sub new {
 	$navigation_box{ident $self} = new Gtk2::HBox(0,0);
 	$vbox{ident $self}->pack_start($navigation_box{ident $self}, 0, 1, 0);
 
-# 	$treemodel{ident $self} = new Gtk2::ListStore(qw(Glib::Scalar Glib::Object Glib::String Glib::String Glib::String Glib::String Glib::String));
-	$treemodel{ident $self} = new Filer::ListStore; 
+	$treemodel{ident $self} = Filer::ListStore->new;
 
-	$treeview{ident $self} = Gtk2::TreeView->new($treemodel{ident $self});
+	print $treemodel{ident $self}, "\n";
+
+	$treeview{ident $self}  = Gtk2::TreeView->new($treemodel{ident $self});
 	$treeview{ident $self}->set_rules_hint(1);
 	$treeview{ident $self}->set_enable_search(1);
 	$treeview{ident $self}->signal_connect("grab-focus", sub { $self->treeview_grab_focus_cb(@_) });
@@ -104,53 +105,6 @@ sub new {
 	$vbox{ident $self}->pack_start($scrolled_window, 1, 1, 0);
 	$scrolled_window->add($treeview{ident $self});
 
-# 	my $sorts = {
-# 		$COL_NAME => sub {
-# 			my ($a,$b) = @_;
-# 			return ($a->get_basename cmp $b->get_basename);
-# 		},
-# 
-# 		$COL_SIZE => sub {
-# 			my ($a,$b) = @_;
-# 			return ($a->get_raw_size - $b->get_raw_size);
-# 		}, 
-# 	
-# 		$COL_TYPE => sub {
-# 			my ($a,$b) = @_;
-# 			return ($a->get_mimetype cmp $b->get_mimetype);
-# 		},
-# 
-# 		$COL_MODE => sub {
-# 			my ($a,$b) = @_;
-# 			return ($a->get_raw_mode - $b->get_raw_mode);
-# 		},
-# 
-# 		$COL_DATE => sub {
-# 			my ($a,$b) = @_;
-# 			return ($a->get_raw_mtime - $b->get_raw_mtime);
-# 		},
-# 	};
-# 
-# 	my $sort_func = sub {
-# 		my ($model,$a,$b) = @_;
-# 		my ($sort_column_id,$order) = $model->get_sort_column_id;
-# 
-# 		my $fi1 = $model->get_fileinfo($a);
-# 		my $fi2 = $model->get_fileinfo($b);
-# 
-# 		if (($fi1->is_dir) and !($fi2->is_dir)) {
-# 			return ($order eq "ascending") ? -1 : 1;
-# 
-# 		} elsif (!($fi1->is_dir) and ($fi2->is_dir)) {
-# 			return ($order eq "ascending") ? 1 : -1;
-# 		}
-# 		
-# 		# if $sort_column_id == $COL_NAME:
-# 		# $sorts->{$sort_column_id}->($fi1,$fi2) will _never_ return 0
-# 		# note: there are no two equal filenames...
-# 		return ($sorts->{$sort_column_id}->($fi1,$fi2) || $sorts->{$COL_NAME}->($fi1,$fi2));
-# 	};
-
 	# a column with a pixbuf renderer and a text renderer
 	my $col = new Gtk2::TreeViewColumn;
 	$col->set_sort_column_id($COL_NAME);
@@ -166,7 +120,6 @@ sub new {
 	$col->pack_start($cell1, 1);
 	$col->add_attribute($cell1, text => $COL_NAME);
 
-#	$treemodel{ident $self}->set_sort_func($COL_NAME, $sort_func);
 	$treeview{ident $self}->append_column($col);
 
 	my @cols = qw(Fileinfo Icon Name Size Mode Type Date);
@@ -177,11 +130,8 @@ sub new {
 		$col->set_sort_column_id($n);
  		$col->set_sort_indicator(1);
 		$col->set_sizing('GTK_TREE_VIEW_COLUMN_AUTOSIZE');
-#		$treemodel{ident $self}->set_sort_func($n, $sort_func);
 		$treeview{ident $self}->append_column($col);
 	}
-
-#	$treemodel{ident $self}->set_sort_column_id($COL_NAME,'ascending');
 
 	$status{ident $self} = new Gtk2::Label;
 	$status{ident $self}->set_alignment(0.0,0.5);
@@ -208,11 +158,6 @@ sub new {
 # 	delete $status{ident $self};
 # 	delete $mouse_motion_select{ident $self};
 # 	delete $mouse_motion_y_pos_old{ident $self};
-# }
-
-# sub refilter {
-# 	my ($self) = @_;
-# 	$treefilter{ident $self}->refilter;
 # }
 
 sub get_type {
@@ -515,12 +460,12 @@ sub open_path {
 	}
 
 	my $show_hidden  = $filer{ident $self}->get_config->get_option('ShowHiddenFiles');
-	my $vfs          = new Filer::VFS(path => $filepath, hidden => $show_hidden);
+	my $vfs          = Filer::VFS->new(path => $filepath, hidden => $show_hidden);
 	my $dir_contents = $vfs->get_all;
 
 	$filepath{ident $self} = $filepath;
-
-	$treemodel{ident $self}->insert_fileinfo_list($dir_contents);
+	
+	$treemodel{ident $self}->set_fileinfo_list($dir_contents);
 
 	$path_combo{ident $self}->insert_text(0, $filepath{ident $self});
 	$path_combo{ident $self}->set_active(0);
@@ -534,6 +479,16 @@ sub open_path {
 }
 
 sub select_dialog {
+	my ($self) = @_;
+	$self->_select_dialog($SELECT);
+}
+
+sub unselect_dialog {
+	my ($self) = @_;
+	$self->_select_dialog($UNSELECT);
+}
+
+sub _select_dialog {
 	my ($self,$type) = @_;
 
 	my $dialog = new Gtk2::Dialog("", undef, 'modal', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
@@ -571,11 +526,27 @@ sub select_dialog {
 		$str =~ s/\*/\.*/g;
 		$str =~ s/\?/\./g;
 
-		$treemodel{ident $self}->foreach(sub {
-			my ($model,$path,$iter) = @_;
-			my $item  = $model->get($iter, $COL_NAME);
+# 		$treemodel{ident $self}->foreach(sub {
+# 			my ($model,$path,$iter) = @_;
+# 			my $item  = $model->get($iter, $COL_NAME);
+# 
+# 			if ($item =~ /\A$str\Z/)  {
+# 				if ($type == $SELECT) {
+# 					$treeselection{ident $self}->select_iter($iter);
+# 				}
+# 
+# 				if ($type == $UNSELECT) {
+# 					$treeselection{ident $self}->unselect_iter($iter);
+# 				}
+# 			}
+# 		});
 
-			if ($item =~ /\A$str\Z/)  {
+		$treemodel{ident $self}->foreach(sub {
+			my ($model,$iter,$filename) = @_;
+			
+			print "$type\n";
+
+			if ($filename =~ /\A$str\Z/)  {
 				if ($type == $SELECT) {
 					$treeselection{ident $self}->select_iter($iter);
 				}

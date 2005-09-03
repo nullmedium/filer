@@ -61,7 +61,7 @@ sub wait_for_pid {
 
 sub catpath {
 	my ($self,$dir,@p) = @_;
-	return File::Spec->catfile(File::Spec->splitdir($dir), @p);
+	File::Spec->catfile(File::Spec->splitdir($dir), @p);
 }
 
 sub _mkdir {
@@ -102,9 +102,7 @@ sub suggest_filename_helper {
 
 	if ($filename =~ /(_\(copy\))$/) {
 		my $r = $1;
-#		$r =~ s/\(/\\(/g;
-#		$r =~ s/\)/\\)/g;
-		$r =~ s/\(|\)/\\(|/g;
+		$r =~ s/\(/\\(/g;
 		$r =~ s/\)/\\)/g;
 		$filename =~ s/$r//g;
 		$i = 2;
@@ -143,17 +141,10 @@ sub suggest_filename_helper {
 sub calculate_size {
 	my $size = pop;
 
-	$size ||= 0;
-
-	if ($size >= 1073741824) {
-		return sprintf("%.2f GB", $size/1073741824);
-	} elsif ($size >= 1048576) {
-		return sprintf("%.2f MB", $size/1048576);
-	} elsif ($size >= 1024) {
-		return sprintf("%.2f kB", $size/1024);
-	}
-
-	return $size;	
+	(! $size)             ? undef                                :
+	($size >= 1073741824) ? sprintf("%.2f GB", $size/1073741824) :
+	($size >= 1048576)    ? sprintf("%.2f MB", $size/1048576)    :
+	($size >= 1024)       ? sprintf("%.2f kB", $size/1024)       : $size;
 }
 
 # Utility functions for Gtk+ classes:

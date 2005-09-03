@@ -646,21 +646,21 @@ sub synchronize_cb {
 
 sub select_cb {
 	my ($self) = @_;
-	$self->select_dialog($Filer::FilePane::SELECT);
+
+	if ($active_pane{ident $self}->get_type eq "TREE") {
+		$pane{ident $self}->[$RIGHT]->select_dialog;
+	} else {
+		$active_pane{ident $self}->select_dialog;
+	}
 }
 
 sub unselect_cb {
 	my ($self) = @_;
-	$self->select_dialog($Filer::FilePane::UNSELECT);
-}
-
-sub select_dialog {
-	my ($self,$type) = @_;
 
 	if ($active_pane{ident $self}->get_type eq "TREE") {
-		$pane{ident $self}->[$RIGHT]->select_dialog($type);
+		$pane{ident $self}->[$RIGHT]->unselect_dialog;
 	} else {
-		$active_pane{ident $self}->select_dialog($type);
+		$active_pane{ident $self}->unselect_dialog;
 	}
 }
 

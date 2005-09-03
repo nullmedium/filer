@@ -5,8 +5,6 @@ package Filer::ListStore;
 
 use Glib qw(TRUE FALSE);
 use Gtk2;
-use Readonly;
-use List::Object;
 
 use Filer::FilePaneConstants;
 
@@ -35,11 +33,7 @@ sub INIT_INSTANCE {
 	my ($self) = @_;
 	$self->{n_columns}    = 7;
 	$self->{column_types} = [qw(Glib::Scalar Glib::Object Glib::String Glib::String Glib::String Glib::String Glib::String)];
-	$self->{list}         = List::Object->new(
-					type          => 'Filer::FileInfo',
-					list          => [],
-					allow_undef   => 0
-				);
+	$self->{list}         = [];
 
 	$self->{sort_column_id}  = $COL_NAME;
 	$self->{sort_order}      = "ascending";
@@ -58,7 +52,6 @@ sub FINALIZE_INSTANCE {
 	# free all records and free all memory used by the list
 	#warning IMPLEMENT
 }
-
 
 #
 # tells the rest of the world whether our tree model has any special
@@ -114,9 +107,9 @@ sub GET_ITER {
 
 	my $n      = $indices[0]; # the n-th top level row
 
-	return undef if ($n >= $self->{list}->count);
+	return undef if ($n >= @{$self->{list}});
 
-	my $record = $self->{list}->get($n);
+	my $record = $self->{list}->[$n];
 
 	return [ $self->{stamp}, $n, $record, undef ];
 }
@@ -151,8 +144,8 @@ sub GET_VALUE {
 	my $pos    = $iter->[1];
 	my $record = $iter->[2];
 
-	die "bad iter" if ($pos >= $self->{list}->count);
-
+	die "bad iter" if ($pos >= @{$self->{list}});
+	
 	return $record->get_by_column($column);
 }
 
@@ -170,13 +163,14 @@ sub ITER_NEXT {
 	my $record = $iter->[2];
 
 	# Is this the last record in the list?
-	return undef if ($pos >= $self->{list}->count);
+	return undef if ($pos >= @{$self->{list}});
 
-	my $nextpos    = $pos + 1;
+	my $nextpos = $pos + 1;
 
-	return undef if ($nextpos >= $self->{list}->count);
+	return undef if ($nextpos >= @{$self->{list}});
+	return undef if (! defined $self->{list}->[$nextpos]);
 
-	my $nextrecord = $self->{list}->get($nextpos);
+	my $nextrecord = $self->{list}->[$nextpos];
 
 	return undef unless $nextrecord;
 
@@ -202,10 +196,10 @@ sub ITER_CHILDREN {
 	# parent == NULL is a special case; we need to return the first top-level row
 
  	# No rows => no first row
-	return undef if ($self->{list}->count == 0);
+	return undef if (@{$self->{list}} == 0);
 
 	# Set iter to first item in list
-	return [ $self->{stamp}, 0, $self->{list}->first ];
+	return [ $self->{stamp}, 0, $self->{list}->[0] ];
 }
 
 #
@@ -232,7 +226,7 @@ sub ITER_N_CHILDREN {
 
 	# special case: if iter == NULL, return number of top-level rows
 	if (! $iter) {
-		return $self->{list}->count;
+		return @{$self->{list}};
 	}
 
 	return 0; # otherwise, this is easy again for a list
@@ -253,9 +247,9 @@ sub ITER_NTH_CHILD {
 	return undef if $parent;
 
 	# special case: if parent == NULL, set iter to n-th top-level row
-	return undef if ($n >= $self->{list}->count);
+	return undef if ($n >= @{$self->{list}});
 
-	my $record = $self->{list}->get($n);
+	my $record = $self->{list}->[$n];
 
 	die "no record" if (! $record);
 
@@ -291,15 +285,8 @@ sub ITER_PARENT {
 # Gtk2::TreeSortable methods:
 ################################################################################
 
-sub sort_dirs_first {
-	my ($self,@array) = @_; 
-
-}
-
 sub sort {
-	my ($self) = @_; 
-
-	return if ($self->{list}->count == 0);
+	my ($self,$list) = @_; 
 
 	my ($t0,$t1,$elapsed);
  	use Time::HiRes qw(gettimeofday tv_interval);
@@ -321,7 +308,7 @@ sub sort {
 			) || $a->[2] cmp $b->[2]           # sub-sort on filename
 		}
 		map  [ $_, $_->get_raw_by_column($col), $_->get_basename, $_->is_dir ] =>
-		$self->{list}->array;
+		@{$list};
 
 	@array = ($self->{sort_order} eq "ascending") ? @array : reverse @array;
 
@@ -329,11 +316,7 @@ sub sort {
 	$elapsed = tv_interval($t0,$t1);
 	print "time to sort: $elapsed\n";
 
-	$self->{list} = List::Object->new(
-				type        => 'Filer::FileInfo',
-				list        => \@array,
-				allow_undef => 0
-			);
+	$self->{list} = \@array;
 
 # 	my $path = Gtk2::TreePath->new;
 # 	$self->rows_reordered($path, undef, @new_order);
@@ -347,11 +330,10 @@ sub GET_SORT_COLUMN_ID {
 sub SET_SORT_COLUMN_ID {
 	my ($self,$id,$order) = @_;
 
-	print "SET_SORT_COLUMN_ID: $id: $order\n";
 	$self->{sort_column_id} = $id;
 	$self->{sort_order}     = $order;
 
-	$self->sort;
+	$self->sort($self->{list});
 	$self->sort_column_changed;
 }
 
@@ -369,6 +351,10 @@ sub HAS_DEFAULT_SORT_FUNC {
 	my ($list) = @_;
 	return FALSE;
 }
+
+################################################################################
+# Gtk2::TreeDragDest
+################################################################################
 
 sub drag_data_received {
 #	my ($self,$dest,$selection_data) = @_;
@@ -406,7 +392,7 @@ sub row_drop_possible {
 # 
 # 	$self->{list}->add($fi);
 # 
-# 	my $pos = ($self->{list}->count - 1);
+# 	my $pos = (@{$self->{list}} - 1);
 # 
 # 	# inform the tree view and other interested objects
 # 	# (e.g. tree row references) that we have inserted
@@ -419,8 +405,8 @@ sub row_drop_possible {
 sub clear {
 	my ($self) = @_;
 
-	my $last = ($self->{list}->count - 1);
-	undef $self->{list};
+	my $last = (@{$self->{list}} - 1);
+	$self->{list} = [];
 	
 	for (my $i = $last; $i >= 0; $i--) {
 		my $path = Gtk2::TreePath->new_from_indices($i);
@@ -430,38 +416,43 @@ sub clear {
 	return 1;
 }
 
-sub insert_fileinfo_list {
+sub set_fileinfo_list {
 	my ($self,$list) = @_;
 
 	$self->clear;
+	$self->sort($list);
 
-	$self->{list} = List::Object->new(
-				type        => 'Filer::FileInfo',
-				list        => $list,
-				allow_undef => 0
-			);
-
-	for (my $i = 0; $i < $self->{list}->count; $i++) {
+	for (my $i = 0; $i < @{$self->{list}}; $i++) {
 		my $path = Gtk2::TreePath->new_from_indices($i);
 		my $iter = $self->get_iter($path);
 		$self->row_inserted($path,$iter);
 	}
-
-	$self->sort;
 }
+
+# sub foreach {
+# 	my ($self,$func,$data) = @_;
+# 
+# 	for (my $i = 0; $i < @{$self->{list}}; $i++) {
+# 		my $path = Gtk2::TreePath->new_from_indices($i);
+# 		my $iter = $self->get_iter($path);
+# 		my $r    = $func->($self,$path,$iter,$data);
+# 
+# 		last if ($r);
+# 	}
+# }
 
 sub foreach {
 	my ($self,$func,$data) = @_;
 
-	for (my $i = 0; $i < $self->{list}->count; $i++) {
+	for (my $i = 0; $i < @{$self->{list}}; $i++) {
 		my $path = Gtk2::TreePath->new_from_indices($i);
 		my $iter = $self->get_iter($path);
-		my $r    = $func->($self,$path,$iter,$data);
+		my $name = $self->get($iter, $COL_NAME);
+		my $r    = $func->($self,$iter,$name);
 
 		last if ($r);
 	}
 }
-
 sub remove {
 	my ($self,$iter) = @_;
 
@@ -469,7 +460,7 @@ sub remove {
 	my @indices = $path->get_indices;
 	my $pos     = $indices[0];
 
-	$self->{list}->remove($pos);
+ 	splice @{$self->{list}}, $pos, 1;
 	$self->row_deleted($path);
 }
 

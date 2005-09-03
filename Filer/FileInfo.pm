@@ -39,7 +39,7 @@ my %basename;
 my %mimetype;
 my %stat;
 
-memoize('new');
+# memoize('new');
 
 sub set_mimetype_icons {
 	my ($self,$icons) = @_;
@@ -66,16 +66,14 @@ sub rename {
 	}
 }
 
-# sub DESTROY {
-# 	my ($self) = @_;
-# 
-# 	print "DESTROY: $self\n";
-# 
-# 	delete $filepath{ident $self};
-# 	delete $basename{ident $self};
-# 	delete $mimetype{ident $self};
-# 	delete $stat{ident $self};
-# }
+sub DESTROY {
+	my ($self) = @_;
+
+	delete $filepath{ident $self};
+	delete $basename{ident $self};
+	delete $mimetype{ident $self};
+	delete $stat{ident $self};
+}
 
 sub get_path {
 	my ($self) = @_;
@@ -193,21 +191,21 @@ use Filer::FilePaneConstants;
 sub get_by_column {
 	my ($self,$column) = @_;
 
-	return  ($column == $COL_FILEINFO) ? $self                           :
-		($column == $COL_ICON)     ? $self->get_mimetype_icon        :
-		($column == $COL_NAME)     ? $self->get_basename             :
-		($column == $COL_SIZE)     ? $self->get_size                 :
-		($column == $COL_TYPE)     ? $self->get_mimetype_description :
-		($column == $COL_MODE)     ? $self->get_mode                 : $self->get_mtime;
+	($column == $COL_FILEINFO) ? $self                           :
+	($column == $COL_ICON)     ? $self->get_mimetype_icon        :
+	($column == $COL_NAME)     ? $self->get_basename             :
+	($column == $COL_SIZE)     ? $self->get_size                 :
+	($column == $COL_TYPE)     ? $self->get_mimetype_description :
+	($column == $COL_MODE)     ? $self->get_mode                 : $self->get_mtime;
 }
 	
 sub get_raw_by_column {
 	my ($self,$column) = @_;
 
-	return  ($column == $COL_NAME) ?  $self->get_basename : 
-		($column == $COL_SIZE) ? $self->get_raw_size  : 
-		($column == $COL_TYPE) ? $self->get_mimetype  : 
-		($column == $COL_MODE) ? $self->get_raw_mode  : $self->get_raw_mtime;
+	($column == $COL_NAME) ? $self->get_basename :  
+	($column == $COL_SIZE) ? $self->get_raw_size : 
+	($column == $COL_TYPE) ? $self->get_mimetype : 
+	($column == $COL_MODE) ? $self->get_raw_mode : $self->get_raw_mtime;
 }
 
 1;
