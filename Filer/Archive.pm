@@ -61,20 +61,19 @@ sub create_tar_bz2_archive {
 sub create_archive {
 	my ($self,$type,$path,$files) = @_;
 	my $archive_file = "";
-	my @files        = map { Filer::Tools->catpath(File::Spec->curdir, basename($_)) } @{$files};
-	my @commandline  = ();
+	my $files_to_add = join " ", map { Filer::Tools->catpath(File::Spec->curdir, basename($_)) } @{$files};
+	my $commandline;
 
 	if ($type eq $TGZ) {
 		$archive_file = sprintf("%s.tar.gz", $files->[0]);
-		@commandline  = ("tar", "-cz", "-C", $path, "-f", $archive_file, @files);
+		$commandline  = "tar -cz -C $path -f $archive_file $files_to_add";
 	
 	} elsif ($type eq $TBZ2) {
 		$archive_file = sprintf("%s.tar.bz2", $files->[0]);
-		@commandline  = ("tar", "-cj", "-C", $path, "-f", $archive_file, @files);
+		$commandline  = "tar -cj -C $path -f $archive_file $files_to_add";
 	}
 
-	my $pid = Filer::Tools->start_program(@commandline);
-	Filer::Tools->wait_for_pid($pid);
+	Filer::Tools->exec(command => $commandline, wait => 1);
 
 	return $path;
 }
@@ -85,17 +84,16 @@ sub extract_archive {
 	foreach my $f (@{$files}) {
 		my $type = mimetype($f);
 
-		my @cmdline =	($type eq $TAR)	 ? ("tar", "-x", "-C", $path, "-f", $f)	 :
-				($type eq $TGZ)	 ? qw(tar -xz -C $path -f $f) :
-				($type eq $TBZ2) ? ("tar", "-xj", "-C", $path, "-f", $f) :
-				($type eq $GZ)	 ? ("gzip", "-d", $f)                    :
-				($type eq $BZ2)	 ? ("bzip2", "-d", $f)                   :
-				($type eq $ZIP)	 ? ("unzip", $f, "-d", $path)            :
-				($type eq $RAR)	 ? ("unrar", "x", $f, $path)             : undef;
+		my $cmdline =	($type eq $TAR)	 ? "tar -x -C $path -f $f"  :
+				($type eq $TGZ)	 ? "tar -xz -C $path -f $f" :
+				($type eq $TBZ2) ? "tar -xj -C $path -f $f" :
+				($type eq $GZ)	 ? "gzip -d $f"             :
+				($type eq $BZ2)	 ? "bzip2 -d $f"            :
+				($type eq $ZIP)	 ? "unzip $f -d $path"      :
+				($type eq $RAR)	 ? "unrar x $f $path"       : undef;
 
-		if (@cmdline) {
-			my $pid = Filer::Tools->start_program(@cmdline);
-			Filer::Tools->wait_for_pid($pid);
+		if ($cmdline) {
+			Filer::Tools->exec(command => $cmdline, wait => 1);
 		}
 	}
 

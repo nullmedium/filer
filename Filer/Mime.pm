@@ -182,8 +182,8 @@ sub set_default_command {
 
 sub set_icon_dialog {
 	my ($self,$type) = @_;
-	my $icon         = $self->get_icon($type);
-	my $pixbuf       = Gtk2::Gdk::Pixbuf->new_from_file($icon);
+	my $icon   = $self->get_icon($type);
+	my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($icon);
 
 	my $dialog = new Gtk2::Dialog(
 		"Set Icon",
@@ -245,18 +245,17 @@ sub set_icon_dialog {
 	$icon_browse_button->set_preview_widget($preview);
 	$icon_browse_button->set_preview_widget_active(1);
 	$icon_browse_button->signal_connect("update-preview", sub {
-		my ($dialog)  = @_;
-		my $filename  = $dialog->get_preview_filename;
+		my ($dialog) = @_;
+		my $filename = $dialog->get_preview_filename;
 
-		return if (! defined $filename or -d $filename);
+		if (-f $filename or ! -d $filename) {
+			my $preview = $dialog->get_preview_widget;
+			my $pixbuf  = Gtk2::Gdk::Pixbuf->new_from_file($filename);
 
-		my $preview   = $dialog->get_preview_widget;
-		my $pixbuf    = Gtk2::Gdk::Pixbuf->new_from_file($filename);
-
-		$icon_image->set_from_pixbuf($pixbuf->intelligent_scale(50));
-		$preview->set_from_pixbuf($pixbuf->intelligent_scale(100));
+			$icon_image->set_from_pixbuf($pixbuf->intelligent_scale(50));
+			$preview->set_from_pixbuf($pixbuf->intelligent_scale(100));
+		}
 	});
-
  	$table->attach($icon_browse_button, 2, 3, 1, 2, [ "expand","fill" ], [], 0, 0);
 
 	$dialog->show_all;
@@ -344,7 +343,7 @@ sub run_dialog {
 	my $run_terminal_checkbutton = new Gtk2::CheckButton("Run in Terminal");
 	$dialog->vbox->pack_start($run_terminal_checkbutton, 0,1,0);
 
-	my $button = Filer::Dialog::mixed_button_new('gtk-ok',"_Run");
+	my $button = Filer::Dialog->mixed_button_new('gtk-ok',"_Run");
 	$dialog->add_action_widget($button, 'ok');
 	
 	$dialog->show_all;
@@ -358,13 +357,10 @@ sub run_dialog {
 		}
 
 		if (! $run_terminal_checkbutton->get_active) {
-			my @c = split /\s+/, $command;
-			Filer::Tools->start_program(@c, $file);
+			Filer::Tools->exec(command => "$command $file", wait => 0);
 		} else {
 			my $term = $filer{ident $self}->get_config->get_option("Terminal");
-			my @t = split /\s+/, $term;
-			my @c = split /\s+/, $command;
-			Filer::Tools->start_program(@t, "-x", @c, $file);
+			Filer::Tools->exec(command => "$term -x $command $file", wait => 0);
 		}
 	}
 

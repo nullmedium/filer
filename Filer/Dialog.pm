@@ -212,7 +212,7 @@ sub source_target_dialog {
 }
 
 sub mixed_button_new {
-	my ($stock,$text) = @_;
+	my ($self,$stock,$text) = @_;
 
 	my $button = new Gtk2::Button;
 	my $align = new Gtk2::Alignment(0.5, 0.5, 0.0, 0.0);

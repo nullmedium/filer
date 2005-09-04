@@ -82,27 +82,27 @@ sub get_path {
 
 sub get_basename {
 	my ($self) = @_;
-	$basename{ident $self} ||= basename($filepath{ident $self});
+	return $basename{ident $self} ||= basename($filepath{ident $self});
 }
 
 sub get_mimetype {
 	my ($self) = @_;
-	$mimetype{ident $self} ||= ($self->is_symlink) ? 'inode/symlink' : mimetype($filepath{ident $self});
+	return $mimetype{ident $self} ||= ($self->is_symlink) ? 'inode/symlink' : mimetype($filepath{ident $self});
 }
 
 sub get_mimetype_icon {
 	my ($self) = @_;
-	($mimetype_icons->{$self->get_mimetype} || $mimetype_icons->{'application/default'});
+	return ($mimetype_icons->{$self->get_mimetype} || $mimetype_icons->{'application/default'});
 }
 
 sub get_mimetype_description {
 	my ($self) = @_;
-	describe($self->get_mimetype);
+	return describe($self->get_mimetype);
 }
 
 sub get_stat {
 	my ($self) = @_;
-	[ stat($filepath{ident $self}) ];
+	return [ stat($filepath{ident $self}) ];
 }
 
 sub get_raw_size {

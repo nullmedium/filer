@@ -313,7 +313,6 @@ sub refresh {
 
 sub CreateRootNodes {
 	my ($self)    = @_;
-	my $mimeicons = $filer{ident $self}->get_mimeicons;
 	my $iter;
 
 	my $root = Filer::VFS->get_rootdir;

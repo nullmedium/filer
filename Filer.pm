@@ -61,7 +61,6 @@ require Filer::Search;
 my %VERSION;
 my %config;
 my %mime;
-my %mimeicons;
 my %widgets;
 my %pane;
 my %active_pane;
@@ -116,23 +115,15 @@ sub init_mimeicons {
 		my $icon   = $mime{ident $self}->get_icon($_);
 		my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($icon);
 
-		$_ => $pixbuf->intelligent_scale(22);
-
+		$_ => $pixbuf;
 	} $mime{ident $self}->get_mimetypes;
 
-	$mimeicons{ident $self} = \%icons;	
-
-	Filer::FileInfo->set_mimetype_icons($mimeicons{ident $self});
+	Filer::FileInfo->set_mimetype_icons(\%icons);
 }
 
 sub get_mime {
 	my ($self) = @_;
 	return $mime{ident $self};
-}
-
-sub get_mimeicons {
-	my ($self) = @_;
-	return $mimeicons{ident $self};
 }
 
 sub init_main_window {
@@ -216,10 +207,6 @@ sub init_main_window {
 		tooltip => "Delete files",
 		accelerator => "F8",
 		callback => sub { $self->delete_cb },
-	},{
-		name => "link-action",
-		label => "Link",
-		callback => sub { $self->link_cb },
 	},{
 		name => "symlink-action",
 		label => "Symlink",
@@ -437,15 +424,15 @@ sub get_pane {
 	return $pane{ident $self}->[$side];
 }
 
-sub get_left_pane {
-	my ($self) = @_;
-	return $pane{ident $self}->[$LEFT];
-}
-
-sub get_right_pane {
-	my ($self) = @_;
-	return $pane{ident $self}->[$RIGHT];
-}
+# sub get_left_pane {
+# 	my ($self) = @_;
+# 	return $pane{ident $self}->[$LEFT];
+# }
+# 
+# sub get_right_pane {
+# 	my ($self) = @_;
+# 	return $pane{ident $self}->[$RIGHT];
+# }
 
 sub window_event_cb {
 	my ($self,$w,$e,$d) = @_;
@@ -470,31 +457,23 @@ sub quit_cb {
 
 sub about_cb {
 	my ($self) = @_;
+	my $license;
+
+	$license = eval {
+	#	use Xfce4;
+		Xfce4::LICENSE_GPL();
+	};
+
+	if ($@) {
+		$license = join "", <DATA>;
+		$license =~ s/__VERSION__/$VERSION{ident $self}/g;
+	}
 
 	my $dialog = new Gtk2::AboutDialog;
 	$dialog->set_name("Filer");
 	$dialog->set_version($VERSION{ident $self});
 	$dialog->set_copyright("Copyright © 2004-2005 Jens Luedicke");
-	$dialog->set_license(
-<<EOF
-Filer $VERSION{ident $self}
-Copyright (C) 2004-2005 Jens Luedicke <jens.luedicke\@gmail.com>
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-EOF
-	);
+	$dialog->set_license($license);
 	$dialog->set_website("http://perldude.de/");
 	$dialog->set_website_label("http://perldude.de/");
 	$dialog->set_authors(	"Jens Luedicke <jens.luedicke\@gmail.com>",
@@ -700,16 +679,16 @@ sub cut_cb {
 	my ($self) = @_;
 	return if ($active_pane{ident $self}->count_items == 0);
 
- 	my @files =  (@{$active_pane{ident $self}->get_items}, "cut");
- 	$self->set_clipboard_contents(join "\n\r", @files);
+	my $str = join "\n\r", (@{$active_pane{ident $self}->get_items}, "cut");
+	$self->set_clipboard_contents($str);
 }
 
 sub copy_cb {
 	my ($self) = @_;
 	return if ($active_pane{ident $self}->count_items == 0);
 
-	my @files =  (@{$active_pane{ident $self}->get_items}, "copy");
-	$self->set_clipboard_contents(join "\n\r", @files);
+	my $str = join "\n\r", (@{$active_pane{ident $self}->get_items}, "copy");
+	$self->set_clipboard_contents($str);
 }
 
 sub rename_cb {
@@ -820,50 +799,11 @@ sub mkdir_cb {
 	if ($dialog->run eq 'ok') {
 		my $dir = Filer::Tools->catpath($active_pane{ident $self}->get_pwd, $entry->get_text);
 
-		if (Filer::Tools->_mkdir($dir)) {
+		if (mkdir($dir)) {
 			$active_pane{ident $self}->refresh;
 			$self->refresh_inactive_pane;
 		} else {
 			Filer::Dialog->msgbox_error("Make directory $dir failed: $!");
-		}
-	}
-
-	$dialog->destroy;
-}
-
-sub link_cb {
-	my ($self) = @_;
-	return if ($active_pane{ident $self}->count_items == 0);
-
-	my ($dialog,$link_label,$target_label,$link_entry,$target_entry) = Filer::Dialog->source_target_dialog;
-
-	$dialog->set_title("Link");
-	$dialog->set_size_request(450,150);
-	$dialog->set_default_response('ok');
-
-	$link_label->set_markup("<b>Link: </b>");
-	$link_entry->set_text(Filer::Tools->catpath($inactive_pane{ident $self}->get_pwd, $active_pane{ident $self}->get_fileinfo->[0]->get_basename));
-	$link_entry->set_activates_default(1);
-
-	$target_label->set_markup("<b>linked object: </b>");
-	$target_entry->set_text($active_pane{ident $self}->get_item);
-	$target_entry->set_activates_default(1);
-
-	$dialog->show_all;
-
-	if ($dialog->run eq 'ok') {
-		my $link = $link_entry->get_text;
-		my $target = $target_entry->get_text;
-
-		if (dirname($link) eq File::Spec->curdir) {
-			$link = Filer::Tools->catpath($active_pane{ident $self}->get_pwd, $link);
-		}
-
-		if (link($target, $link)) {
-			$active_pane{ident $self}->refresh;
-			$self->refresh_inactive_pane;
-		} else {
-			Filer::Dialog->msgbox_error("Couldn't create link! $!");
 		}
 	}
 
@@ -911,7 +851,11 @@ sub symlink_cb {
 
 sub get_clipboard_contents {
 	my ($self) = @_;
-	my $clipboard = Gtk2::Clipboard->get_for_display($widgets{ident $self}->{main_window}->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
+
+	my $display        = $widgets{ident $self}->{main_window}->get_display;
+	my $clipboard_atom = Gtk2::Gdk::Atom->new('CLIPBOARD');
+	my $clipboard      = Gtk2::Clipboard->get_for_display($display, $clipboard_atom);
+
 	my $contents = "";
 
 	$clipboard->request_text(sub {
@@ -926,8 +870,42 @@ sub get_clipboard_contents {
 
 sub set_clipboard_contents {
 	my ($self,$contents) = @_;
-	my $clipboard = Gtk2::Clipboard->get_for_display($widgets{ident $self}->{main_window}->get_display, Gtk2::Gdk::Atom->new('CLIPBOARD'));
-	$clipboard->set_text($contents);
+
+	my $display        = $widgets{ident $self}->{main_window}->get_display;
+	my $clipboard_atom = Gtk2::Gdk::Atom->new('CLIPBOARD');
+	my $clipboard      = Gtk2::Clipboard->get_for_display($display, $clipboard_atom);
+
+ 	$clipboard->set_text($contents);
+
+	$clipboard->set_with_data(
+		sub {
+			print "@_\n";
+		},
+		sub { 
+			print "@_\n";
+		},
+		undef, 
+		{'target' => "text/uri-list", 'flags' => [], 'info' => 0}
+	);
 }
 
 1;
+
+__DATA__
+
+Filer __VERSION__
+Copyright (C) 2004-2005 Jens Luedicke <jens.luedicke@gmail.com>
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA

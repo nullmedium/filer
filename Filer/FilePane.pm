@@ -208,7 +208,7 @@ sub show_popup_menu {
 		}
 
 		if ($self->count_items == 1) {
-			my $fi = $self->get_fileinfo->[0];
+			my $fi   = $self->get_fileinfo->[0];
 			my $type = $fi->get_mimetype;
 
 			# Customize archive submenu
@@ -227,7 +227,8 @@ sub show_popup_menu {
 				$item = new Gtk2::MenuItem(basename($_));
 				$item->signal_connect("activate", sub {
 					my $command = pop;
-					Filer::Tools->start_program($command,$self->get_item);
+					my $param   = $self->get_item;
+					Filer::Tools->exec(command => "$command $param", wait => 0);
 				}, $_);
 				$commands_menu->add($item);
 			}
@@ -410,14 +411,15 @@ sub open_file {
 		$self->open_path_helper($filepath);
 
 	} elsif ($fileinfo->is_executable) {
-		Filer::Tools->start_program($filepath);
+
+		Filer::Tools->exec(command => $filepath, wait => 0);
 
 	} else {
 		my $type    = $fileinfo->get_mimetype;
-		my @command = $filer{ident $self}->get_mime->get_default_command($type);
+		my $command = $filer{ident $self}->get_mime->get_default_command($type);
 
-		if (@command) {
-			Filer::Tools->start_program(@command,$filepath);
+		if ($command) {
+			Filer::Tools->exec(command => "$command $filepath", wait => 0);
 		} else {
 			if (defined Filer::Archive->is_supported_archive($type)) {
 				$self->extract_archive_temporary($filepath);
@@ -601,9 +603,7 @@ sub extract_archive_temporary {
 sub archive_helper {
 	my ($self,$func) = @_;
 
-	$vbox{ident $self}->set_sensitive(0);
 	my $dir = $func->();
-	$vbox{ident $self}->set_sensitive(1);
 
 	$self->open_path($dir);
 }

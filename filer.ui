@@ -17,7 +17,6 @@
       <menuitem name="MkDir" action="mkdir-action" />
       <menuitem name="Delete" action="delete-action" />
       <separator/>
-      <menuitem name="Link" action="link-action" />
       <menuitem name="SymLink" action="symlink-action" />
       <separator/>
       <menuitem name="Refresh" action="refresh-action" />
@@ -43,10 +42,8 @@
 	<menuitem name="Deleting" action="ask-deleting-action" />
       </menu>
       <menuitem name="ShowHidden" action="show-hidden-action" />
-<!--      <menuitem name="CaseSort" action="case-sort-action" /> -->
       <separator/>
       <menuitem name="SetTerminal" action="set-terminal-action" />
-<!--      <menuitem name="SetEditor" action="set-editor-action" /> -->
       <separator/>
       <menuitem name="FileAssoc" action="file-assoc-action" />
     </menu>

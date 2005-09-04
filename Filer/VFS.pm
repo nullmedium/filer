@@ -45,20 +45,16 @@ sub new {
 	$total_size{ident $self}  = 0;
 	my $pos = 0;
 
-# 	for (1 ... 10) {
-# 	my $pos = 0;
-# 	$list{ident $self} = [];
 	my ($t0,$t1,$elapsed);
  	use Time::HiRes qw(gettimeofday tv_interval);
  	$t0 = [gettimeofday];
 
 	opendir my $dirh, $path || die "$filepath: $!";
 
-	foreach my $file (readdir $dirh) {
+	while (my $file = readdir $dirh) {
 		next if (($file =~ /^\.{1,2}$/) || ($file =~ /^\./ && !$show_hidden));
 			
 		$list{ident $self}->[$pos++] = Filer::FileInfo->new("$path/$file");
-# 		push @{$list{ident $self}}, Filer::FileInfo->new("$path/$file");
 
 		if (-d "$path/$file") {
 			++$dirs_count{ident $self};
@@ -74,7 +70,6 @@ sub new {
 	$t1 = [gettimeofday];
 	$elapsed = tv_interval($t0,$t1);
 	print "time to read $path: $elapsed\n";
-#	}
 
 	return $self;
 }

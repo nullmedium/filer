@@ -6,55 +6,27 @@ use warnings;
 use Cwd qw(abs_path);
 use File::Spec;
 
-# require Exporter;
-# our @ISA = qw(Exporter);
-# our @EXPORT = qw(catpath);
+sub exec {
+	my ($self,%opts) = @_;
 
-# REAPER  - taken from 'man perlipc'
+	my $cmd  = $opts{command} || die "no command defined!";
+	my $wait = $opts{wait};
 
-use POSIX ":sys_wait_h";
+	my $main_loop = Glib::MainLoop->new;
 
-sub REAPER {
-	my $child;
-	my %Kid_Status;
+	print "open $cmd\n";
+	my $pid = open my $child, '-|', $cmd || die "can't fork $cmd: $!";
 
-	# If a second child dies while in the signal handler caused by the
-	# first death, we won't get another signal. So must loop here else
-	# we will leave the unreaped child as a zombie. And the next time
-	# two children die we get another zombie. And so on.
-	while (($child = waitpid(-1,WNOHANG)) > 0) {
-		$Kid_Status{$child} = $?;
-	}
+	Glib::IO->add_watch(fileno $child, ['hup'], sub {
+		$main_loop->quit;
+		return 0;
+	});
 
-	$SIG{CHLD} = \&REAPER;  # still loathe sysV
-}
+	print "run\n";
+	$main_loop->run;
 
-$SIG{CHLD} = \&REAPER;
-
-sub start_program {
-	my ($self,$command,@params) = @_;
-
-	my $pid = fork();
-	return 0 unless defined $pid;
-
-	if ($pid == 0) { # child
-		exec $command, @params;
-		exit 0;
-	} elsif ($pid > 0) {
-		print "forked $command\n";
-	}
-
-	return $pid;
-}
-
-sub wait_for_pid {
-	my $pid = pop;
-
-	while (kill 0, $pid) {
-		while (Gtk2->events_pending) {
-			Gtk2->main_iteration
-		}
-	}
+	print "close $child\n";
+	close $child or warn "$cmd died with exit status ".($? >> 8)."\n";
 }
 
 ####
@@ -64,21 +36,6 @@ sub catpath {
 	File::Spec->catfile(File::Spec->splitdir($dir), @p);
 }
 
-sub _mkdir {
-	my ($self,$dir) = @_;
-	my $p = File::Spec->rootdir; 
-
-	foreach (File::Spec->splitdir($dir)) {
-		$p = Filer::Tools->catpath($p, $_); 
-
-		if (! -e $p) {
-			mkdir($p) || return undef;
-		}
-	}
-
-	return 1;
-}
-
 sub suggest_filename_helper {
 	my $filename  = pop;
 	my $suggested = "";
@@ -86,56 +43,16 @@ sub suggest_filename_helper {
 	my $i         = 1;
 
 	if (-f $filename) {
-		if ($filename =~ /((\..+)+)$/) {
-			my $re_sx = $1;
-			$suffix = $re_sx;
-
-			# escape parentheses.
-			$re_sx =~ s/\(/\\(/g;
-			$re_sx =~ s/\)/\\)/g;
-			$re_sx =~ s/\[/\\[/g;
-			$re_sx =~ s/\]/\\]/g;
-
-			$filename =~ s/$re_sx//g;
-		}
+		$suffix = $1 if ($filename =~ /((\..+)+)$/);
+		$filename =~ s/$suffix//g;
 	}
 
-	if ($filename =~ /(_\(copy\))$/) {
-		my $r = $1;
-		$r =~ s/\(/\\(/g;
-		$r =~ s/\)/\\)/g;
-		$filename =~ s/$r//g;
-		$i = 2;
-	} elsif ($filename =~ /(_\(another copy\))$/) {
-		my $r = $1;
-		$r =~ s/\(/\\(/g;
-		$r =~ s/\)/\\)/g;
-		$filename =~ s/$r//g;
-		$i = 3;
-	} elsif ($filename =~ /(_\(3rd copy\))$/) {
-		my $r = $1;
-		$r =~ s/\(/\\(/g;
-		$r =~ s/\)/\\)/g;
-		$filename =~ s/$r//g;
-		$i = 4;
-	}
+	$filename =~ s/(_\d+)$//g;
 
 	while (1) {
-		if ($i == 1) {
-			$suggested = "$filename\_(copy)";
-		} elsif ($i == 2) {
-			$suggested = "$filename\_(another_copy)";
-		} elsif ($i == 3) {
-			$suggested = "$filename\_(3rd_copy)";
-		} else {
-			$suggested = "$filename\_($i" . "th" . "_copy)";
-		}
-
-		last if (! -e "$suggested$suffix");
-		$i++;
+		$suggested = sprintf("%s_%s", $filename, $i++);
+		return "$suggested$suffix" if (! -e "$suggested$suffix");
 	}
-
-	return "$suggested$suffix";
 }
 
 sub calculate_size {
