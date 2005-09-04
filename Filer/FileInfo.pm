@@ -32,6 +32,7 @@ use Filer::Tools;
 
 # class attributes:
 my $mimetype_icons; 
+my %thumbnails;
 
 # attributes;
 my %filepath;
@@ -80,6 +81,22 @@ sub get_path {
 	return $filepath{ident $self};
 }
 
+sub get_uri {
+	my ($self) = @_;
+	my $uri = "file://$filepath{ident $self}";
+	my $str = ""; 
+
+	foreach my $c (split //, $uri) {
+		if (ord($c) > 32 and ord($c) < 128 and $c ne "&" and $c ne "+" and $c ne "%") {
+			$str .= $c;
+		} else {
+			$str .= '%' . unpack("h", chr(ord($c) >> 4)) . unpack("h", chr(ord($c) & 0xf));
+		}
+	}
+
+	return $str;
+}
+
 sub get_basename {
 	my ($self) = @_;
 	return $basename{ident $self} ||= basename($filepath{ident $self});
@@ -98,6 +115,27 @@ sub get_mimetype_icon {
 sub get_mimetype_description {
 	my ($self) = @_;
 	return describe($self->get_mimetype);
+}
+
+sub get_thumbnail {
+	my ($self) = @_;
+	
+	$thumbnails{$filepath{ident $self}} ||= eval {
+		use Digest::MD5 qw(md5_hex);
+	
+		my $thumbnail_file = md5_hex($self->get_uri);
+		my $thumbnail_path = "$ENV{HOME}/.thumbnails/normal/$thumbnail_file.png";
+		my $thumbnail      = undef;
+
+		if (-e $thumbnail_path) {
+			$thumbnail = Gtk2::Gdk::Pixbuf->new_from_file($thumbnail_path);
+			$thumbnail = $thumbnail->intelligent_scale(22);
+		}
+		
+		$thumbnail;
+	};
+		
+	return $thumbnails{$filepath{ident $self}};
 }
 
 sub get_stat {
@@ -183,7 +221,7 @@ sub is_executable {
 
 sub is_hidden {
 	my ($self) = @_;
-	return ($self->get_basename =~ /^\./);
+	return ($basename{ident $self} =~ /^\./);
 }
 
 use Filer::FilePaneConstants;
@@ -192,7 +230,7 @@ sub get_by_column {
 	my ($self,$column) = @_;
 
 	($column == $COL_FILEINFO) ? $self                           :
-	($column == $COL_ICON)     ? $self->get_mimetype_icon        :
+	($column == $COL_ICON)     ? $self->get_thumbnail || $self->get_mimetype_icon        :
 	($column == $COL_NAME)     ? $self->get_basename             :
 	($column == $COL_SIZE)     ? $self->get_size                 :
 	($column == $COL_TYPE)     ? $self->get_mimetype_description :

@@ -96,7 +96,7 @@ sub move {
 	my $filecopy = new Filer::FileCopy($self);
 
 	$dirwalk->onFile(sub {
-		my $file = pop;
+		my ($file) = @_;
 		$total_bytes{ident $self} += -s $file;
 		return 1;
 	});
@@ -196,8 +196,6 @@ sub move {
 	$progress_dialog{ident $self}->show;
 
 	foreach my $source (@{$FILES}) {
-		$source =~ s/file:\///g;
-
 		return 0 if ($CANCELLED{ident $self} == $TRUE);
 		my $r = $dirwalk->walk($source);
 

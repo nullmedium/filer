@@ -36,10 +36,9 @@ use Stat::lsMode;
 
 use Filer::Constants;
 
-require Filer::VFS;
-
 require Filer::Config;
 require Filer::Bookmarks;
+require Filer::VFS;
 require Filer::FileInfo;
 require Filer::Tools;
 require Filer::Mime;
@@ -364,9 +363,11 @@ sub init_main_window {
 	$widgets{ident $self}->{hbox}->pack_start($widgets{ident $self}->{list2}->get_vbox,1,1,0);
 	$widgets{ident $self}->{vbox}->pack_start($widgets{ident $self}->{hpaned},1,1,0);
 
-  	my $bookmarks = new Filer::Bookmarks($self);
-	$widgets{ident $self}->{uimanager}->get_widget("/ui/menubar/bookmarks-menu")->set_submenu($bookmarks->generate_bookmarks_menu);
-	$widgets{ident $self}->{uimanager}->get_widget("/ui/menubar/bookmarks-menu")->show;
+  	my $bookmarks      = new Filer::Bookmarks($self);
+	my $bookmarks_menu = $widgets{ident $self}->{uimanager}->get_widget("/ui/menubar/bookmarks-menu");
+
+	$bookmarks_menu->set_submenu($bookmarks->generate_bookmarks_menu);
+	$bookmarks_menu->show;
 
 	$widgets{ident $self}->{list1}->open_path_helper((defined $ARGV[0] and -d $ARGV[0]) ? $ARGV[0] : $config{ident $self}->get_option('PathLeft'));
 	$widgets{ident $self}->{list2}->open_path_helper((defined $ARGV[1] and -d $ARGV[1]) ? $ARGV[1] : $config{ident $self}->get_option('PathRight'));
@@ -389,10 +390,10 @@ sub init_main_window {
 	$active_pane{ident $self}->set_focus;
 }
 
-sub get_widgets {
-	my ($self) = @_;
-	return $widgets{ident $self};
-}
+# sub get_widgets {
+# 	my ($self) = @_;
+# 	return $widgets{ident $self};
+# }
 
 sub get_widget {
 	my ($self,$id) = @_;
@@ -448,9 +449,11 @@ sub window_event_cb {
 sub quit_cb {
 	my ($self) = @_;
 
-	$config{ident $self}->set_option('PathLeft', $pane{ident $self}->[$LEFT]->get_pwd);
-	$config{ident $self}->set_option('PathRight', $pane{ident $self}->[$RIGHT]->get_pwd);
-	$config{ident $self}->set_option('WindowSize', join ":", $widgets{ident $self}->{main_window}->get_size());
+	$config{ident $self}->set_options(
+		'PathLeft'   => $pane{ident $self}->[$LEFT]->get_pwd,
+		'PathRight'  => $pane{ident $self}->[$RIGHT]->get_pwd,
+		'WindowSize' => join ":", $widgets{ident $self}->{main_window}->get_size,
+	);
 
 	Gtk2->main_quit;
 }
@@ -460,7 +463,7 @@ sub about_cb {
 	my $license;
 
 	$license = eval {
-	#	use Xfce4;
+		use Xfce4;
 		Xfce4::LICENSE_GPL();
 	};
 
@@ -476,8 +479,9 @@ sub about_cb {
 	$dialog->set_license($license);
 	$dialog->set_website("http://perldude.de/");
 	$dialog->set_website_label("http://perldude.de/");
-	$dialog->set_authors(	"Jens Luedicke <jens.luedicke\@gmail.com>",
-				"Bjoern Martensen <bjoern.martensen\@gmail.com>"
+	$dialog->set_authors(
+		"Jens Luedicke <jens.luedicke\@gmail.com>",
+		"Bjoern Martensen <bjoern.martensen\@gmail.com>"
 	);
 
 	$dialog->set_artists("Crystal SVG 16x16 mimetype icons by Everaldo (http://www.everaldo.com)");
@@ -488,21 +492,25 @@ sub about_cb {
 sub open_cb {
 	my ($self) = @_;
 
-	if ($config{ident $self}->get_option('Mode') == $NORTON_COMMANDER_MODE) {
-		$active_pane{ident $self}->open_file($active_pane{ident $self}->get_fileinfo->[0]);
-	} else {
-		$pane{ident $self}->[$RIGHT]->open_file($pane{ident $self}->[$RIGHT]->get_fileinfo->[0]);
-	}
+	my $mode = $config{ident $self}->get_option('Mode');
+	my $pane =
+		($mode == $NORTON_COMMANDER_MODE) 
+		? $active_pane{ident $self} 
+		: $pane{ident $self}->[$RIGHT];
+
+	$pane->open_file($pane->get_fileinfo_list->[0]);
 }
 
 sub open_with_cb {
 	my ($self) = @_;
 
-	if ($config{ident $self}->get_option('Mode') == $NORTON_COMMANDER_MODE) {
-		$active_pane{ident $self}->open_file_with;
-	} else {
-		$pane{ident $self}->[$RIGHT]->open_file_with;
-	}
+	my $mode = $config{ident $self}->get_option('Mode');
+	my $pane =
+		($mode == $NORTON_COMMANDER_MODE) 
+		? $active_pane{ident $self} 
+		: $pane{ident $self}->[$RIGHT];
+
+	$pane->open_file_with;
 }
 
 sub open_terminal_cb {
@@ -511,8 +519,7 @@ sub open_terminal_cb {
 
 	if (-d $path) {
 		my $term = $config{ident $self}->get_option("Terminal");
-		my @c = split /\s+/, $term;
-		Filer::Tools->start_program(@c, "--working-directory", $path);
+		Filer::Tools->exec(command => "$term --working-directory $path", wait => 0);
 	}
 }
 
@@ -550,9 +557,6 @@ sub hidden_cb {
 
 	$pane{ident $self}->[$LEFT]->refresh;
 	$pane{ident $self}->[$RIGHT]->refresh;
-
-# 	$pane{ident $self}->[$LEFT]->refilter;
-# 	$pane{ident $self}->[$RIGHT]->refilter;
 
 	return 1;
 }
@@ -666,8 +670,7 @@ sub paste_cb {
 	}
 
 	# refresh panes.
-	$active_pane{ident $self}->refresh;
-	$self->refresh_inactive_pane;
+	$self->refresh_cb;
 
 	# reset clipboard
 	if ($action eq "cut") {
@@ -679,7 +682,7 @@ sub cut_cb {
 	my ($self) = @_;
 	return if ($active_pane{ident $self}->count_items == 0);
 
-	my $str = join "\n\r", (@{$active_pane{ident $self}->get_items}, "cut");
+	my $str = join "\n\r", (@{$active_pane{ident $self}->get_item_list}, "cut");
 	$self->set_clipboard_contents($str);
 }
 
@@ -687,7 +690,7 @@ sub copy_cb {
 	my ($self) = @_;
 	return if ($active_pane{ident $self}->count_items == 0);
 
-	my $str = join "\n\r", (@{$active_pane{ident $self}->get_items}, "copy");
+	my $str = join "\n\r", (@{$active_pane{ident $self}->get_item_list}, "copy");
 	$self->set_clipboard_contents($str);
 }
 
@@ -697,7 +700,16 @@ sub rename_cb {
 
 	return if ($active_pane{ident $self}->count_items == 0);
 
-	$dialog = new Gtk2::Dialog("Rename", undef, 'modal', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
+	my $fileinfo = $active_pane{ident $self}->get_fileinfo_list->[0];
+
+	$dialog = new Gtk2::Dialog(
+		"Rename",
+		undef,
+		'modal',
+		'gtk-cancel' => 'cancel',
+		'gtk-ok'     => 'ok'
+	);
+
 	$dialog->set_size_request(450,150);
 	$dialog->set_position('center');
 	$dialog->set_modal(1);
@@ -711,7 +723,7 @@ sub rename_cb {
 	$hbox->pack_start($label, 0,0,2);
 
 	$entry = new Gtk2::Entry;
-	$entry->set_text($active_pane{ident $self}->get_fileinfo->[0]->get_basename);
+	$entry->set_text($fileinfo->get_basename);
 	$entry->set_activates_default(1);
 	$hbox->pack_start($entry, 1,1,0);
 
@@ -719,7 +731,7 @@ sub rename_cb {
 
 	if ($dialog->run eq 'ok') {
 		my $old_pwd = $active_pane{ident $self}->get_pwd;
-		my $old     = $active_pane{ident $self}->get_fileinfo->[0];
+		my $old     = $fileinfo;
 		my $new;
 
 		if ($active_pane{ident $self}->get_type eq "TREE") {
@@ -740,39 +752,43 @@ sub rename_cb {
 
 sub delete_cb {
 	my ($self) = @_;
+	my $items_count = $active_pane{ident $self}->count_items;
 
-	return if ($active_pane{ident $self}->count_items == 0);
+	return if ($items_count == 0);
 
 	if ($config{ident $self}->get_option("ConfirmDelete") == 1) {
-		if ($active_pane{ident $self}->count_items == 1) {
-			my $fi = $active_pane{ident $self}->get_fileinfo->[0];
+		my $message = "";
+		
+		if ($items_count == 1) {
+			my $fi = $active_pane{ident $self}->get_fileinfo_list->[0];
 			my $f  = $fi->get_basename;
 			$f =~ s/&/&amp;/g; # sick fix. meh.
 
-			if ($fi->is_dir) {
-				return if (Filer::Dialog->yesno_dialog("Delete directory \"$f\"?") eq 'no');
-			} else {
-				return if (Filer::Dialog->yesno_dialog("Delete file \"$f\"?") eq 'no');
-			}
+			$message = ($fi->is_dir) ? "Delete directory \"$f\"?" : "Delete file \"$f\"?";
 		} else {
-			return if (Filer::Dialog->yesno_dialog(sprintf("Delete %s selected files?", $active_pane{ident $self}->count_items)) eq 'no');
+			$message = "Delete $items_count selected files?";
 		}
+
+		return if (Filer::Dialog->yesno_dialog($message) eq 'no');
 	}
 
 	my $delete = new Filer::Delete;
-	$delete->delete($active_pane{ident $self}->get_items);
+	$delete->delete($active_pane{ident $self}->get_item_list);
 
-	$active_pane{ident $self}->remove_selected;
-	$self->refresh_inactive_pane;
+# 	$active_pane{ident $self}->remove_selected;
+# 	$self->refresh_inactive_pane;
+	$self->refresh_cb;
 }
 
 sub mkdir_cb {
 	my ($self) = @_;
 	my ($dialog,$hbox,$label,$entry);
 
+	my $active_pwd = $active_pane{ident $self}->get_pwd;
+
 	$dialog = new Gtk2::Dialog(
 		"Make directory",
-		$widgets{ident $self}->{main_window},
+		undef,
 		'modal',
 		'gtk-cancel' => 'cancel',
 		'gtk-ok' => 'ok'
@@ -786,22 +802,22 @@ sub mkdir_cb {
 	$dialog->vbox->pack_start($hbox, 0,0,5);
 
 	$label = new Gtk2::Label;
-	$label->set_text($active_pane{ident $self}->get_pwd . "/");
+	$label->set_text("$active_pwd/");
 	$hbox->pack_start($label, 0,0,2);
 
 	$entry = new Gtk2::Entry;
-	$entry->set_text("New Folder");
+	$entry->set_text("New_Folder");
 	$entry->set_activates_default(1);
 	$hbox->pack_start($entry, 1,1,0);
 
 	$dialog->show_all;
 
 	if ($dialog->run eq 'ok') {
-		my $dir = Filer::Tools->catpath($active_pane{ident $self}->get_pwd, $entry->get_text);
+		my $name = $entry->get_text;
+		my $dir  = Filer::Tools->catpath($active_pwd, $name);
 
 		if (mkdir($dir)) {
-			$active_pane{ident $self}->refresh;
-			$self->refresh_inactive_pane;
+			$self->refresh_cb;
 		} else {
 			Filer::Dialog->msgbox_error("Make directory $dir failed: $!");
 		}
@@ -816,31 +832,35 @@ sub symlink_cb {
 
 	my ($dialog,$symlink_label,$target_label,$symlink_entry,$target_entry) = Filer::Dialog->source_target_dialog;
 
+	my $active_pwd      = $active_pane{ident $self}->get_pwd;
+	my $inactive_pwd    = $inactive_pane{ident $self}->get_pwd;
+	my $active_selected = $active_pane{ident $self}->get_item;
+	my $active_basename = $active_pane{ident $self}->get_fileinfo_list->[0]->get_basename;	
+
 	$dialog->set_title("Symlink");
 	$dialog->set_size_request(450,150);
 	$dialog->set_default_response('ok');
 
 	$symlink_label->set_markup("<b>Symlink: </b>");
-	$symlink_entry->set_text(Filer::Tools->catpath($inactive_pane{ident $self}->get_pwd, $active_pane{ident $self}->get_fileinfo->[0]->get_basename));
+	$symlink_entry->set_text(Filer::Tools->catpath($inactive_pwd, $active_basename));
 	$symlink_entry->set_activates_default(1);
 
 	$target_label->set_markup("<b>linked object: </b>");
-	$target_entry->set_text($active_pane{ident $self}->get_item);
+	$target_entry->set_text($active_selected);
 	$target_entry->set_activates_default(1);
 
 	$dialog->show_all;
 
 	if ($dialog->run eq 'ok') {
 		my $symlink = $symlink_entry->get_text;
-		my $target = $target_entry->get_text;
+		my $target  = $target_entry->get_text;
 
 		if (dirname($symlink) eq File::Spec->curdir) {
-			$symlink = Filer::Tools->catpath($active_pane{ident $self}->get_pwd, $symlink);
+			$symlink = Filer::Tools->catpath($active_pwd, $symlink);
 		}
 
 		if (symlink($target, $symlink)) {
-			$active_pane{ident $self}->refresh;
-			$self->refresh_inactive_pane;
+			$self->refresh_cb;
 		} else {
 			Filer::Dialog->msgbox_error("Couldn't create symlink! $!");
 		}
@@ -877,16 +897,16 @@ sub set_clipboard_contents {
 
  	$clipboard->set_text($contents);
 
-	$clipboard->set_with_data(
-		sub {
-			print "@_\n";
-		},
-		sub { 
-			print "@_\n";
-		},
-		undef, 
-		{'target' => "text/uri-list", 'flags' => [], 'info' => 0}
-	);
+# 	$clipboard->set_with_data(
+# 		sub {
+# 			print "@_\n";
+# 		},
+# 		sub { 
+# 			print "@_\n";
+# 		},
+# 		undef, 
+# 		{'target' => "text/uri-list", 'flags' => [], 'info' => 0}
+# 	);
 }
 
 1;

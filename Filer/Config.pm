@@ -78,6 +78,14 @@ sub set_option {
 	$config{ident $self}->{$option} = $value;
 }
 
+sub set_options {
+	my ($self,%vals) = @_;
+	
+	while (my ($option,$value) = each %vals) {
+		$config{ident $self}->{$option} = $value;
+	}
+}
+
 sub get_option {
 	my ($self,$option) = @_;
 

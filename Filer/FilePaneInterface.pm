@@ -76,19 +76,19 @@ sub treeview_grab_focus_cb {
 
 sub get_iter {
 	my ($self) = @_;
-	return $self->get_iters->[0];
+	return $self->get_iter_list->[0];
 }
 
-sub get_iters {
+sub get_iter_list {
 	my ($self) = @_;
 	my @sel    = $treeselection{ident $self}->get_selected_rows;
 	my @iters  = map { $treemodel{ident $self}->get_iter($_) } @sel;
 	return \@iters;
 }
 
-sub get_fileinfo {
+sub get_fileinfo_list {
 	my ($self) = @_;
-	my @iters  = @{$self->get_iters};
+	my @iters  = @{$self->get_iter_list};
 	my @fi     = map { $treemodel{ident $self}->get_fileinfo($_) } @iters;
 
 	return \@fi;
@@ -96,15 +96,23 @@ sub get_fileinfo {
 
 sub get_item {
 	my ($self) = @_;
-	return $self->get_items->[0];
+	return $self->get_item_list->[0];
 }
 
-sub get_items {
+sub get_item_list {
 	my ($self) = @_;
-	my @fi     = @{$self->get_fileinfo};
+	my @fi     = @{$self->get_fileinfo_list};
 	my @items  = map { $_->get_path } @fi;
 
 	return \@items;
+}
+
+sub get_uri_list {
+	my ($self) = @_;
+	my @fi   = @{$self->get_fileinfo_list};
+	my @uris = map { $_->get_uri } @fi;
+
+	return \@uris;
 }
 
 sub get_path_by_treepath {

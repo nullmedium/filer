@@ -15,6 +15,7 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::DND;
+use Class::Std::Utils;
 
 use strict;
 use warnings;
@@ -23,26 +24,40 @@ use Readonly;
 
 Readonly my $TARGET_URI_LIST => 0;
 
+my %filer;
+my %config;
+my %filepane;
+
 sub new {
 	my ($class,$filer,$filepane) = @_;
-	my $self = bless {}, $class;
-	$self->{filer} = $filer;
-	$self->{filepane} = $filepane;
+	my $self = bless anon_scalar(), $class;
+
+	$filer{ident $self}    = $filer;
+	$config{ident $self}   = $filer{ident $self}->get_config;
+	$filepane{ident $self} = $filepane;
 
 	return $self;
 }
 
+sub DESTROY {
+	my $self = shift;
+
+	delete $filer{ident $self};
+	delete $config{ident $self};
+	delete $filepane{ident $self};
+}
+
 sub target_table {
-	my ($self) = @_;
-	return ({'target' => "text/uri-list", 'flags' => [], 'info' => $TARGET_URI_LIST});
+	{'target' => "text/uri-list", 'flags' => [], 'info' => $TARGET_URI_LIST};
 }
 
 sub filepane_treeview_drag_data_get {
-	my ($self,$widget,$context,$data,$info,$time) = @_;
+	my $self = shift;
+	my ($widget,$context,$data,$info,$time) = @_;
 
 	if ($info == $TARGET_URI_LIST) {
-		if ($self->{filepane}->count_items > 0) {
-			my $d = join "\r\n", @{$self->{filepane}->get_items};
+		if ($filepane{ident $self}->count_items > 0) {
+			my $d = join "\r\n", @{$filepane{ident $self}->get_uri_list};
 			$data->set($data->target, 8, $d);
 		}
 	}
@@ -51,74 +66,55 @@ sub filepane_treeview_drag_data_get {
 }
 
 sub filepane_treeview_drag_data_received {
-	my ($self,$widget,$context,$x,$y,$data,$info,$time) = @_;
+	my $self = shift;
+	my ($widget,$context,$x,$y,$data,$info,$time) = @_;
 
 	if (($data->length >= 0) && ($data->format == 8)) {
-		my ($p)    = $widget->get_dest_row_at_pos($x,$y);
-		my $action = $context->action;
+		my ($p)         = $widget->get_dest_row_at_pos($x,$y);
+		my $action      = $context->action;
+		my $active_pane = $filer{ident $self}->get_active_pane;
 		my $path;
-		my $do;
+
+		my @items       = map {
+					$_ =~ s/^file:\/\///g;
+					$_;
+				} split(/\r\n/, $data->data);
+		my $items_count = scalar @items;
 
 		if (defined $p) {
-			$path = $self->{filepane}->get_path_by_treepath($p);
+			$path = $filepane{ident $self}->get_path_by_treepath($p);
 		} else {
-			$path = $self->{filepane}->get_pwd;
+			$path = $filepane{ident $self}->get_pwd;
 		}
 
  		if (! -d $path) {
-			$path = $self->{filepane}->get_pwd;
+			$path = $filepane{ident $self}->get_pwd;
 		}
 
-#		print $self->{filer}->get_active_pane->get_pwd, " <=> ", $path, "\n";
+		if (($config{ident $self}->get_option("ConfirmCopy") == 1)
+		 or ($config{ident $self}->get_option("ConfirmMove") == 1)) {
+			my $do      = ($action eq "copy") ? "Copy" : "Move";
 
-#		if ($self->{filer}->get_active_pane->get_pwd ne $path) {
-			if ($action eq "copy") {
-				if ($self->{filer}->get_config->get_option("ConfirmCopy") == 1) {
-					if ($self->{filer}->get_active_pane->count_items == 1) {
-						my $f = $self->{filer}->get_active_pane->get_fileinfo->[0]->get_basename;
-						$f =~ s/&/&amp;/g; # sick fix. meh.
+			if ($items_count == 1) {
+				my $f = $items[0];
+				$f =~ s/&/&amp;/g; # sick fix. meh.
 
-						return if (Filer::Dialog->yesno_dialog("Copy $f to $path?") eq 'no');
-					} else {
-						return if (Filer::Dialog->yesno_dialog(sprintf("Copy %s files to $path?", $self->{filer}->get_active_pane->count_items)) eq 'no');
-					}
-				}
-
-				$do = new Filer::Copy;
-			} elsif ($action eq "move") {
-				if ($self->{filer}->get_config->get_option("ConfirmMove") == 1) {
-					if ($self->{filer}->get_active_pane->count_items == 1) {
-						my $f = $self->{filer}->get_active_pane->get_fileinfo->[0]->get_basename;
-						$f =~ s/&/&amp;/g; # sick fix. meh.
-
-						return if (Filer::Dialog->yesno_dialog("Move $f to $path?") eq 'no');
-					} else {
-						return if (Filer::Dialog->yesno_dialog(sprintf("Move %s files to $path?", $self->{filer}->get_active_pane->count_items)) eq 'no');
-					}
-				}
-
-				$do = new Filer::Move;
+				return if (Filer::Dialog->yesno_dialog("$do $f to $path?") eq 'no');
+			} else {
+				return if (Filer::Dialog->yesno_dialog("$do $items_count files to $path?") eq 'no');
 			}
+		}
 
-			my @files = split /\r\n/, $data->data;
+		if ($action eq "copy") {
+			my $copy = new Filer::Copy;
+			$copy->copy(\@items,$path);
 
-			$do->action(\@files,$path);
+		} elsif ($action eq "move") {
+			my $move = new Filer::Move;
+			$move->move(\@items,$path);
+		}
 
-# # 			if ($action eq "move") {
-# # 				$self->{filer}->get_active_pane->remove_selected;
-# # 			}
-# # 
-# # 			$self->{filer}->refresh_inactive_pane;
-# 			
-# 			$self->{filer}->refresh_cb;
-
-			$self->{filepane}->refresh;			
-			
-			$context->finish (1, 0, $time);
-# 			return;
-# 		}
-# 
-#  		$context->finish (0, 0, $time);
+ 		$filer{ident $self}->refresh_cb;
 	}
 
 	$context->finish (0, 0, $time);

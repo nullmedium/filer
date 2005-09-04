@@ -77,9 +77,6 @@ sub new {
 	$vbox{ident $self}->pack_start($navigation_box{ident $self}, 0, 1, 0);
 
 	$treemodel{ident $self} = Filer::ListStore->new;
-
-	print $treemodel{ident $self}, "\n";
-
 	$treeview{ident $self}  = Gtk2::TreeView->new($treemodel{ident $self});
 	$treeview{ident $self}->set_rules_hint(1);
 	$treeview{ident $self}->set_enable_search(1);
@@ -179,7 +176,7 @@ sub show_popup_menu {
 	my ($self,$e) = @_;
 
  	my $item;
-	my $uimanager  = $filer{ident $self}->get_widgets->{uimanager};
+	my $uimanager  = $filer{ident $self}->get_widget("uimanager");
 	my $ui_path    = '/ui/list-popupmenu';
 
 	my $popup_menu = $uimanager->get_widget($ui_path);
@@ -208,7 +205,7 @@ sub show_popup_menu {
 		}
 
 		if ($self->count_items == 1) {
-			my $fi   = $self->get_fileinfo->[0];
+			my $fi   = $self->get_fileinfo_list->[0];
 			my $type = $fi->get_mimetype;
 
 			# Customize archive submenu
@@ -271,7 +268,7 @@ sub treeview_event_cb {
 
 		} elsif ($e->keyval == $Gtk2::Gdk::Keysyms{'Return'}) {
 
-			$self->open_file($self->get_fileinfo->[0]);
+			$self->open_file($self->get_fileinfo_list->[0]);
 			return 1;
 		}
 	}
@@ -364,7 +361,9 @@ sub update_navigation_buttons {
 		$path = Filer::Tools->catpath($path, $_);
 
 		if (not defined $navigation_buttons{ident $self}->{$path}) {
-			$button = new Gtk2::RadioButton($navigation_buttons{ident $self}->{$rootdir}, basename($path) || $rootdir);
+			my $name = basename($path) || $rootdir;
+			
+			$button = Gtk2::RadioButton->new_with_label($navigation_buttons{ident $self}->{$rootdir}, $name);
 			$button->set(draw_indicator => 0); # i'm evil
 
 			$button->signal_connect(toggled => sub {
@@ -435,7 +434,7 @@ sub open_file_with {
 
 	return 0 if (! defined $self->get_iter);
 
-	$filer{ident $self}->get_mime->run_dialog($self->get_fileinfo->[0]);
+	$filer{ident $self}->get_mime->run_dialog($self->get_fileinfo_list->[0]);
 }
 
 sub open_path_helper {
@@ -568,7 +567,7 @@ sub create_tar_gz_archive {
 
 	$self->archive_helper(sub {
 		my $archive = new Filer::Archive;
-		return $archive->create_tar_gz_archive($filepath{ident $self}, $self->get_items);
+		return $archive->create_tar_gz_archive($filepath{ident $self}, $self->get_item_list);
 	});
 }
 
@@ -577,7 +576,7 @@ sub create_tar_bz2_archive {
 
 	$self->archive_helper(sub {
 		my $archive = new Filer::Archive;
-		return $archive->create_tar_bz2_archive($filepath{ident $self}, $self->get_items);
+		return $archive->create_tar_bz2_archive($filepath{ident $self}, $self->get_item_list);
 	});
 }
 
@@ -586,7 +585,7 @@ sub extract_archive {
 
 	$self->archive_helper(sub {
 		my $archive = new Filer::Archive;
-		return $archive->extract_archive($filepath{ident $self}, $self->get_items);
+		return $archive->extract_archive($filepath{ident $self}, $self->get_item_list);
 	});
 }
 

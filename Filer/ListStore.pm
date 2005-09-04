@@ -16,7 +16,7 @@ use Filer::FilePaneConstants;
 
 use Glib::Object::Subclass
 	Glib::Object::,
-	interfaces => [qw(Gtk2::TreeModel Gtk2::TreeSortable Gtk2::TreeDragDest)],
+	interfaces => [qw(Gtk2::TreeModel Gtk2::TreeSortable Gtk2::TreeDragDest Gtk2::TreeDragSource)],
 	;
 
 ################################################################################
@@ -362,6 +362,13 @@ sub drag_data_received {
 
 sub row_drop_possible {
 #	my ($self,$dest_path,$selection_data) = @_;
+}
+
+################################################################################
+# Gtk2::TreeDragSource
+################################################################################
+
+sub drag_data_delete {
 }
 
 ################################################################################

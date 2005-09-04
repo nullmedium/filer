@@ -122,7 +122,7 @@ sub show_popup_menu {
 			$treeselection{ident $self}->select_path($p);
 		}
 
-		my $uimanager  = $filer{ident $self}->get_widgets->{uimanager};
+		my $uimanager  = $filer{ident $self}->get_widget("uimanager");
 		my $ui_path    = '/ui/list-popupmenu';
 		my $popup_menu = $uimanager->get_widget($ui_path);
 
@@ -270,7 +270,7 @@ sub treeview_row_collapsed_cb {
 
 sub filepath {
 	my ($self) = @_;
-	my $path   = $self->get_items->[0];
+	my $path   = $self->get_item_list->[0];
 
 	if (defined $path) {
 		return abs_path($path);
@@ -366,7 +366,7 @@ sub create_tar_gz_archive {
 
 	$treeview{ident $self}->set_sensitive(0);
 	my $archive = new Filer::Archive;
-	$archive->create_tar_gz_archive($self->get_updir, $self->get_items);
+	$archive->create_tar_gz_archive($self->get_updir, $self->get_item_list);
 	$treeview{ident $self}->set_sensitive(1);
 
 	$filer{ident $self}->refresh_inactive_pane;
@@ -377,7 +377,7 @@ sub create_tar_bz2_archive {
 
 	$treeview{ident $self}->set_sensitive(0);
 	my $archive = new Filer::Archive;
-	$archive->create_tar_bz2_archive($self->get_updir, $self->get_items);
+	$archive->create_tar_bz2_archive($self->get_updir, $self->get_item_list);
 	$treeview{ident $self}->set_sensitive(1);
 
 	$filer{ident $self}->refresh_inactive_pane;

@@ -98,13 +98,13 @@ sub copy {
 	my $filecopy = new Filer::FileCopy($self);
 
 	$dirwalk->onFile(sub {
-		my $file = pop;
+		my ($file) = @_;
 		$total_bytes{ident $self} += -s $file;
 		return 1;
 	});
 
 	for (@{$FILES}) {
-		$dirwalk->walk($_); 
+		$dirwalk->walk($_);
 	}
 
 	$dirwalk->onBeginWalk(sub {
@@ -170,8 +170,6 @@ sub copy {
 	$progress_dialog{ident $self}->show;
 
 	foreach my $source (@{$FILES}) {
-		$source =~ s/file:\///g;
-
 		my $r = $dirwalk->walk($source);
 
 		if ($r == File::DirWalk::FAILED) {

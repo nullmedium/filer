@@ -44,7 +44,7 @@ sub set_properties_dialog {
 	my $multiple = 0;
 
 	if ($active_pane->count_items == 1) {
-		$fileinfo = $active_pane->get_fileinfo->[0];
+		$fileinfo = $active_pane->get_fileinfo_list->[0];
 		$owner = $fileinfo->get_uid;
 		$group = $fileinfo->get_gid;
 	} else {
@@ -274,7 +274,7 @@ sub set_properties_dialog {
 	$dialog->show_all;
 
 	if ($dialog->run eq 'ok') {
-		my @files = @{$active_pane->get_items};
+		my @files = @{$active_pane->get_item_list};
 		my $mode  = oct(($properties_mode * 1000) + ($owner_mode * 100) +  ($group_mode * 10) + ($other_mode));
 		my $uid   = getpwnam($owner_combo->get_active_text);
 		my $gid   = getgrnam($group_combo->get_active_text);

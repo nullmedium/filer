@@ -88,7 +88,7 @@ sub generate_bookmarks_menu {
 		my $pane = $filer{ident $self}->get_active_pane;
 
 		if ($pane->count_items > 0) {
-			foreach (@{$pane->get_fileinfo}) {
+			foreach (@{$pane->get_fileinfo_list}) {
 				if ($_->is_dir) {
 					$self->set_bookmark($_->get_path);
 				} else {
@@ -99,7 +99,7 @@ sub generate_bookmarks_menu {
 			$self->set_bookmark($pane->get_pwd);
 		}
 
-		$filer{ident $self}->get_widgets->{uimanager}->get_widget("/ui/menubar/bookmarks-menu")->set_submenu($self->generate_bookmarks_menu);
+		$filer{ident $self}->get_widget("uimanager")->get_widget("/ui/menubar/bookmarks-menu")->set_submenu($self->generate_bookmarks_menu);
 	});
 	$menuitem->show;
 	$bookmarks_menu->add($menuitem);
@@ -109,7 +109,7 @@ sub generate_bookmarks_menu {
 		my $pane = $filer{ident $self}->get_active_pane;
 
 		if ($pane->count_items > 0) {
-			foreach (@{$pane->get_fileinfo}) {
+			foreach (@{$pane->get_fileinfo_list}) {
 				if ($_->is_dir) {
 					$self->remove_bookmark($_->get_path);
 				} else {
@@ -120,7 +120,7 @@ sub generate_bookmarks_menu {
 			$self->remove_bookmark($pane->get_pwd);
 		}
 
-		$filer{ident $self}->get_widgets->{uimanager}->get_widget("/ui/menubar/bookmarks-menu")->set_submenu($self->generate_bookmarks_menu);
+		$filer{ident $self}->get_widget("uimanager")->get_widget("/ui/menubar/bookmarks-menu")->set_submenu($self->generate_bookmarks_menu);
 	});
 	$menuitem->show;
 	$bookmarks_menu->add($menuitem);
