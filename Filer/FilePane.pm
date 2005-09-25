@@ -220,7 +220,7 @@ sub show_popup_menu {
 			$item = $uimanager->get_widget("$ui_path/Open");
 			$item->set_submenu($commands_menu);
 
-			foreach ($filer{ident $self}->get_mime->get_commands($type)) {
+			foreach my $command ($filer{ident $self}->get_mime->get_commands($type)) {
 				$item = new Gtk2::MenuItem(basename($_));
 				$item->signal_connect("activate", sub {
 					my $command = pop;
@@ -420,7 +420,7 @@ sub open_file {
 		if ($command) {
 			Filer::Tools->exec(command => "$command $filepath", wait => 0);
 		} else {
-			if (defined Filer::Archive->is_supported_archive($type)) {
+			if (Filer::Archive->is_supported_archive($type)) {
 				$self->extract_archive_temporary($filepath);
 			} else {
 				$filer{ident $self}->get_mime->run_dialog($fileinfo);

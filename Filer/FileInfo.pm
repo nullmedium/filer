@@ -29,6 +29,7 @@ use Stat::lsMode qw(format_mode);
 
 use Filer::Stat qw(:stat);
 use Filer::Tools;
+use Filer::FilePaneConstants;
 
 # class attributes:
 my $mimetype_icons; 
@@ -39,6 +40,7 @@ my %filepath;
 my %basename;
 my %mimetype;
 my %stat;
+my %cols;
 
 # memoize('new');
 
@@ -52,6 +54,16 @@ sub new {
 	my $self = bless anon_scalar(), $class;
 
 	$filepath{ident $self} = $filepath;
+
+	$cols{ident $self} = {
+		$COL_FILEINFO => [ $self,                    undef                ],
+		$COL_ICON     => [ $self->get_mimetype_icon, undef                ],
+		$COL_NAME     => [ $self->get_basename,      $self->get_basename  ],
+		$COL_SIZE     => [ $self->get_size,          $self->get_raw_size  ],
+		$COL_TYPE     => [ $self->get_description,   $self->get_mimetype  ],
+		$COL_MODE     => [ $self->get_mode,          $self->get_raw_mode  ],
+		$COL_DATE     => [ $self->get_mtime,         $self->get_raw_mtime ],
+	};
 
 	return $self;
 }
@@ -74,6 +86,7 @@ sub DESTROY {
 	delete $basename{ident $self};
 	delete $mimetype{ident $self};
 	delete $stat{ident $self};
+	delete $cols{ident $self};
 }
 
 sub get_path {
@@ -109,10 +122,10 @@ sub get_mimetype {
 
 sub get_mimetype_icon {
 	my ($self) = @_;
-	return ($mimetype_icons->{$self->get_mimetype} || $mimetype_icons->{'application/default'});
+ 	return ($mimetype_icons->{$self->get_mimetype} || $mimetype_icons->{'application/default'});
 }
 
-sub get_mimetype_description {
+sub get_description {
 	my ($self) = @_;
 	return describe($self->get_mimetype);
 }
@@ -191,7 +204,8 @@ sub get_gid {
 
 sub get_mode {
 	my ($self) = @_;
-	return format_mode($self->get_raw_mode);
+	my $format = format_mode($self->get_raw_mode);
+	return $format;
 }
 
 sub exist {
@@ -224,26 +238,14 @@ sub is_hidden {
 	return ($basename{ident $self} =~ /^\./);
 }
 
-use Filer::FilePaneConstants;
-
 sub get_by_column {
 	my ($self,$column) = @_;
-
-	($column == $COL_FILEINFO) ? $self                           :
-	($column == $COL_ICON)     ? $self->get_thumbnail || $self->get_mimetype_icon        :
-	($column == $COL_NAME)     ? $self->get_basename             :
-	($column == $COL_SIZE)     ? $self->get_size                 :
-	($column == $COL_TYPE)     ? $self->get_mimetype_description :
-	($column == $COL_MODE)     ? $self->get_mode                 : $self->get_mtime;
+	return $cols{ident $self}->{$column}->[0];
 }
 	
 sub get_raw_by_column {
 	my ($self,$column) = @_;
-
-	($column == $COL_NAME) ? $self->get_basename :  
-	($column == $COL_SIZE) ? $self->get_raw_size : 
-	($column == $COL_TYPE) ? $self->get_mimetype : 
-	($column == $COL_MODE) ? $self->get_raw_mode : $self->get_raw_mtime;
+	return $cols{ident $self}->{$column}->[1];
 }
 
 1;

@@ -34,6 +34,7 @@ sub INIT_INSTANCE {
 	$self->{n_columns}    = 7;
 	$self->{column_types} = [qw(Glib::Scalar Glib::Object Glib::String Glib::String Glib::String Glib::String Glib::String)];
 	$self->{list}         = [];
+	$self->{cache}        = [];
 
 	$self->{sort_column_id}  = $COL_NAME;
 	$self->{sort_order}      = "ascending";
@@ -96,20 +97,13 @@ sub GET_COLUMN_TYPE {
 sub GET_ITER {
 	my ($self,$path) = @_;
 
-	die "no path" unless $path;
+	die "no path" if (! $path);
 
 	my @indices = $path->get_indices;
-	my $depth   = $path->get_depth;
-
-	# we do not allow children
-	# depth 1 = top level; a list only has top level nodes and no children
-	die "depth != 1" if ($depth != 1);
-
-	my $n      = $indices[0]; # the n-th top level row
-
-	return undef if ($n >= @{$self->{list}});
-
-	my $record = $self->{list}->[$n];
+	my $n       = $indices[0];
+	my $record  = $self->{list}->[$n];
+	
+	return undef if (! $record);
 
 	return [ $self->{stamp}, $n, $record, undef ];
 }
@@ -123,8 +117,8 @@ sub GET_PATH {
 	my ($self, $iter) = @_;
 	die "no iter" unless $iter;
 
-	my $pos    = $iter->[1];
-	my $path   = Gtk2::TreePath->new_from_indices($pos);
+	my $pos  = $iter->[1];
+	my $path = Gtk2::TreePath->new_from_indices($pos);
 
 	return $path;
 }
@@ -146,7 +140,7 @@ sub GET_VALUE {
 
 	die "bad iter" if ($pos >= @{$self->{list}});
 	
-	return $record->get_by_column($column);
+	return ($self->{cache}->[$pos][$column] ||= $record->get_by_column($column));
 }
 
 #
@@ -156,23 +150,10 @@ sub GET_VALUE {
 sub ITER_NEXT {
 	my ($self,$iter) = @_;
 
-	return undef
-		unless $iter && $iter->[2];
-
-	my $pos    = $iter->[1];
-	my $record = $iter->[2];
-
-	# Is this the last record in the list?
-	return undef if ($pos >= @{$self->{list}});
-
-	my $nextpos = $pos + 1;
-
-	return undef if ($nextpos >= @{$self->{list}});
-	return undef if (! defined $self->{list}->[$nextpos]);
-
+	my $nextpos    = $iter->[1] + 1;
 	my $nextrecord = $self->{list}->[$nextpos];
 
-	return undef unless $nextrecord;
+	return undef if (! $nextrecord);
 
 	return [ $self->{stamp}, $nextpos, $nextrecord, undef ];
 }
@@ -187,8 +168,6 @@ sub ITER_NEXT {
 
 sub ITER_CHILDREN {
 	my ($self,$parent) = @_;
-
-###	return undef unless $parent and $parent->[1];
 
 	# this is a list, nodes have no children
 	return undef if $parent;
@@ -288,9 +267,9 @@ sub ITER_PARENT {
 sub sort {
 	my ($self,$list) = @_; 
 
-	my ($t0,$t1,$elapsed);
- 	use Time::HiRes qw(gettimeofday tv_interval);
- 	$t0 = [gettimeofday];
+# 	my ($t0,$t1,$elapsed);
+#  	use Time::HiRes qw(gettimeofday tv_interval);
+#  	$t0 = [gettimeofday];
 	
 	my $col  = $self->{sort_column_id};
 	my $r    = ($self->{sort_order} eq "ascending") ? -1 : 1;
@@ -312,11 +291,12 @@ sub sort {
 
 	@array = ($self->{sort_order} eq "ascending") ? @array : reverse @array;
 
-	$t1 = [gettimeofday];
-	$elapsed = tv_interval($t0,$t1);
-	print "time to sort: $elapsed\n";
+# 	$t1 = [gettimeofday];
+# 	$elapsed = tv_interval($t0,$t1);
+# 	print "time to sort: $elapsed\n";
 
 	$self->{list} = \@array;
+	$self->{cache} = [];
 
 # 	my $path = Gtk2::TreePath->new;
 # 	$self->rows_reordered($path, undef, @new_order);
@@ -414,6 +394,7 @@ sub clear {
 
 	my $last = (@{$self->{list}} - 1);
 	$self->{list} = [];
+	$self->{cache} = [];
 	
 	for (my $i = $last; $i >= 0; $i--) {
 		my $path = Gtk2::TreePath->new_from_indices($i);
@@ -426,10 +407,14 @@ sub clear {
 sub set_fileinfo_list {
 	my ($self,$list) = @_;
 
+	$self->{cache} = [];
+
 	$self->clear;
 	$self->sort($list);
 
-	for (my $i = 0; $i < @{$self->{list}}; $i++) {
+	my $len = @{$self->{list}};
+	
+	for (my $i = 0; $i < $len; $i++) {
 		my $path = Gtk2::TreePath->new_from_indices($i);
 		my $iter = $self->get_iter($path);
 		$self->row_inserted($path,$iter);
@@ -456,7 +441,7 @@ sub foreach {
 		my $iter = $self->get_iter($path);
 		my $name = $self->get($iter, $COL_NAME);
 		my $r    = $func->($self,$iter,$name);
-
+		
 		last if ($r);
 	}
 }

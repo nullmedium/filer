@@ -81,10 +81,9 @@ my %mime;
 my %mime_file;
 
 sub new {
-	my ($class,$filer) = @_;
+	my ($class) = @_;
 	my $self = bless anon_scalar(), $class;
 
-	$filer{ident $self}     = $filer;
 	$mime_file{ident $self} = Filer::Tools->catpath(File::BaseDir->new->xdg_config_home, "filer", "mime.yml");
 
 	if (! -e $mime_file{ident $self}) {
@@ -110,7 +109,6 @@ sub DESTROY {
 	my ($self) = @_;
 	DumpFile($mime_file{ident $self}, $mime{ident $self});
 
-	delete $filer{ident $self};
 	delete $mime{ident $self};
 	delete $mime_file{ident $self};
 }
@@ -359,7 +357,8 @@ sub run_dialog {
 		if (! $run_terminal_checkbutton->get_active) {
 			Filer::Tools->exec(command => "$command $file", wait => 0);
 		} else {
-			my $term = $filer{ident $self}->get_config->get_option("Terminal");
+			my $filer = new Filer;
+			my $term  = $filer->get_config->get_option("Terminal");
 			Filer::Tools->exec(command => "$term -x $command $file", wait => 0);
 		}
 	}

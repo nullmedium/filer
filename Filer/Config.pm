@@ -52,7 +52,7 @@ sub new {
 	$config_file{ident $self} = Filer::Tools->catpath($config_home{ident $self}, "config.yml");
 
 	if (! -e $config_home{ident $self}) {
- 		Filer::Tools->_mkdir($config_home{ident $self});
+ 		mkdir($config_home{ident $self});
 	}
 
 	if (! -e $config_file{ident $self}) {

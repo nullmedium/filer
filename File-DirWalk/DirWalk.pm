@@ -3,81 +3,100 @@
 # modify it under the same terms as Perl itself.
 
 package File::DirWalk;
+use base qw(Exporter);
+use Class::Std::Utils;
 
 our $VERSION = '0.3';
+our @EXPORT = qw(FAILED SUCCESS ABORTED PRUNE);
 
 use strict;
 use warnings;
 
+use Readonly;
+
 use File::Basename;
 use File::Spec;
-
-require Exporter;
-our @ISA = qw(Exporter);
-our @EXPORT = qw(FAILED SUCCESS ABORTED PRUNE);
 
 use constant SUCCESS 	=> 1;
 use constant FAILED 	=> 0;
 use constant ABORTED 	=> -1;
 use constant PRUNE 	=> -10;
 
+my %onBeginWalk;
+my %onLink;
+my %onFile;
+my %onDirEnter;
+my %onDirLeave;
+
 sub new {
 	my ($class) = @_;
-	my $self = bless {}, $class;
+	my $self = bless anon_scalar(), $class;
 
-	foreach (qw(onBeginWalk onLink onFile onDirEnter onDirLeave)) {
-		$self->{$_} = sub { SUCCESS; };
-	}
+	$onBeginWalk{ident $self} = sub { SUCCESS };
+	$onLink{ident $self}      = sub { SUCCESS };
+	$onFile{ident $self}      = sub { SUCCESS };
+	$onDirEnter{ident $self}  = sub { SUCCESS };
+	$onDirLeave{ident $self}  = sub { SUCCESS };
 
 	return $self;
 }
 
+sub DESTROY {
+	my ($self) = @_;
+
+	delete $onBeginWalk{ident $self};
+	delete $onLink{ident $self};     
+	delete $onFile{ident $self};     
+	delete $onDirEnter{ident $self};
+	delete $onDirLeave{ident $self};
+}
+
 sub onBeginWalk {
 	my ($self,$func) = @_;
-	$self->{onBeginWalk} = $func;
+	$onBeginWalk{ident $self} = $func;
 }
 
 sub onLink {
 	my ($self,$func) = @_;
-	$self->{onLink} = $func;
+	$onLink{ident $self} = $func;
 }
 
 sub onFile {
 	my ($self,$func) = @_;
-	$self->{onFile} = $func;
+	$onFile{ident $self} = $func;
 }
 
 sub onDirEnter {
 	my ($self,$func) = @_;
-	$self->{onDirEnter} = $func;
+	$onDirEnter{ident $self} = $func;
 }
 
 sub onDirLeave {
 	my ($self,$func) = @_;
-	$self->{onDirLeave} = $func;
+	$onDirLeave{ident $self} = $func;
 }
 
 sub walk {
 	my ($self,$path) = @_;
 
-	if ((my $r = &{$self->{onBeginWalk}}($path)) != SUCCESS) {
+	if ((my $r = $onBeginWalk{ident $self}->($path)) != SUCCESS) {
 		return $r;
 	}
 
 	if (-l $path) {
 
-		if ((my $r = &{$self->{onLink}}($path)) != SUCCESS) {
+		if ((my $r = $onLink{ident $self}->($path)) != SUCCESS) {
 			return $r;
 		}
 
 	} elsif (-d $path) {
 
-		if ((my $r = &{$self->{onDirEnter}}($path)) != SUCCESS) {
+		if ((my $r = $onDirEnter{ident $self}->($path)) != SUCCESS) {
 			return $r;
 		}
 
-		opendir(my $dirh, $path) || return FAILED;
-		my @dir_contents = readdir($dirh);
+		opendir my $dirh, $path || return FAILED;
+		my @dir_contents = readdir $dirh;
 		@dir_contents = File::Spec->no_upwards(@dir_contents);
 
 		foreach my $f (@dir_contents) {
@@ -94,13 +113,13 @@ sub walk {
 			}
 		}
 
-		closedir($dirh);
+		closedir $dirh;
 
-		if ((my $r = &{$self->{onDirLeave}}($path)) != SUCCESS) {
+		if ((my $r = $onDirLeave{ident $self}->($path)) != SUCCESS) {
 			return $r;
 		}
 	} else {
-		if ((my $r = &{$self->{onFile}}($path)) != SUCCESS) {
+		if ((my $r = $onFile{ident $self}->($path)) != SUCCESS) {
 			return $r;
 		}
 	}

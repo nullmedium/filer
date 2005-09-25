@@ -45,9 +45,9 @@ sub new {
 	$total_size{ident $self}  = 0;
 	my $pos = 0;
 
-	my ($t0,$t1,$elapsed);
- 	use Time::HiRes qw(gettimeofday tv_interval);
- 	$t0 = [gettimeofday];
+# 	my ($t0,$t1,$elapsed);
+#  	use Time::HiRes qw(gettimeofday tv_interval);
+#  	$t0 = [gettimeofday];
 
 	opendir my $dirh, $path || die "$filepath: $!";
 
@@ -67,9 +67,9 @@ sub new {
 
 	closedir $dirh;
 
-	$t1 = [gettimeofday];
-	$elapsed = tv_interval($t0,$t1);
-	print "time to read $path: $elapsed\n";
+# 	$t1 = [gettimeofday];
+# 	$elapsed = tv_interval($t0,$t1);
+# 	print "time to read $path: $elapsed\n";
 
 	return $self;
 }

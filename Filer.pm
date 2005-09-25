@@ -70,7 +70,7 @@ sub new {
 	my $self = bless anon_scalar(), $class;
 
 	$VERSION{ident $self} = "0.0.13-svn";
-	$mime{ident $self} = new Filer::Mime($self);
+	$mime{ident $self} = new Filer::Mime;
 
 	return $self;
 }
@@ -369,8 +369,17 @@ sub init_main_window {
 	$bookmarks_menu->set_submenu($bookmarks->generate_bookmarks_menu);
 	$bookmarks_menu->show;
 
-	$widgets{ident $self}->{list1}->open_path_helper((defined $ARGV[0] and -d $ARGV[0]) ? $ARGV[0] : $config{ident $self}->get_option('PathLeft'));
-	$widgets{ident $self}->{list2}->open_path_helper((defined $ARGV[1] and -d $ARGV[1]) ? $ARGV[1] : $config{ident $self}->get_option('PathRight'));
+	$widgets{ident $self}->{list1}->open_path_helper(
+		(defined $ARGV[0] and -d $ARGV[0])
+		? $ARGV[0]
+		: $config{ident $self}->get_option('PathLeft')
+	);
+
+	$widgets{ident $self}->{list2}->open_path_helper(
+		(defined $ARGV[1] and -d $ARGV[1])
+		? $ARGV[1]
+		: $config{ident $self}->get_option('PathRight')
+	);
 
 	$widgets{ident $self}->{main_window}->show_all;
 
@@ -379,15 +388,11 @@ sub init_main_window {
 	$widgets{ident $self}->{list1}->get_vbox->hide;
 	$widgets{ident $self}->{list2}->get_vbox->show;
 	
-	$pane{ident $self}->[$LEFT]  = undef;
+	$pane{ident $self}->[$LEFT]  = $widgets{ident $self}->{list1};
 	$pane{ident $self}->[$RIGHT] = $widgets{ident $self}->{list2};
 
 	$self->switch_mode;
-
-	$active_pane{ident $self}   = $pane{ident $self}->[$RIGHT];
-	$inactive_pane{ident $self} = $pane{ident $self}->[$LEFT];
-
-	$active_pane{ident $self}->set_focus;
+	$pane{ident $self}->[$RIGHT]->set_focus;
 }
 
 # sub get_widgets {
@@ -460,17 +465,9 @@ sub quit_cb {
 
 sub about_cb {
 	my ($self) = @_;
-	my $license;
 
-	$license = eval {
-		use Xfce4;
-		Xfce4::LICENSE_GPL();
-	};
-
-	if ($@) {
-		$license = join "", <DATA>;
-		$license =~ s/__VERSION__/$VERSION{ident $self}/g;
-	}
+	my $license = join "", <DATA>;
+	$license =~ s/__VERSION__/$VERSION{ident $self}/g;
 
 	my $dialog = new Gtk2::AboutDialog;
 	$dialog->set_name("Filer");
@@ -613,13 +610,13 @@ sub refresh_inactive_pane {
 
 sub go_home_cb {
 	my ($self) = @_;
-	my $opt = $config{ident $self}->get_option('Mode');
+	my $opt  = $config{ident $self}->get_option('Mode');
+	my $pane =
+		($opt == $NORTON_COMMANDER_MODE)
+		? $active_pane{ident $self}
+		: $pane{ident $self}->[$RIGHT];
 
-	if ($config{ident $self}->get_option('Mode') == $NORTON_COMMANDER_MODE) {
-		$active_pane{ident $self}->open_path_helper($ENV{HOME});
-	} else {
-		$pane{ident $self}->[$RIGHT]->open_path_helper($ENV{HOME});
-	}
+	$pane->open_path_helper($ENV{HOME});
 }
 
 sub synchronize_cb {
@@ -629,22 +626,22 @@ sub synchronize_cb {
 
 sub select_cb {
 	my ($self) = @_;
+	my $pane =
+		($active_pane{ident $self}->get_type eq "TREE")
+		? $pane{ident $self}->[$RIGHT]
+		: $active_pane{ident $self};
 
-	if ($active_pane{ident $self}->get_type eq "TREE") {
-		$pane{ident $self}->[$RIGHT]->select_dialog;
-	} else {
-		$active_pane{ident $self}->select_dialog;
-	}
+	$pane->select_dialog;
 }
 
 sub unselect_cb {
 	my ($self) = @_;
+	my $pane =
+		($active_pane{ident $self}->get_type eq "TREE")
+		? $pane{ident $self}->[$RIGHT]
+		: $active_pane{ident $self};
 
-	if ($active_pane{ident $self}->get_type eq "TREE") {
-		$pane{ident $self}->[$RIGHT]->unselect_dialog;
-	} else {
-		$active_pane{ident $self}->unselect_dialog;
-	}
+	$pane->unselect_dialog;
 }
 
 sub search_cb {
@@ -680,17 +677,21 @@ sub paste_cb {
 
 sub cut_cb {
 	my ($self) = @_;
-	return if ($active_pane{ident $self}->count_items == 0);
+	my $pane = $active_pane{ident $self};
 
-	my $str = join "\n\r", (@{$active_pane{ident $self}->get_item_list}, "cut");
+	return if ($pane->count_items == 0);
+
+	my $str = join "\n\r", (@{$pane->get_item_list}, "cut");
 	$self->set_clipboard_contents($str);
 }
 
 sub copy_cb {
 	my ($self) = @_;
-	return if ($active_pane{ident $self}->count_items == 0);
+	my $pane = $active_pane{ident $self};
 
-	my $str = join "\n\r", (@{$active_pane{ident $self}->get_item_list}, "copy");
+	return if ($pane->count_items == 0);
+
+	my $str = join "\n\r", (@{$pane->get_item_list}, "copy");
 	$self->set_clipboard_contents($str);
 }
 
@@ -698,9 +699,11 @@ sub rename_cb {
 	my ($self) = @_;
 	my ($dialog,$hbox,$label,$entry);
 
-	return if ($active_pane{ident $self}->count_items == 0);
+	my $pane = $active_pane{ident $self};
 
-	my $fileinfo = $active_pane{ident $self}->get_fileinfo_list->[0];
+	return if ($pane->count_items == 0);
+
+	my $fileinfo = $pane->get_fileinfo_list->[0];
 
 	$dialog = new Gtk2::Dialog(
 		"Rename",
@@ -730,7 +733,7 @@ sub rename_cb {
 	$dialog->show_all;
 
 	if ($dialog->run eq 'ok') {
-		my $old_pwd = $active_pane{ident $self}->get_pwd;
+		my $old_pwd = $pane->get_pwd;
 		my $old     = $fileinfo;
 		my $new;
 
@@ -752,7 +755,8 @@ sub rename_cb {
 
 sub delete_cb {
 	my ($self) = @_;
-	my $items_count = $active_pane{ident $self}->count_items;
+	my $pane        = $active_pane{ident $self};
+	my $items_count = $pane->count_items;
 
 	return if ($items_count == 0);
 
@@ -760,7 +764,7 @@ sub delete_cb {
 		my $message = "";
 		
 		if ($items_count == 1) {
-			my $fi = $active_pane{ident $self}->get_fileinfo_list->[0];
+			my $fi = $pane->get_fileinfo_list->[0];
 			my $f  = $fi->get_basename;
 			$f =~ s/&/&amp;/g; # sick fix. meh.
 
@@ -773,10 +777,8 @@ sub delete_cb {
 	}
 
 	my $delete = new Filer::Delete;
-	$delete->delete($active_pane{ident $self}->get_item_list);
+	$delete->delete($pane->get_item_list);
 
-# 	$active_pane{ident $self}->remove_selected;
-# 	$self->refresh_inactive_pane;
 	$self->refresh_cb;
 }
 
@@ -828,6 +830,7 @@ sub mkdir_cb {
 
 sub symlink_cb {
 	my ($self) = @_;
+
 	return if ($active_pane{ident $self}->count_items == 0);
 
 	my ($dialog,$symlink_label,$target_label,$symlink_entry,$target_entry) = Filer::Dialog->source_target_dialog;

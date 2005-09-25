@@ -6,24 +6,28 @@ use warnings;
 use Cwd qw(abs_path);
 use File::Spec;
 
+my $sizes = {};
+
 sub exec {
 	my ($self,%opts) = @_;
 
 	my $cmd  = $opts{command} || die "no command defined!";
 	my $wait = $opts{wait};
 
-	my $main_loop = Glib::MainLoop->new;
-
 	print "open $cmd\n";
 	my $pid = open my $child, '-|', $cmd || die "can't fork $cmd: $!";
 
-	Glib::IO->add_watch(fileno $child, ['hup'], sub {
-		$main_loop->quit;
-		return 0;
-	});
+	if ($wait) {
+		my $main_loop = Glib::MainLoop->new;
 
-	print "run\n";
-	$main_loop->run;
+		Glib::IO->add_watch(fileno $child, ['hup'], sub {
+			$main_loop->quit;
+			return 0;
+		});
+
+		print "run\n";
+		$main_loop->run;
+	}
 
 	print "close $child\n";
 	close $child or warn "$cmd died with exit status ".($? >> 8)."\n";
@@ -58,7 +62,8 @@ sub suggest_filename_helper {
 sub calculate_size {
 	my $size = pop;
 
-	(! $size)             ? undef                                :
+	return undef if (! $size);
+	return $sizes->{$size} ||=
 	($size >= 1073741824) ? sprintf("%.2f GB", $size/1073741824) :
 	($size >= 1048576)    ? sprintf("%.2f MB", $size/1048576)    :
 	($size >= 1024)       ? sprintf("%.2f kB", $size/1024)       : $size;
