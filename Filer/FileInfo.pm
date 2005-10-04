@@ -130,26 +130,26 @@ sub get_description {
 	return describe($self->get_mimetype);
 }
 
-sub get_thumbnail {
-	my ($self) = @_;
-	
-	$thumbnails{$filepath{ident $self}} ||= eval {
-		use Digest::MD5 qw(md5_hex);
-	
-		my $thumbnail_file = md5_hex($self->get_uri);
-		my $thumbnail_path = "$ENV{HOME}/.thumbnails/normal/$thumbnail_file.png";
-		my $thumbnail      = undef;
-
-		if (-e $thumbnail_path) {
-			$thumbnail = Gtk2::Gdk::Pixbuf->new_from_file($thumbnail_path);
-			$thumbnail = $thumbnail->intelligent_scale(22);
-		}
-		
-		$thumbnail;
-	};
-		
-	return $thumbnails{$filepath{ident $self}};
-}
+# sub get_thumbnail {
+# 	my ($self) = @_;
+# 	
+# 	$thumbnails{$filepath{ident $self}} ||= eval {
+# 		use Digest::MD5 qw(md5_hex);
+# 	
+# 		my $thumbnail_file = md5_hex($self->get_uri);
+# 		my $thumbnail_path = "$ENV{HOME}/.thumbnails/normal/$thumbnail_file.png";
+# 		my $thumbnail      = undef;
+# 
+# 		if (-e $thumbnail_path) {
+# 			$thumbnail = Gtk2::Gdk::Pixbuf->new_from_file($thumbnail_path);
+# 			$thumbnail = $thumbnail->intelligent_scale(22);
+# 		}
+# 		
+# 		$thumbnail;
+# 	};
+# 		
+# 	return $thumbnails{$filepath{ident $self}};
+# }
 
 sub get_stat {
 	my ($self) = @_;

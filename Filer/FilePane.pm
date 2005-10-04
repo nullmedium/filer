@@ -220,13 +220,15 @@ sub show_popup_menu {
 			$item = $uimanager->get_widget("$ui_path/Open");
 			$item->set_submenu($commands_menu);
 
-			foreach my $command ($filer{ident $self}->get_mime->get_commands($type)) {
-				$item = new Gtk2::MenuItem(basename($_));
+			my @commands = $filer{ident $self}->get_mime->get_commands($type);
+
+			foreach my $command (@commands) {
+				$item = Gtk2::MenuItem->new($command);
 				$item->signal_connect("activate", sub {
 					my $command = pop;
 					my $param   = $self->get_item;
 					Filer::Tools->exec(command => "$command $param", wait => 0);
-				}, $_);
+				}, $command);
 				$commands_menu->add($item);
 			}
 
