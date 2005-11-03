@@ -14,23 +14,28 @@ sub exec {
 	my $cmd  = $opts{command} || die "no command defined!";
 	my $wait = $opts{wait};
 
-	print "open $cmd\n";
-	my $pid = open my $child, '-|', $cmd || die "can't fork $cmd: $!";
-
 	if ($wait) {
-		my $main_loop = Glib::MainLoop->new;
+# 		print "open $cmd\n";
+# 		my $pid = open my $child, '-|', $cmd || die "can't fork $cmd: $!";
+# 
+# 		my $main_loop = Glib::MainLoop->new;
+# 
+# 		Glib::IO->add_watch(fileno $child, ['hup'], sub {
+# 			$main_loop->quit;
+# 			return 0;
+# 		});
+# 
+# 		print "run\n";
+# 		$main_loop->run;
+# 
+# 		print "close $child\n";
+# 		close $child or warn "$cmd died with exit status ".($? >> 8)."\n";
 
-		Glib::IO->add_watch(fileno $child, ['hup'], sub {
-			$main_loop->quit;
-			return 0;
-		});
+		system($cmd);
 
-		print "run\n";
-		$main_loop->run;
+	} else {
+		system("$cmd &");
 	}
-
-	print "close $child\n";
-	close $child or warn "$cmd died with exit status ".($? >> 8)."\n";
 }
 
 ####
