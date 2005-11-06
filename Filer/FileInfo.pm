@@ -117,7 +117,7 @@ sub get_basename {
 
 sub get_mimetype {
 	my ($self) = @_;
-	return $mimetype{ident $self} ||= ($self->is_symlink) ? 'inode/symlink' : mimetype($filepath{ident $self});
+	return $mimetype{ident $self} ||= mimetype($filepath{ident $self});
 }
 
 sub get_mimetype_icon {
