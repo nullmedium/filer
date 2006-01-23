@@ -516,7 +516,8 @@ sub open_terminal_cb {
 
 	if (-d $path) {
 		my $term = $config{ident $self}->get_option("Terminal");
-		Filer::Tools->exec(command => "$term --working-directory $path", wait => 0);
+#		Filer::Tools->exec(command => "$term --working-directory $path", wait => 0);
+		Filer::Tools->exec(command => "cd $path && $term", wait => 0);
 	}
 }
 
@@ -751,6 +752,7 @@ sub rename_cb {
 	}
 
 	$dialog->destroy;
+	$self->refresh_cb;
 }
 
 sub delete_cb {
