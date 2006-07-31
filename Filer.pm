@@ -42,7 +42,7 @@ require Filer::Bookmarks;
 require Filer::Directory;
 require Filer::FileInfo;
 require Filer::Tools;
-require Filer::Mime;
+# require Filer::Mime;
 require Filer::MimeTypeIcon;
 require Filer::FileAssociationDialog;
 require Filer::Archive;
@@ -65,7 +65,7 @@ require Filer::Search;
 # attributes:
 my %VERSION;
 my %config;
-my %mime;
+# my %mime;
 my %widgets;
 my %pane;
 my %active_pane;
@@ -76,7 +76,7 @@ sub new {
 	my $self = bless anon_scalar(), $class;
 
 	$VERSION{ident $self} = "0.0.13-svn";
-	$mime{ident $self} = new Filer::Mime;
+# 	$mime{ident $self} = new Filer::Mime;
 
 	return $self;
 }
@@ -103,7 +103,7 @@ sub init_config {
 	my ($self) = @_;
 	$config{ident $self} = new Filer::Config;
 
-	if ($config{ident $self}->get_option("HonorUmask") == 0) {
+	if ($config{ident $self}->get_option("HonorUmask") == $FALSE) {
 		umask 0000;
 	}
 }
@@ -126,10 +126,10 @@ sub init_mimeicons {
 # 	Filer::FileInfo->set_mimetype_icons(\%icons);
 }
 
-sub get_mime {
-	my ($self) = @_;
-	return $mime{ident $self};
-}
+# sub get_mime {
+# 	my ($self) = @_;
+# 	return $mime{ident $self};
+# }
 
 sub init_main_window {
 	my ($self) = @_;
@@ -584,10 +584,10 @@ sub set_terminal_cb {
 	$config{ident $self}->set_option('Terminal', $term);
 }
 
-sub file_ass_cb {
-	my ($self) = @_;
-	$mime{ident $self}->file_association_dialog;
-}
+# sub file_ass_cb {
+# 	my ($self) = @_;
+# 	$mime{ident $self}->file_association_dialog;
+# }
 
 sub set_properties {
 	my ($self) = @_;
