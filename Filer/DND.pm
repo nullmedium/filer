@@ -76,8 +76,7 @@ sub filepane_treeview_drag_data_received {
 		my $path;
 
 		my @items       = map {
-					$_ =~ s/^file:\/\///g;
-					$_;
+				URI::file->new($_)->file;
 				} split(/\r\n/, $data->data);
 		my $items_count = scalar @items;
 
@@ -91,13 +90,16 @@ sub filepane_treeview_drag_data_received {
 			$path = $filepane{ident $self}->get_pwd;
 		}
 
+		return if ($path eq $active_pane->get_pwd);
+
 		if (($config{ident $self}->get_option("ConfirmCopy") == 1)
 		 or ($config{ident $self}->get_option("ConfirmMove") == 1)) {
-			my $do      = ($action eq "copy") ? "Copy" : "Move";
+			my $do      = ucfirst($action);
 
 			if ($items_count == 1) {
 				my $f = $items[0];
 				$f =~ s/&/&amp;/g; # sick fix. meh.
+				$f = basename($f);
 
 				return if (Filer::Dialog->yesno_dialog("$do $f to $path?") eq 'no');
 			} else {

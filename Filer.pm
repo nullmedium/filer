@@ -26,6 +26,7 @@ use Gtk2::Gdk::Keysyms;
 
 use Fcntl;
 use Memoize;
+use URI::file;
 use File::Spec;
 use File::BaseDir;
 use File::Basename;
@@ -38,19 +39,24 @@ use Filer::Constants;
 
 require Filer::Config;
 require Filer::Bookmarks;
-require Filer::VFS;
+require Filer::Directory;
 require Filer::FileInfo;
 require Filer::Tools;
 require Filer::Mime;
+require Filer::MimeTypeIcon;
 require Filer::FileAssociationDialog;
 require Filer::Archive;
 require Filer::Properties;
 require Filer::Dialog;
-require Filer::ProgressDialog;
 require Filer::FilePaneInterface;
 require Filer::FilePane;
 require Filer::FileTreePane;
 require Filer::FileCopy;
+require Filer::JobDialog;
+require Filer::CopyMoveJobDialogCommon;
+require Filer::CopyJobDialog;
+require Filer::MoveJobDialog;
+require Filer::DeleteJobDialog;
 require Filer::Copy;
 require Filer::Move;
 require Filer::Delete;
@@ -110,14 +116,14 @@ sub get_config {
 sub init_mimeicons {
 	my ($self) = @_;
 
-	my %icons = map {
-		my $icon   = $mime{ident $self}->get_icon($_);
-		my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($icon);
-
-		$_ => $pixbuf;
-	} $mime{ident $self}->get_mimetypes;
-
-	Filer::FileInfo->set_mimetype_icons(\%icons);
+# 	my %icons = map {
+# 		my $icon   = $mime{ident $self}->get_icon($_);
+# 		my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($icon);
+# 
+# 		$_ => $pixbuf;
+# 	} $mime{ident $self}->get_mimetypes;
+# 
+# 	Filer::FileInfo->set_mimetype_icons(\%icons);
 }
 
 sub get_mime {
@@ -247,10 +253,10 @@ sub init_main_window {
 		name => "set-terminal-action",
 		label => "Set Terminal",
 		callback => sub { $self->set_terminal_cb },
-	},{
-		name => "file-assoc-action",
-		label => "File Associations",
-		callback => sub { $self->file_ass_cb },
+# 	},{
+# 		name => "file-assoc-action",
+# 		label => "File Associations",
+# 		callback => sub { $self->file_ass_cb },
 	},{
 		name => "HelpMenuAction",
 		label => "_Help",
@@ -268,9 +274,6 @@ sub init_main_window {
 		label => "Synchronize",
 		tooltip => "Synchronize Folders",
 		callback => sub { $self->synchronize_cb },
-	},{
-		name => "OpenPopupMenuAction",
-		stock_id => "gtk-open",
 	},{
 		name => "ArchiveMenuAction",
 		label => "Archive",
@@ -481,7 +484,7 @@ sub about_cb {
 		"Bjoern Martensen <bjoern.martensen\@gmail.com>"
 	);
 
-	$dialog->set_artists("Crystal SVG 16x16 mimetype icons by Everaldo (http://www.everaldo.com)");
+#	$dialog->set_artists("Crystal SVG 16x16 mimetype icons by Everaldo (http://www.everaldo.com)");
 
 	$dialog->show;
 }
@@ -507,7 +510,7 @@ sub open_with_cb {
 		? $active_pane{ident $self} 
 		: $pane{ident $self}->[$RIGHT];
 
-	$pane->open_file_with;
+	$pane->open_file_with($pane->get_fileinfo_list->[0]);
 }
 
 sub open_terminal_cb {
@@ -515,9 +518,10 @@ sub open_terminal_cb {
 	my $path = $active_pane{ident $self}->get_pwd;
 
 	if (-d $path) {
-		my $term = $config{ident $self}->get_option("Terminal");
+#		my $term = $config{ident $self}->get_option("Terminal");
 #		Filer::Tools->exec(command => "$term --working-directory $path", wait => 0);
-		Filer::Tools->exec(command => "cd $path && $term", wait => 0);
+#		Filer::Tools->exec(command => "cd $path && $term", wait => 0);
+		Filer::Tools->exec(command => "exo-open --launch TerminalEmulator", wait => 0);
 	}
 }
 
@@ -617,7 +621,7 @@ sub go_home_cb {
 		? $active_pane{ident $self}
 		: $pane{ident $self}->[$RIGHT];
 
-	$pane->open_path_helper($ENV{HOME});
+	$pane->open_path_helper(File::Spec->homedir);
 }
 
 sub synchronize_cb {
@@ -684,6 +688,15 @@ sub cut_cb {
 
 	my $str = join "\n\r", (@{$pane->get_item_list}, "cut");
 	$self->set_clipboard_contents($str);
+
+# 	foreach (@{$pane->get_fileinfo_list}) {
+# 		my $pixbuf = $_->get_mimetype_icon;
+# 		my $new = $pixbuf->copy;
+# 
+# 		$pixbuf->saturate_and_pixelate($pixbuf, 0.0, 1);
+# 	}
+
+	$pane->set_focus;
 }
 
 sub copy_cb {
@@ -901,17 +914,6 @@ sub set_clipboard_contents {
 	my $clipboard      = Gtk2::Clipboard->get_for_display($display, $clipboard_atom);
 
  	$clipboard->set_text($contents);
-
-# 	$clipboard->set_with_data(
-# 		sub {
-# 			print "@_\n";
-# 		},
-# 		sub { 
-# 			print "@_\n";
-# 		},
-# 		undef, 
-# 		{'target' => "text/uri-list", 'flags' => [], 'info' => 0}
-# 	);
 }
 
 1;

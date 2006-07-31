@@ -193,6 +193,7 @@ sub init_dirwalk {
 
 			$treestore{ident $self}->insert_with_values(
 				$parent_iter{ident $self}->{$dirname_file},
+				-1,
 				0, $basename_file
 			);
 		} else {

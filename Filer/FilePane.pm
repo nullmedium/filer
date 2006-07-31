@@ -182,8 +182,8 @@ sub show_popup_menu {
 	my $popup_menu = $uimanager->get_widget($ui_path);
 	$popup_menu->show_all;
 
-	$uimanager->get_widget("$ui_path/Open")->show;
-	$uimanager->get_widget("$ui_path/Open")->set_sensitive(1);
+	$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive(1);
+	$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive(1);
 	$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive(1);
 	$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive(1);
 	$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive(1);
@@ -205,45 +205,52 @@ sub show_popup_menu {
 		}
 
 		if ($self->count_items == 1) {
-			my $fi   = $self->get_fileinfo_list->[0];
-			my $type = $fi->get_mimetype;
+			my $fi = $self->get_fileinfo_list->[0];
 
-			# Customize archive submenu
-			if (Filer::Archive->is_supported_archive($type)) {
-				$uimanager->get_widget("$ui_path/archive-menu/Extract")->set_sensitive(1);
+			if ($fi->is_dir) {
+				$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive(0);
 			} else {
-				$uimanager->get_widget("$ui_path/archive-menu/Extract")->set_sensitive(0);
+				# Customize archive submenu
+				if ($fi->is_supported_archive) {
+					$uimanager->get_widget("$ui_path/archive-menu/Extract")->set_sensitive(1);
+					$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive(0);
+				} else {
+					$uimanager->get_widget("$ui_path/archive-menu/Extract")->set_sensitive(0);
+					$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive(1);
+				}
 			}
 
 			# add and create Open submenu
-			my $commands_menu = new Gtk2::Menu;
-			$item = $uimanager->get_widget("$ui_path/Open");
-			$item->set_submenu($commands_menu);
-
-			my @commands = $filer{ident $self}->get_mime->get_commands($type);
-
-			foreach my $command (@commands) {
-				$item = Gtk2::MenuItem->new($command);
-				$item->signal_connect("activate", sub {
-					my $command = pop;
-					my $param   = $self->get_item;
-					Filer::Tools->exec(command => "$command $param", wait => 0);
-				}, $command);
-				$commands_menu->add($item);
-			}
-
-			$item = new Gtk2::MenuItem("Other ...");
-			$item->signal_connect("activate", sub { $self->open_file_with });
-			$commands_menu->add($item);
-
-			$commands_menu->show_all;
+# 			my $commands_menu = new Gtk2::Menu;
+# 			$item = $uimanager->get_widget("$ui_path/Open");
+# 			$item->set_submenu($commands_menu);
+# 
+# 			my @commands = $filer{ident $self}->get_mime->get_commands($type);
+# 
+# 			foreach my $command (@commands) {
+# 				$item = Gtk2::MenuItem->new($command);
+# 				$item->signal_connect("activate", sub {
+# 					my $command = pop;
+# 					my $param   = $self->get_item;
+# 					Filer::Tools->exec(command => "$command $param", wait => 0);
+# 				}, $command);
+# 				$commands_menu->add($item);
+# 			}
+# 
+# 			$item = new Gtk2::MenuItem("Other ...");
+# 			$item->signal_connect("activate", sub { $self->open_file_with });
+# 			$commands_menu->add($item);
+# 
+# 			$commands_menu->show_all;
 		} else {
-			$uimanager->get_widget("$ui_path/Open")->set_sensitive(0);
+			$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive(0);
+			$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive(0);
 			$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive(0);
 			$uimanager->get_widget("$ui_path/Properties")->set_sensitive(0);
 		}
 	} else {
-		$uimanager->get_widget("$ui_path/Open")->set_sensitive(0);
+		$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive(0);
+		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive(0);
 		$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive(0);
 		$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive(0);
 		$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive(0);
@@ -276,20 +283,21 @@ sub treeview_event_cb {
 	}
 
 	if ($e->type eq "button-press") { 
-		if ($e->button == 2) {
-			$mouse_motion_select{ident $self}    = 1;
-			$mouse_motion_y_pos_old{ident $self} = $e->y;
-
-			my ($p) = $treeview{ident $self}->get_path_at_pos($e->x,$e->y);
-
-			if (defined $p) {
- 				$treeselection{ident $self}->unselect_all;
-				$treeselection{ident $self}->select_path($p);
-			}
-
-			$self->set_focus;
-			return 1;
-		} elsif ($e->button == 3) {
+# 		if ($e->button == 2) {
+# 			$mouse_motion_select{ident $self}    = 1;
+# 			$mouse_motion_y_pos_old{ident $self} = $e->y;
+# 
+# 			my ($p) = $treeview{ident $self}->get_path_at_pos($e->x,$e->y);
+# 
+# 			if (defined $p) {
+#  				$treeselection{ident $self}->unselect_all;
+# 				$treeselection{ident $self}->select_path($p);
+# 			}
+# 
+# 			$self->set_focus;
+# 			return 1;
+# 		} elsif ($e->button == 3) {
+		if ($e->button == 3) {
 
 			$self->set_focus;
 			$self->show_popup_menu($e);
@@ -312,24 +320,24 @@ sub treeview_event_cb {
 		return 1;
 	}
 
-	if ($e->type eq "button-release" and $e->button == 2) {
-#		$self->set_focus;
-		$mouse_motion_select{ident $self} = 0;
-		return 1;
-	}
+# 	if ($e->type eq "button-release" and $e->button == 2) {
+# #		$self->set_focus;
+# 		$mouse_motion_select{ident $self} = 0;
+# 		return 1;
+# 	}
 
-	if (($e->type eq "motion-notify") and ($mouse_motion_select{ident $self} == 1)) {
-		my ($p_old) = $treeview{ident $self}->get_path_at_pos($e->x,$mouse_motion_y_pos_old{ident $self});
-		my ($p_new) = $treeview{ident $self}->get_path_at_pos($e->x,$e->y);
-
-		if (defined $p_old and defined $p_new) {
-			$treeselection{ident $self}->unselect_all;
-			$treeselection{ident $self}->select_range($p_old,$p_new);
-		}
-
-#		$self->set_focus;
-		return 1;
-	}
+# 	if (($e->type eq "motion-notify") and ($mouse_motion_select{ident $self} == 1)) {
+# 		my ($p_old) = $treeview{ident $self}->get_path_at_pos($e->x,$mouse_motion_y_pos_old{ident $self});
+# 		my ($p_new) = $treeview{ident $self}->get_path_at_pos($e->x,$e->y);
+# 
+# 		if (defined $p_old and defined $p_new) {
+# 			$treeselection{ident $self}->unselect_all;
+# 			$treeselection{ident $self}->select_range($p_old,$p_new);
+# 		}
+# 
+# #		$self->set_focus;
+# 		return 1;
+# 	}
 
 	return 0;
 }
@@ -415,28 +423,40 @@ sub open_file {
 
 		Filer::Tools->exec(command => $filepath, wait => 0);
 
-	} else {
-		my $type    = $fileinfo->get_mimetype;
-		my $command = $filer{ident $self}->get_mime->get_default_command($type);
+	} elsif ($fileinfo->is_supported_archive) {
 
-		if ($command) {
-			Filer::Tools->exec(command => "$command $filepath", wait => 0);
+		$self->extract_archive_temporary($filepath);
+
+	} else {
+# 		my $type    = $fileinfo->get_mimetype;
+# 		my $command = $filer{ident $self}->get_mime->get_default_command($type);
+# 
+# 		if ($command) {
+# 			Filer::Tools->exec(command => "$command '$filepath'", wait => 0);
+# 		} else {
+# 			if (Filer::Archive->is_supported_archive($type)) {
+# 				$self->extract_archive_temporary($filepath);
+# 			} else {
+# 				$filer{ident $self}->get_mime->run_dialog($fileinfo);
+# 			}
+# 		}
+
+		my $handler = $fileinfo->get_mimetype_handler;
+
+		if ($handler) {
+			Filer::Tools->exec(command => "$handler '$filepath'", wait => 0);
 		} else {
-			if (Filer::Archive->is_supported_archive($type)) {
-				$self->extract_archive_temporary($filepath);
-			} else {
-				$filer{ident $self}->get_mime->run_dialog($fileinfo);
-			}
+			$self->open_file_with($fileinfo);
 		}
 	}
 }
 
 sub open_file_with {
-	my ($self) = @_;
+	my ($self,$fileinfo) = @_;
 
-	return 0 if (! defined $self->get_iter);
+	return 0 if (not defined $fileinfo);
 
-	$filer{ident $self}->get_mime->run_dialog($self->get_fileinfo_list->[0]);
+	Filer::Dialog->open_with_dialog($fileinfo);		
 }
 
 sub open_path_helper {
@@ -453,32 +473,36 @@ sub open_path_helper {
 sub open_path {
 	my ($self,$filepath) = @_;
 
-	my ($t0,$t1,$elapsed);
- 	use Time::HiRes qw(gettimeofday tv_interval);
- 	$t0 = [gettimeofday];
+# 	my ($t0,$t1,$elapsed);
+#  	use Time::HiRes qw(gettimeofday tv_interval);
+#  	$t0 = [gettimeofday];
 
 	if (defined $overrides{ident $self}->{$filepath}) {
 		$filepath = $overrides{ident $self}->{$filepath};
 		delete $overrides{ident $self}->{$filepath};
 	}
 
+	if (! -d $filepath) {
+		$filepath = File::Spec->homedir;	
+	}
+
 	my $show_hidden  = $filer{ident $self}->get_config->get_option('ShowHiddenFiles');
-	my $vfs          = Filer::VFS->new(path => $filepath, hidden => $show_hidden);
-	my $dir_contents = $vfs->get_all;
+	my $Directory    = Filer::Directory->new(path => $filepath, hidden => $show_hidden);
+	my $dir_contents = $Directory->get_all;
 
 	$filepath{ident $self} = $filepath;
 	
-	$treemodel{ident $self}->set_fileinfo_list($dir_contents);
+ 	$treemodel{ident $self}->set_dir_contents($dir_contents);
 
 	$path_combo{ident $self}->insert_text(0, $filepath{ident $self});
 	$path_combo{ident $self}->set_active(0);
 
-	my $status = sprintf("%d directories and %d files: %s", $vfs->dirs_count, $vfs->files_count, $vfs->total_size);
+	my $status = sprintf("%d directories and %d files: %s", $Directory->dirs_count, $Directory->files_count, $Directory->total_size);
 	$status{ident $self}->set_text($status);
 
-	$t1 = [gettimeofday];
-	$elapsed = tv_interval($t0,$t1);
-	print "time to load $filepath: $elapsed\n";
+# 	$t1 = [gettimeofday];
+# 	$elapsed = tv_interval($t0,$t1);
+# 	print "time to load $filepath: $elapsed\n";
 }
 
 sub select_dialog {
@@ -567,44 +591,36 @@ sub _select_dialog {
 sub create_tar_gz_archive {
 	my ($self) = @_;
 
-	$self->archive_helper(sub {
-		my $archive = new Filer::Archive;
-		return $archive->create_tar_gz_archive($filepath{ident $self}, $self->get_item_list);
-	});
+	my $archive = new Filer::Archive;
+	$archive->create_tar_gz_archive($filepath{ident $self}, $self->get_item_list);
+
+	$self->refresh;
 }
 
 sub create_tar_bz2_archive {
 	my ($self) = @_;
 
-	$self->archive_helper(sub {
-		my $archive = new Filer::Archive;
-		return $archive->create_tar_bz2_archive($filepath{ident $self}, $self->get_item_list);
-	});
+	my $archive = new Filer::Archive;
+	$archive->create_tar_bz2_archive($filepath{ident $self}, $self->get_item_list);
+
+	$self->refresh;
 }
 
 sub extract_archive {
 	my ($self) = @_;
 
-	$self->archive_helper(sub {
-		my $archive = new Filer::Archive;
-		return $archive->extract_archive($filepath{ident $self}, $self->get_item_list);
-	});
+	my $archive = new Filer::Archive;
+	$archive->extract_archive($filepath{ident $self}, $self->get_item_list);
+
+	$self->refresh;
 }
 
 sub extract_archive_temporary {
 	my ($self,$file) = @_;
 
-	$self->archive_helper(sub {
-		my $dir = $self->get_temp_archive_dir;
-		my $archive = new Filer::Archive;
-		return $archive->extract_archive($dir, [ $file ]);
-	});
-}
-
-sub archive_helper {
-	my ($self,$func) = @_;
-
-	my $dir = $func->();
+	my $dir = $self->get_temp_archive_dir;
+	my $archive = new Filer::Archive;
+	$archive->extract_archive($dir, [ $file ]);
 
 	$self->open_path($dir);
 }

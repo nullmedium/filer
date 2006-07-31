@@ -15,6 +15,8 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::Copy;
+use base qw(Filer::CopyJobDialog);
+
 use Class::Std::Utils;
 
 use strict;
@@ -26,89 +28,36 @@ use File::DirWalk;
 
 use Filer::Constants;
 
-my %SKIPALL;
-my %OVERWRITEALL;
-my %CANCELLED;
-my %progress_dialog;
-my %progress_label;
-my %progressbar_total;
-my %total_bytes;
-my %completed_bytes;
-
 sub new {
 	my ($class) = @_;
-	my $self    = bless {}, $class;
-
-	$SKIPALL{ident $self}      = 0;
-	$OVERWRITEALL{ident $self} = 0;
-	$CANCELLED{ident $self}    = $FALSE;
-
-	$progress_dialog{ident $self} = new Filer::ProgressDialog;
-	$progress_dialog{ident $self}->dialog->set_title("Copying ...");
-	$progress_dialog{ident $self}->label1->set_markup("<b>Copying: \nto: </b>");
-
-	$progress_label{ident $self}    = $progress_dialog{ident $self}->label2;
-	$progressbar_total{ident $self} = $progress_dialog{ident $self}->add_progressbar;
-
-	my $button = $progress_dialog{ident $self}->dialog->add_button('gtk-cancel' => 'cancel');
-	$button->signal_connect("clicked", sub {
-		$CANCELLED{ident $self} = $TRUE;
-		$progress_dialog{ident $self}->destroy;
-	});
-
+	my $self = $class->SUPER::new();
+	
 	return $self;
 }
 
 sub DESTROY {
 	my ($self) = @_;
-
-	delete $SKIPALL{ident $self};
-	delete $OVERWRITEALL{ident $self};
-	delete $CANCELLED{ident $self};
-	delete $progress_dialog{ident $self};
-	delete $progress_label{ident $self};
-	delete $progressbar_total{ident $self};
-	delete $total_bytes{ident $self};
-	delete $completed_bytes{ident $self};
 }
 
-sub cancelled {
-	my ($self) = @_;
-	return $CANCELLED{ident $self};
-}
+sub deep_count_bytes {
+	my ($self,$FILES) = @_;
 
-sub update_progress_label {
-	my ($self,$str) = @_;
-	$progress_label{ident $self}->set_text($str);
-	while (Gtk2->events_pending) { Gtk2->main_iteration; }
-}
-
-sub update_written_bytes {
-	my ($self,$bytes) = @_;
-	$completed_bytes{ident $self} += $bytes;
+	for (@{$FILES}) {
+		my $fi = Filer::FileInfo->new($_);
+		$self->set_total_bytes($self->total_bytes + $fi->deep_count_bytes);
+	}
 }
 
 sub copy {
 	my ($self,$FILES,$DEST) = @_;
 
-	$total_bytes{ident $self}     = 0;
-	$completed_bytes{ident $self} = 0;
+	$self->deep_count_bytes($FILES);
 
 	my $dirwalk  = new File::DirWalk;
 	my $filecopy = new Filer::FileCopy($self);
 
-	$dirwalk->onFile(sub {
-		my ($file) = @_;
-		$total_bytes{ident $self} += -s $file;
-		return 1;
-	});
-
-	for (@{$FILES}) {
-		$dirwalk->walk($_);
-	}
-
 	$dirwalk->onBeginWalk(sub {
-		return ($CANCELLED{ident $self} == $FALSE) ? File::DirWalk::SUCCESS : File::DirWalk::ABORTED;
+		return (!$self->cancelled) ? File::DirWalk::SUCCESS : File::DirWalk::ABORTED;
 	});
 
 	$dirwalk->onLink(sub {
@@ -152,37 +101,25 @@ sub copy {
 			}
 		}
 
+		$self->update_progress_label("$file\n$my_dest");
 		return $filecopy->filecopy($file,$my_dest);
  	});
 
-	my $timeout = Glib::Timeout->add(100, sub {
-		return 1 if ($total_bytes{ident $self} == 0);
-		return 0 if ($CANCELLED{ident $self} == $TRUE);
-
-		my $percent_written = $completed_bytes{ident $self}/$total_bytes{ident $self};
-
-		$progressbar_total{ident $self}->set_text(sprintf("%.0f", ($percent_written * 100)) . "%");
-		$progressbar_total{ident $self}->set_fraction($percent_written);
-
-		return 1;
-	});
-
-	$progress_dialog{ident $self}->show;
+	$self->show_job_dialog;
 
 	foreach my $source (@{$FILES}) {
 		my $r = $dirwalk->walk($source);
 
 		if ($r == File::DirWalk::FAILED) {
-			Filer::Dialog->msgbox_error("Copying of $source to " . $DEST . " failed: $!");
+			Filer::Dialog->msgbox_error("Copying of $source to $DEST failed: $!");
 			last;
 		} elsif ($r == File::DirWalk::ABORTED) {
-			Filer::Dialog->msgbox_info("Copying of $source to " . $DEST . " aborted!");
+			Filer::Dialog->msgbox_info("Copying of $source to $DEST aborted!");
 			last;
 		}
 	}
 
-	Glib::Source->remove($timeout);
-	$progress_dialog{ident $self}->destroy;
+	$self->destroy_job_dialog;
 }
 
 *action = \&copy;

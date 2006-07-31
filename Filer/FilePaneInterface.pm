@@ -58,6 +58,11 @@ sub get_model {
 	return $treemodel{ident $self};
 }
 
+sub get_model_data {
+	my ($self) = @_;
+	return $treemodel{ident $self}->get_data;
+}
+
 sub set_focus {
 	my ($self) = @_;
 	$treeview{ident $self}->grab_focus;
@@ -162,10 +167,8 @@ package Gtk2::TreeModel;
 
 sub get_fileinfo {
 	my ($self,$iter) = @_;
-#  	my ($package, $filename, $line) = caller;
-#
-# 	print "get_fileinfo: called by: $package, $filename, $line\n";
-
+	
+	return undef if (!$iter);
 	return $self->get($iter, 0);
 }
 

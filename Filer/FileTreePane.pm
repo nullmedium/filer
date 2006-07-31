@@ -177,19 +177,34 @@ sub treeview_event_cb {
 	}
 
 	if ($e->type eq "button-press") {
-		if ($e->button == 2) {
-			$mouse_motion_select{ident $self}    = 1;
-			$mouse_motion_y_pos_old{ident $self} = $e->y;
+# 		if ($e->button == 2) {
+# 			$mouse_motion_select{ident $self}    = 1;
+# 			$mouse_motion_y_pos_old{ident $self} = $e->y;
+# 
+# 			my ($p) = $treeview{ident $self}->get_path_at_pos($e->x,$e->y);
+# 
+# 			if (defined $p) {
+# 				$treeselection{ident $self}->unselect_all;
+# 				$treeselection{ident $self}->select_path($p);
+# 			}
+# 
+# 			$self->set_focus;
+# 			return 1;
+# 
+#		} elsif ($e->button == 3) {
 
+		if ($e->button == 1) {
 			my ($p) = $treeview{ident $self}->get_path_at_pos($e->x,$e->y);
 
 			if (defined $p) {
-				$treeselection{ident $self}->unselect_all;
-				$treeselection{ident $self}->select_path($p);
-			}
+ 				$treeselection{ident $self}->select_path($p);
 
-			$self->set_focus;
-			return 1;
+				my $pane = $filer{ident $self}->get_inactive_pane;
+				my $iter = $treemodel{ident $self}->get_iter($p);
+				my $fi   = $treemodel{ident $self}->get_fileinfo($iter);
+
+				$pane->open_file($fi);
+			}
 
 		} elsif ($e->button == 3) {
 
@@ -208,24 +223,24 @@ sub treeview_event_cb {
 		}
 	}
 
-	if ($e->type eq "button-release" and $e->button == 2) {
-		$self->set_focus;
-		$mouse_motion_select{ident $self} = 0;
-		return 1;
-	}
+# 	if ($e->type eq "button-release" and $e->button == 2) {
+# 		$self->set_focus;
+# 		$mouse_motion_select{ident $self} = 0;
+# 		return 1;
+# 	}
 
-	if (($e->type eq "motion-notify") and ($mouse_motion_select{ident $self} == 1)) {
-		my ($p_old) = $treeview{ident $self}->get_path_at_pos($e->x, $mouse_motion_y_pos_old{ident $self});
-		my ($p_new) = $treeview{ident $self}->get_path_at_pos($e->x, $e->y);
-
-		if ((defined $p_old) and (defined $p_new)) {
-			$treeselection{ident $self}->unselect_all;
-			$treeselection{ident $self}->select_range($p_old,$p_new);
-		}
-
-		$self->set_focus;
-		return 0;
-	}
+# 	if (($e->type eq "motion-notify") and ($mouse_motion_select{ident $self} == 1)) {
+# 		my ($p_old) = $treeview{ident $self}->get_path_at_pos($e->x, $mouse_motion_y_pos_old{ident $self});
+# 		my ($p_new) = $treeview{ident $self}->get_path_at_pos($e->x, $e->y);
+# 
+# 		if ((defined $p_old) and (defined $p_new)) {
+# 			$treeselection{ident $self}->unselect_all;
+# 			$treeselection{ident $self}->select_range($p_old,$p_new);
+# 		}
+# 
+# 		$self->set_focus;
+# 		return 0;
+# 	}
 
 	return 0;
 }
@@ -315,8 +330,8 @@ sub CreateRootNodes {
 	my ($self)    = @_;
 	my $iter;
 
-	my $root = Filer::VFS->get_rootdir;
-	my $home = Filer::VFS->get_homedir;
+	my $root = Filer::Directory->get_rootdir;
+	my $home = Filer::Directory->get_homedir;
 
 	$iter = $treemodel{ident $self}->insert_with_values(undef, -1,
 		$COL_FILEINFO, $root,
@@ -340,10 +355,10 @@ sub DirRead {
 
 	my $show_hidden = $filer{ident $self}->get_config->get_option('ShowHiddenFiles');
 
-	my $vfs          = new Filer::VFS(path => $dir, hidden => $show_hidden);
-	my $dir_contents = $vfs->get_dirs;
+	my $Directory          = new Filer::Directory(path => $dir, hidden => $show_hidden);
+	my $dir_contents = $Directory->get_dirs;
 
-	foreach my $fi (@{$dir_contents}) {
+	foreach my $fi (sort { $a->get_basename cmp $b->get_basename } @{$dir_contents}) {
 		my $type     = $fi->get_mimetype;
 		my $icon     = $fi->get_mimetype_icon;
 		my $basename = $fi->get_basename;
@@ -364,23 +379,15 @@ sub DirRead {
 sub create_tar_gz_archive {
 	my ($self) = @_;
 
-	$treeview{ident $self}->set_sensitive(0);
 	my $archive = new Filer::Archive;
 	$archive->create_tar_gz_archive($self->get_updir, $self->get_item_list);
-	$treeview{ident $self}->set_sensitive(1);
-
-	$filer{ident $self}->refresh_inactive_pane;
 }
 
 sub create_tar_bz2_archive {
 	my ($self) = @_;
 
-	$treeview{ident $self}->set_sensitive(0);
 	my $archive = new Filer::Archive;
 	$archive->create_tar_bz2_archive($self->get_updir, $self->get_item_list);
-	$treeview{ident $self}->set_sensitive(1);
-
-	$filer{ident $self}->refresh_inactive_pane;
 }
 
 1;

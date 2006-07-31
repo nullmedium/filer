@@ -50,9 +50,6 @@ sub filecopy {
 	my $buf_size = 4 * $stat[11];
 	my $buf      = "";
 
-	$job{ident $self}->update_progress_label("$source\n$dest");
-	while (Gtk2->events_pending) { Gtk2->main_iteration; }
-
 	sysopen(my $in_fh, $source, O_RDONLY);
 	sysopen(my $out_fh, $dest, O_CREAT|O_WRONLY|O_TRUNC, $mode);
 
@@ -65,7 +62,6 @@ sub filecopy {
 				or return File::DirWalk::FAILED;
 
 			$job{ident $self}->update_written_bytes($t);
-			while (Gtk2->events_pending) { Gtk2->main_iteration; }
 		}
 	}
 

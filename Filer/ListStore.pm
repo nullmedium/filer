@@ -34,7 +34,6 @@ sub INIT_INSTANCE {
 	$self->{n_columns}    = 7;
 	$self->{column_types} = [qw(Glib::Scalar Glib::Object Glib::String Glib::String Glib::String Glib::String Glib::String)];
 	$self->{list}         = [];
-	$self->{cache}        = [];
 
 	$self->{sort_column_id}  = $COL_NAME;
 	$self->{sort_order}      = "ascending";
@@ -139,8 +138,15 @@ sub GET_VALUE {
 	my $record = $iter->[2];
 
 	die "bad iter" if ($pos >= @{$self->{list}});
-	
-	return ($self->{cache}->[$pos][$column] ||= $record->get_by_column($column));
+
+	if ($column == $COL_FILEINFO) { return $record; }
+	if ($column == $COL_ICON) { return $record->get_mimetype_icon; }
+	if ($column == $COL_NAME) { return $record->get_basename; }
+	if ($column == $COL_SIZE) { return $record->get_size; }
+#	if ($column == $COL_SIZE) { if ($record->is_dir) { return $record->deep_count_files } else { return $record->get_size; } }
+	if ($column == $COL_TYPE) { return $record->get_mimetype; }
+	if ($column == $COL_MODE) { return $record->get_mode; }
+	if ($column == $COL_DATE) { return $record->get_mtime; }
 }
 
 #
@@ -264,39 +270,74 @@ sub ITER_PARENT {
 # Gtk2::TreeSortable methods:
 ################################################################################
 
-sub sort {
-	my ($self,$list) = @_; 
+sub sort_dir {
+	my ($a,$b) = @_;
 
-# 	my ($t0,$t1,$elapsed);
-#  	use Time::HiRes qw(gettimeofday tv_interval);
-#  	$t0 = [gettimeofday];
+	my $a_is_dir = $a->is_dir;
+	my $b_is_dir = $b->is_dir;
+
+	if ($a_is_dir && !$b_is_dir) {
+		return -1;
+	} elsif (!$a_is_dir && $b_is_dir) {
+		return 1;
+	}
 	
-	my $col  = $self->{sort_column_id};
-	my $r    = ($self->{sort_order} eq "ascending") ? -1 : 1;
-	my $cond = (($self->{sort_column_id} == $COL_NAME)
-		 || ($self->{sort_column_id} == $COL_TYPE));
+	return 0;
+}
 
- 	my @array =
- 		map  $_->[0] =>
-		sort {
-			(( $a->[3]) && (!$b->[3])) ?  $r : # dir, file
-			((!$a->[3]) && ( $b->[3])) ? -$r : # files, dir
-			(($cond)                           # use numeric or string compare?
-			? $a->[1] cmp $b->[1]
-			: $a->[1] <=> $b->[1]
-			) || $a->[2] cmp $b->[2]           # sub-sort on filename
-		}
-		map  [ $_, $_->get_raw_by_column($col), $_->get_basename, $_->is_dir ] =>
-		@{$list};
+sub sort {
+	my ($self) = @_; 
+	
+	my $sort_column = $self->{sort_column_id};
+	my $sort_sign   = ($self->{sort_order} eq "ascending") ? 1 : -1;
 
-	@array = ($self->{sort_order} eq "ascending") ? @array : reverse @array;
+	my @array = ();
 
-# 	$t1 = [gettimeofday];
-# 	$elapsed = tv_interval($t0,$t1);
-# 	print "time to sort: $elapsed\n";
+	if ($sort_column == $COL_NAME) {
+	 	@array =
+			sort {
+				sort_dir($a,$b)
+				|| ($a->get_basename cmp $b->get_basename) * $sort_sign;
+			}
+ 			@{$self->{list}};
+
+	} elsif ($sort_column == $COL_SIZE) {
+	 	@array =
+			sort {
+				sort_dir($a,$b) ||
+				(($a->get_raw_size <=> $b->get_raw_size)
+				|| ($a->get_basename cmp $b->get_basename)) * $sort_sign;
+			}
+ 			@{$self->{list}};
+	} elsif ($sort_column == $COL_TYPE) {
+	 	@array =
+			sort {
+				sort_dir($a,$b)	||
+				(($a->get_mimetype cmp $b->get_mimetype)
+				|| ($a->get_basename cmp $b->get_basename)) * $sort_sign;
+			}
+ 			@{$self->{list}};
+
+	} elsif ($sort_column == $COL_MODE) {
+	 	@array =
+			sort {
+				sort_dir($a,$b) ||
+				(($a->get_raw_mode <=> $b->get_raw_mode)
+				||  ($a->get_basename cmp $b->get_basename)) * $sort_sign;
+			}
+ 			@{$self->{list}};
+
+	} elsif ($sort_column == $COL_DATE) {
+	 	@array =
+			sort {
+				sort_dir($a,$b) ||
+				(($a->get_raw_mtime <=> $b->get_raw_mtime)
+				||  ($a->get_basename cmp $b->get_basename)) * $sort_sign;
+			}
+ 			@{$self->{list}};
+	}
 
 	$self->{list} = \@array;
-	$self->{cache} = [];
 
 # 	my $path = Gtk2::TreePath->new;
 # 	$self->rows_reordered($path, undef, @new_order);
@@ -313,7 +354,7 @@ sub SET_SORT_COLUMN_ID {
 	$self->{sort_column_id} = $id;
 	$self->{sort_order}     = $order;
 
-	$self->sort($self->{list});
+	$self->sort;
 	$self->sort_column_changed;
 }
 
@@ -371,6 +412,8 @@ sub drag_data_delete {
 # 	# that we did not create in the first place.
 # 	my $iter = $treeiter->to_arrayref($self->{stamp});
 # 	
+# 	
+# 	
 # 	$self->row_changed($self->get_path($treeiter), $treeiter);
 # }
 
@@ -394,7 +437,6 @@ sub clear {
 
 	my $last = (@{$self->{list}} - 1);
 	$self->{list} = [];
-	$self->{cache} = [];
 	
 	for (my $i = $last; $i >= 0; $i--) {
 		my $path = Gtk2::TreePath->new_from_indices($i);
@@ -404,13 +446,16 @@ sub clear {
 	return 1;
 }
 
-sub set_fileinfo_list {
+# use Filer::RowStore;
+
+sub set_dir_contents {
 	my ($self,$list) = @_;
 
-	$self->{cache} = [];
-
 	$self->clear;
-	$self->sort($list);
+
+	$self->{list} = $list;
+
+	$self->sort;
 
 	my $len = @{$self->{list}};
 	
@@ -454,6 +499,11 @@ sub remove {
 
  	splice @{$self->{list}}, $pos, 1;
 	$self->row_deleted($path);
+}
+
+sub get_data {
+	my ($self) = @_;
+	return $self->{list};
 }
 
 1;

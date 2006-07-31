@@ -26,44 +26,36 @@ use Memoize qw(memoize);
 use File::Basename qw(basename);
 use File::MimeInfo::Magic qw(mimetype describe);
 use Stat::lsMode qw(format_mode);
+use YAML qw(LoadFile DumpFile);
 
 use Filer::Stat qw(:stat);
 use Filer::Tools;
 use Filer::FilePaneConstants;
 
+# $File::MimeInfo::DEBUG = 1;
+
 # class attributes:
-my $mimetype_icons; 
-my %thumbnails;
+# my $mimetype_icons; 
+# my %thumbnails;
 
 # attributes;
 my %filepath;
 my %basename;
 my %mimetype;
 my %stat;
-my %cols;
 
 # memoize('new');
 
-sub set_mimetype_icons {
-	my ($self,$icons) = @_;
-	$mimetype_icons = $icons; 
-}
+# sub set_mimetype_icons {
+# 	my ($self,$icons) = @_;
+# 	$mimetype_icons = $icons; 
+# }
 
 sub new {
 	my ($class,$filepath) = @_;
 	my $self = bless anon_scalar(), $class;
 
 	$filepath{ident $self} = $filepath;
-
-	$cols{ident $self} = {
-		$COL_FILEINFO => [ $self,                    undef                ],
-		$COL_ICON     => [ $self->get_mimetype_icon, undef                ],
-		$COL_NAME     => [ $self->get_basename,      $self->get_basename  ],
-		$COL_SIZE     => [ $self->get_size,          $self->get_raw_size  ],
-		$COL_TYPE     => [ $self->get_description,   $self->get_mimetype  ],
-		$COL_MODE     => [ $self->get_mode,          $self->get_raw_mode  ],
-		$COL_DATE     => [ $self->get_mtime,         $self->get_raw_mtime ],
-	};
 
 	return $self;
 }
@@ -86,7 +78,6 @@ sub DESTROY {
 	delete $basename{ident $self};
 	delete $mimetype{ident $self};
 	delete $stat{ident $self};
-	delete $cols{ident $self};
 }
 
 sub get_path {
@@ -96,18 +87,20 @@ sub get_path {
 
 sub get_uri {
 	my ($self) = @_;
-	my $uri = "file://$filepath{ident $self}";
-	my $str = ""; 
+# 	my $uri = "file://$filepath{ident $self}";
+# 	my $str = ""; 
+# 
+# 	foreach my $c (split //, $uri) {
+# 		if (ord($c) > 32 and ord($c) < 128 and $c ne "&" and $c ne "+" and $c ne "%") {
+# 			$str .= $c;
+# 		} else {
+# 			$str .= '%' . unpack("h", chr(ord($c) >> 4)) . unpack("h", chr(ord($c) & 0xf));
+# 		}
+# 	}
 
-	foreach my $c (split //, $uri) {
-		if (ord($c) > 32 and ord($c) < 128 and $c ne "&" and $c ne "+" and $c ne "%") {
-			$str .= $c;
-		} else {
-			$str .= '%' . unpack("h", chr(ord($c) >> 4)) . unpack("h", chr(ord($c) & 0xf));
-		}
-	}
+	my $uri = URI::file->new($filepath{ident $self});
 
-	return $str;
+	return $uri->as_string;
 }
 
 sub get_basename {
@@ -117,12 +110,39 @@ sub get_basename {
 
 sub get_mimetype {
 	my ($self) = @_;
-	return $mimetype{ident $self} ||= mimetype($filepath{ident $self});
+	$mimetype{ident $self} ||= mimetype($filepath{ident $self});
+
+# 	if ($mimetype{ident $self} eq "inode/mount-point") {
+# 		$mimetype{ident $self} = "inode/directory";
+# 	}
+	
+	return $mimetype{ident $self};
+}
+
+sub get_mimetype_handler {
+	my ($self) = @_;
+
+	my $mime_file = Filer::Tools->catpath(File::BaseDir::xdg_config_home, "filer", "mime-2.yml");
+	my $mime = LoadFile($mime_file);
+	
+	return $mime->{$self->get_mimetype};	
+}
+
+sub set_mimetype_handler {
+	my ($self,$handler) = @_;
+
+	my $mime_file = Filer::Tools->catpath(File::BaseDir::xdg_config_home, "filer", "mime-2.yml");
+	my $mime = LoadFile($mime_file);
+
+	$mime->{$self->get_mimetype} = $handler;	
+
+	DumpFile($mime_file, $mime);
 }
 
 sub get_mimetype_icon {
 	my ($self) = @_;
- 	return ($mimetype_icons->{$self->get_mimetype} || $mimetype_icons->{'application/default'});
+	my $icon = Filer::MimeTypeIcon->new($self->get_mimetype);
+	return $icon->get_icon;
 }
 
 sub get_description {
@@ -130,30 +150,9 @@ sub get_description {
 	return describe($self->get_mimetype);
 }
 
-# sub get_thumbnail {
-# 	my ($self) = @_;
-# 	
-# 	$thumbnails{$filepath{ident $self}} ||= eval {
-# 		use Digest::MD5 qw(md5_hex);
-# 	
-# 		my $thumbnail_file = md5_hex($self->get_uri);
-# 		my $thumbnail_path = "$ENV{HOME}/.thumbnails/normal/$thumbnail_file.png";
-# 		my $thumbnail      = undef;
-# 
-# 		if (-e $thumbnail_path) {
-# 			$thumbnail = Gtk2::Gdk::Pixbuf->new_from_file($thumbnail_path);
-# 			$thumbnail = $thumbnail->intelligent_scale(22);
-# 		}
-# 		
-# 		$thumbnail;
-# 	};
-# 		
-# 	return $thumbnails{$filepath{ident $self}};
-# }
-
 sub get_stat {
 	my ($self) = @_;
-	return [ stat($filepath{ident $self}) ];
+	return $stat{ident $self} ||= [ stat($filepath{ident $self}) ];
 }
 
 sub get_raw_size {
@@ -228,6 +227,11 @@ sub is_dir {
 	return (-d $filepath{ident $self});
 }
 
+sub is_file {
+	my ($self) = @_;
+	return (!$self->is_dir);
+}
+
 sub is_executable {
 	my ($self) = @_;
 	return (-x $filepath{ident $self});
@@ -238,14 +242,44 @@ sub is_hidden {
 	return ($basename{ident $self} =~ /^\./);
 }
 
-sub get_by_column {
-	my ($self,$column) = @_;
-	return $cols{ident $self}->{$column}->[0];
+sub is_supported_archive {
+	my ($self) = @_;
+	return Filer::Archive->is_supported_archive($self->get_mimetype);
 }
+
+
+sub deep_count_files {
+	my ($self) = @_;
+
+	my $dirwalk = new File::DirWalk;
+	my $count = 0;
+
+	$dirwalk->onFile(sub {
+		++$count;
+		return 1;
+	});
+
+	$dirwalk->walk($filepath{ident $self});
+
+	return $count;
+}
+
+sub deep_count_bytes {
+	my ($self) = @_;
 	
-sub get_raw_by_column {
-	my ($self,$column) = @_;
-	return $cols{ident $self}->{$column}->[1];
+	my $dirwalk = new File::DirWalk;
+	my $count;
+
+	$dirwalk->onFile(sub {
+		my ($file) = @_;
+		$count += -s $file;
+		return 1;
+	});
+
+	$dirwalk->walk($filepath{ident $self});
+
+	return $count;
 }
+
 
 1;

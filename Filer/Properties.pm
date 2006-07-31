@@ -111,7 +111,15 @@ sub set_properties_dialog {
 		$label->set_ellipsize('PANGO_ELLIPSIZE_MIDDLE');
 		$table->attach($label, 1, 2, 0, 1, [ "fill", "expand" ], [ ], 0, 0);
 
-		$label = new Gtk2::Label($fileinfo->get_size . " (" . $fileinfo->get_raw_size . " Bytes)");
+		if ($fileinfo->is_dir) {
+			my $bytes = Filer::Tools->calculate_size($fileinfo->deep_count_bytes);
+			my $files = $fileinfo->deep_count_files;
+
+			$label = new Gtk2::Label("$files Files ($bytes)");
+		} else {
+			$label = new Gtk2::Label($fileinfo->get_size . " (" . $fileinfo->get_raw_size . " Bytes)");
+		}
+
 		$label->set_alignment(0.0,0.0);
 		$table->attach($label, 1, 2, 1, 2, [ "fill" ], [ ], 0, 0);
  	}

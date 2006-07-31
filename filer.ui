@@ -45,7 +45,7 @@
       <separator/>
       <menuitem name="SetTerminal" action="set-terminal-action" />
       <separator/>
-      <menuitem name="FileAssoc" action="file-assoc-action" />
+<!--      <menuitem name="FileAssoc" action="file-assoc-action" /> -->
     </menu>
 
     <menu name="help-menu" action="HelpMenuAction">
@@ -73,8 +73,9 @@
   </toolbar>
 
   <popup name="list-popupmenu">
-    <menuitem name="Open" action="OpenPopupMenuAction"/>
     <placeholder name="PopupItems1">
+      <menuitem name="Open" action="open-action"/>
+      <menuitem name="Open With" action="open-with-action"/>
       <separator/>
       <menuitem name="Cut" action="cut-action"/>
       <menuitem name="Copy" action="copy-action"/>

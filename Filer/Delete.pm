@@ -15,6 +15,7 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::Delete;
+use base qw(Filer::DeleteJobDialog);
 
 use strict;
 use warnings;
@@ -28,41 +29,29 @@ use English;
 
 sub new {
 	my ($class) = @_;
-	my $self = bless {}, $class;
-
-	$self->{CANCELLED} = $FALSE;
-	$self->{progress_dialog} = new Filer::ProgressDialog;
-	$self->{progress_dialog}->dialog->set_title("Deleting ...");
-	$self->{progress_dialog}->label1->set_markup("<b>Deleting: </b>");
-
-	$self->{progress_label} = $self->{progress_dialog}->label2;
-	$self->{progressbar_total} = $self->{progress_dialog}->add_progressbar;
-
-	my $button = $self->{progress_dialog}->dialog->add_button('gtk-cancel' => 'cancel');
-	$button->signal_connect("clicked", sub {
-		$self->{CANCELLED} = $TRUE;
-		$self->{progress_dialog}->destroy;
-	});
+	my $self = $class->SUPER::new();
 
 	return $self;
 }
 
+sub deep_count_files {
+	my ($self,$files) = @_;
+
+	for (@{$files}) {
+		my $fi = Filer::FileInfo->new($_);
+		$self->set_total_files($self->total_files + $fi->deep_count_files);
+	}
+}
+
 sub delete {
 	my ($self,$files) = @_;
-	$self->{deleted_total} = 0;
-	$self->{deleted_files} = 0;
+
+	$self->deep_count_files($files);
 
 	my $dirwalk = new File::DirWalk;
 
-	$dirwalk->onFile(sub {
-		++$self->{deleted_total};
-		return 1;
-	});
-
-	$dirwalk->walk($ARG) for (@{$files});
-
 	$dirwalk->onBeginWalk(sub {
-		return ($self->{CANCELLED} == $FALSE) ? File::DirWalk::SUCCESS : File::DirWalk::ABORTED;
+		return (!$self->cancelled) ? File::DirWalk::SUCCESS : File::DirWalk::ABORTED;
 	});
 
 	$dirwalk->onLink(sub {
@@ -76,16 +65,15 @@ sub delete {
 	});
 
 	$dirwalk->onFile(sub {
-		$self->{progress_label}->set_text($ARG[0]);
-		$self->{progressbar_total}->set_fraction(++$self->{deleted_files}/$self->{deleted_total});
-		while (Gtk2->events_pending) { Gtk2->main_iteration; }
-
 		unlink($ARG[0]) || return File::DirWalk::FAILED;
+
+		$self->update_progress_label($ARG[0]);
+		$self->set_deleted_files($self->deleted_files + 1);
 
 		return File::DirWalk::SUCCESS;
 	});
 
-	$self->{progress_dialog}->show;
+	$self->show_job_dialog;
 
 	foreach my $source (@{$files}) {
 		my $r = $dirwalk->walk($source);
@@ -99,7 +87,7 @@ sub delete {
 		}
 	}
 
-	$self->{progress_dialog}->destroy;
+	$self->destroy_job_dialog;
 }
 
 1;

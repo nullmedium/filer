@@ -61,16 +61,16 @@ sub create_tar_bz2_archive {
 sub create_archive {
 	my ($self,$type,$path,$files) = @_;
 	my $archive_file = "";
-	my $files_to_add = join " ", map { Filer::Tools->catpath(File::Spec->curdir, basename($_)) } @{$files};
+	my @files_to_add = map { Filer::Tools->catpath(File::Spec->curdir, basename($_)) } @{$files};
 	my $commandline;
 
 	if ($type eq $TGZ) {
 		$archive_file = sprintf("%s.tar.gz", $files->[0]);
-		$commandline  = "tar -cz -C $path -f $archive_file $files_to_add";
+		$commandline  = "tar -cz -C $path -f $archive_file @files_to_add";
 	
 	} elsif ($type eq $TBZ2) {
 		$archive_file = sprintf("%s.tar.bz2", $files->[0]);
-		$commandline  = "tar -cj -C $path -f $archive_file $files_to_add";
+		$commandline  = "tar -cj -C $path -f $archive_file @files_to_add";
 	}
 
 	Filer::Tools->exec(command => $commandline, wait => 1);

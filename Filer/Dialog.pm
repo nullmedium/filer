@@ -231,4 +231,83 @@ sub mixed_button_new {
 
 	return $button;
 }
+
+sub open_with_dialog {
+	my ($class,$fileinfo) = @_;
+
+	my $dialog = new Gtk2::Dialog(
+		"Open With",
+		undef,
+		'modal',
+		'gtk-close' => 'close'
+	);
+
+	$dialog->set_has_separator(1);
+	$dialog->set_position('center');
+
+	my $table = new Gtk2::Table(3,3);
+	$table->set_homogeneous(0);
+	$table->set_col_spacings(5);
+	$table->set_row_spacings(1);
+	$dialog->vbox->pack_start($table,0,0,5);
+
+	my $label1 = new Gtk2::Label;
+	$label1->set_justify('left');
+	$label1->set_text("Type: ");
+	$label1->set_alignment(0.0,0.0);
+	$table->attach($label1, 0, 1, 0, 1, [ "fill" ], [], 0, 0);
+
+	my $type_label = new Gtk2::Label;
+	$type_label->set_justify('left');
+	$type_label->set_text($fileinfo->get_mimetype);
+	$type_label->set_alignment(0.0,0.0);
+	$table->attach($type_label, 1, 3, 0, 1, [ "expand","fill" ], [], 0, 0);
+
+	my $label2 = new Gtk2::Label;
+	$label2->set_justify('left');
+	$label2->set_text("Command:");
+	$label2->set_alignment(0.0,0.0);
+	$table->attach($label2, 0, 1, 1, 2, [ "fill" ], [], 0, 0);
+
+	my $command_entry = Gtk2::Entry->new;
+	$command_entry->set_text($fileinfo->get_mimetype_handler);
+	$table->attach($command_entry, 1, 2, 1, 2, [ "expand","fill" ], [], 0, 0);
+
+	my $cmd_browse_button = new Gtk2::Button;
+	$cmd_browse_button->add(Gtk2::Image->new_from_stock('gtk-open', 'button'));
+	$cmd_browse_button->signal_connect("clicked", sub {
+		my $fs = new Gtk2::FileChooserDialog(
+			"Select Command",
+			undef,
+			'GTK_FILE_CHOOSER_ACTION_OPEN',
+			'gtk-cancel' => 'cancel',
+			'gtk-ok'     => 'ok'
+		);
+
+		$fs->set_filename($command_entry->get_text);
+
+		if ($fs->run eq 'ok') {
+			$command_entry->set_text($fs->get_filename);
+		}
+
+		$fs->destroy;
+	});
+	$table->attach($cmd_browse_button, 2, 3, 1, 2, [ "fill" ], [], 0, 0);
+
+	my $button = Filer::Dialog->mixed_button_new('gtk-ok',"Run");
+	$dialog->add_action_widget($button, 'ok');
+	
+	$dialog->show_all;
+
+	if ($dialog->run eq 'ok') {
+		my $command = $command_entry->get_text;
+		$fileinfo->set_mimetype_handler($command);
+
+		$dialog->destroy;
+		Filer::Tools->exec(command => "$command " . $fileinfo->get_path, wait => 0);
+	}
+
+	$dialog->destroy;
+}
+
 1;

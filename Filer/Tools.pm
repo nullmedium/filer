@@ -8,33 +8,19 @@ use File::Spec;
 
 my $sizes = {};
 
+use Proc::Simple;
+
 sub exec {
 	my ($self,%opts) = @_;
 
 	my $cmd  = $opts{command} || die "no command defined!";
 	my $wait = $opts{wait};
 
+	my $myproc = Proc::Simple->new();        # Create a new process object
+	$myproc->start($cmd);
+
 	if ($wait) {
-# 		print "open $cmd\n";
-# 		my $pid = open my $child, '-|', $cmd || die "can't fork $cmd: $!";
-# 
-# 		my $main_loop = Glib::MainLoop->new;
-# 
-# 		Glib::IO->add_watch(fileno $child, ['hup'], sub {
-# 			$main_loop->quit;
-# 			return 0;
-# 		});
-# 
-# 		print "run\n";
-# 		$main_loop->run;
-# 
-# 		print "close $child\n";
-# 		close $child or warn "$cmd died with exit status ".($? >> 8)."\n";
-
-		system($cmd);
-
-	} else {
-		system("$cmd &");
+		while ($myproc->poll()) {};           # Poll Running Process
 	}
 }
 
@@ -58,10 +44,9 @@ sub suggest_filename_helper {
 
 	$filename =~ s/(_\d+)$//g;
 
-	while (1) {
-		$suggested = sprintf("%s_%s", $filename, $i++);
-		return "$suggested$suffix" if (! -e "$suggested$suffix");
-	}
+	while (-e ($suggested = sprintf("%s_%s", $filename, $i++))) {}
+
+	return "$suggested$suffix";
 }
 
 sub calculate_size {
@@ -72,6 +57,16 @@ sub calculate_size {
 	($size >= 1073741824) ? sprintf("%.2f GB", $size/1073741824) :
 	($size >= 1048576)    ? sprintf("%.2f MB", $size/1048576)    :
 	($size >= 1024)       ? sprintf("%.2f kB", $size/1024)       : $size;
+}
+
+sub calculate_si_size {
+	my $size = pop;
+
+	return undef if (! $size);
+	return $sizes->{$size} ||=
+	($size >= 1000000000) ? sprintf("%.2f GB", $size/1000000000) :
+	($size >= 1000000)    ? sprintf("%.2f MB", $size/1000000)    :
+	($size >= 1000)       ? sprintf("%.2f kB", $size/1000)       : $size;
 }
 
 # Utility functions for Gtk+ classes:
