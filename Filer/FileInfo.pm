@@ -26,7 +26,7 @@ use Memoize qw(memoize);
 use File::Basename qw(basename);
 use File::MimeInfo::Magic qw(mimetype describe);
 use Stat::lsMode qw(format_mode);
-use YAML qw(LoadFile DumpFile);
+use YAML::Syck qw(LoadFile DumpFile);
 
 use Filer::Stat qw(:stat);
 use Filer::Tools;
@@ -123,16 +123,24 @@ sub get_mimetype_handler {
 	my ($self) = @_;
 
 	my $mime_file = Filer::Tools->catpath(File::BaseDir::xdg_config_home, "filer", "mime-2.yml");
-	my $mime = LoadFile($mime_file);
-	
-	return $mime->{$self->get_mimetype};	
+
+	if (-e $mime_file) {
+		my $mime = LoadFile($mime_file);
+		return $mime->{$self->get_mimetype};	
+	}
+
+	return undef;
 }
 
 sub set_mimetype_handler {
 	my ($self,$handler) = @_;
 
 	my $mime_file = Filer::Tools->catpath(File::BaseDir::xdg_config_home, "filer", "mime-2.yml");
-	my $mime = LoadFile($mime_file);
+	my $mime      = {};
+
+	if (-e $mime_file) {
+		$mime = LoadFile($mime_file);
+	}
 
 	$mime->{$self->get_mimetype} = $handler;	
 

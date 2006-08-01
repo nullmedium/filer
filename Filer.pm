@@ -249,10 +249,10 @@ sub init_main_window {
 	},{
 		name => "ConfirmationMenuAction",
 		label => "Ask Confirmation for ...",
-	},{
-		name => "set-terminal-action",
-		label => "Set Terminal",
-		callback => sub { $self->set_terminal_cb },
+# 	},{
+# 		name => "set-terminal-action",
+# 		label => "Set Terminal",
+# 		callback => sub { $self->set_terminal_cb },
 # 	},{
 # 		name => "file-assoc-action",
 # 		label => "File Associations",
@@ -578,11 +578,11 @@ sub ask_delete_cb {
 	$config{ident $self}->set_option('ConfirmDelete', ($action->get_active) ? 1 : 0);
 }
 
-sub set_terminal_cb {
-	my ($self) = @_;
-	my $term = Filer::Dialog->ask_command_dialog("Set Terminal", $config{ident $self}->get_option('Terminal'));
-	$config{ident $self}->set_option('Terminal', $term);
-}
+# sub set_terminal_cb {
+# 	my ($self) = @_;
+# 	my $term = Filer::Dialog->ask_command_dialog("Set Terminal", $config{ident $self}->get_option('Terminal'));
+# 	$config{ident $self}->set_option('Terminal', $term);
+# }
 
 # sub file_ass_cb {
 # 	my ($self) = @_;

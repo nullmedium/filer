@@ -43,8 +43,8 @@
       </menu>
       <menuitem name="ShowHidden" action="show-hidden-action" />
       <separator/>
-      <menuitem name="SetTerminal" action="set-terminal-action" />
-      <separator/>
+<!--      <menuitem name="SetTerminal" action="set-terminal-action" />
+      <separator/> -->
 <!--      <menuitem name="FileAssoc" action="file-assoc-action" /> -->
     </menu>
 

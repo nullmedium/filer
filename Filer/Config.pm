@@ -20,7 +20,7 @@ use Class::Std::Utils;
 use strict;
 use warnings;
 
-use YAML qw(LoadFile DumpFile Dump);
+use YAML::Syck qw(LoadFile DumpFile Dump);
 
 use Filer::Constants;
 

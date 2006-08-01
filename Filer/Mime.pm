@@ -22,7 +22,7 @@ use warnings;
 
 use Readonly;
 
-use YAML qw(LoadFile DumpFile Dump);
+use YAML::Syck qw(LoadFile DumpFile Dump);
 
 use Filer;
 use Filer::Constants;
