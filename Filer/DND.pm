@@ -14,13 +14,15 @@
 #     along with this program; if not, write to the Free Software
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-package Filer::DND;
+package Filer::FilePaneDND;
 use Class::Std::Utils;
 
 use strict;
 use warnings;
 
 use Readonly; 
+
+use Filer::Constants;
 
 Readonly my $TARGET_URI_LIST => 0;
 
@@ -51,7 +53,14 @@ sub target_table {
 	{'target' => "text/uri-list", 'flags' => [], 'info' => $TARGET_URI_LIST};
 }
 
-sub filepane_treeview_drag_data_get {
+sub drag_begin {
+	my $self = shift;
+	my ($widget,$context) = @_;
+
+	$context->status('move',);
+}
+
+sub drag_data_get {
 	my $self = shift;
 	my ($widget,$context,$data,$info,$time) = @_;
 
@@ -65,48 +74,46 @@ sub filepane_treeview_drag_data_get {
 	return 1;
 }
 
-sub filepane_treeview_drag_data_received {
+sub drag_data_received {
 	my $self = shift;
 	my ($widget,$context,$x,$y,$data,$info,$time) = @_;
 
 	if (($data->length >= 0) && ($data->format == 8)) {
-		my ($p)         = $widget->get_dest_row_at_pos($x,$y);
 		my $action      = $context->action;
 		my $active_pane = $filer{ident $self}->get_active_pane;
+		my ($p)         = $widget->get_dest_row_at_pos($x,$y);
 		my $path;
 
-		my @items       = map {
-				URI::file->new($_)->file;
-				} split(/\r\n/, $data->data);
+		my @items       = map {	URI->new($_)->path; } split(/\r\n/, $data->data);
 		my $items_count = scalar @items;
 
 		if (defined $p) {
 			$path = $filepane{ident $self}->get_path_by_treepath($p);
-		} else {
-			$path = $filepane{ident $self}->get_pwd;
+# 		} else {
+# 			$path = $filepane{ident $self}->get_pwd;
+# 		}
+# 
+#  		if (! -d $path) {
+# 			$path = $filepane{ident $self}->get_pwd;
 		}
+t
+#		return if ($path eq $active_pane->get_pwd);
 
- 		if (! -d $path) {
-			$path = $filepane{ident $self}->get_pwd;
-		}
-
-		return if ($path eq $active_pane->get_pwd);
-
-		if (($config{ident $self}->get_option("ConfirmCopy") == 1)
-		 or ($config{ident $self}->get_option("ConfirmMove") == 1)) {
-			my $do      = ucfirst($action);
+		if (($config{ident $self}->get_option("ConfirmCopy") == $TRUE)
+		 or ($config{ident $self}->get_option("ConfirmMove") == $TRUE)) {
+			my $do = ($action eq "copy") ? "Copy" : "Move";
 
 			if ($items_count == 1) {
 				my $f = $items[0];
 				$f =~ s/&/&amp;/g; # sick fix. meh.
-				$f = basename($f);
+				$f = File::Basename::basename($f);
 
-				return if (Filer::Dialog->yesno_dialog("$do $f to $path?") eq 'no');
+				return if (Filer::Dialog->yesno_dialog("$do \"$f\" to $path?") eq 'no');
 			} else {
 				return if (Filer::Dialog->yesno_dialog("$do $items_count files to $path?") eq 'no');
 			}
 		}
-
+		
 		if ($action eq "copy") {
 			my $copy = new Filer::Copy;
 			$copy->copy(\@items,$path);
@@ -116,10 +123,33 @@ sub filepane_treeview_drag_data_received {
 			$move->move(\@items,$path);
 		}
 
- 		$filer{ident $self}->refresh_cb;
+#		$filer{ident $self}->refresh_cb;
 	}
 
 	$context->finish (0, 0, $time);
+}
+
+sub drag_motion {
+	my $self = shift;
+	my ($widget,$context,$x,$y,$time,$data) = @_;
+	my $action = $context->action;
+
+	my ($p) = $widget->get_dest_row_at_pos($x,$y);
+	my $path;
+
+	if (defined $p) {
+		$path = $filepane{ident $self}->get_path_by_treepath($p);
+
+		if (-d $path) {
+			$context->status('move',$time);
+			return $TRUE;
+		} else {
+			$context->status([],$time);
+			return $FALSE;
+		}
+	}
+
+	return $FALSE;
 }
 
 1;
