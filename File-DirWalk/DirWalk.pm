@@ -1,18 +1,15 @@
-# Copyright (c) 2005 Jens Luedicke <jensl@cpan.org>. All rights reserved.
+# Copyright (c) 2005-2006 Jens Luedicke <jensl@cpan.org>. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 
 package File::DirWalk;
 use base qw(Exporter);
-use Class::Std::Utils;
 
 our $VERSION = '0.3';
-our @EXPORT = qw(FAILED SUCCESS ABORTED PRUNE);
+our @EXPORT = qw(FAILED SUCCESS $ABORTED PRUNE);
 
 use strict;
 use warnings;
-
-use Readonly;
 
 use File::Basename;
 use File::Spec;
@@ -22,76 +19,80 @@ use constant FAILED 	=> 0;
 use constant ABORTED 	=> -1;
 use constant PRUNE 	=> -10;
 
-my %onBeginWalk;
-my %onLink;
-my %onFile;
-my %onDirEnter;
-my %onDirLeave;
-
 sub new {
 	my ($class) = @_;
-	my $self = bless anon_scalar(), $class;
+	my $self = bless {}, $class;
 
-	$onBeginWalk{ident $self} = sub { SUCCESS };
-	$onLink{ident $self}      = sub { SUCCESS };
-	$onFile{ident $self}      = sub { SUCCESS };
-	$onDirEnter{ident $self}  = sub { SUCCESS };
-	$onDirLeave{ident $self}  = sub { SUCCESS };
+	$self->{onBeginWalk} = sub { SUCCESS };
+	$self->{onLink}      = sub { SUCCESS };
+	$self->{onFile}      = sub { SUCCESS };
+	$self->{onDirEnter}  = sub { SUCCESS };
+	$self->{onDirLeave}  = sub { SUCCESS };
+
+	$self->{depth}       = 0;
+	$self->{depth_count} = 0;
 
 	return $self;
 }
 
-sub DESTROY {
-	my ($self) = @_;
-
-	delete $onBeginWalk{ident $self};
-	delete $onLink{ident $self};     
-	delete $onFile{ident $self};     
-	delete $onDirEnter{ident $self};
-	delete $onDirLeave{ident $self};
-}
-
 sub onBeginWalk {
 	my ($self,$func) = @_;
-	$onBeginWalk{ident $self} = $func;
+	$self->{onBeginWalk} = $func;
 }
 
 sub onLink {
 	my ($self,$func) = @_;
-	$onLink{ident $self} = $func;
+	$self->{onLink} = $func;
 }
 
 sub onFile {
 	my ($self,$func) = @_;
-	$onFile{ident $self} = $func;
+	$self->{onFile} = $func;
 }
 
 sub onDirEnter {
 	my ($self,$func) = @_;
-	$onDirEnter{ident $self} = $func;
+	$self->{onDirEnter} = $func;
 }
 
 sub onDirLeave {
 	my ($self,$func) = @_;
-	$onDirLeave{ident $self} = $func;
+	$self->{onDirLeave} = $func;
+}
+
+sub setDepth {
+	my ($self,$v) = @_;
+	$self->{depth} = $v;
+}
+
+sub getDepth {
+	my ($self) = @_;
+	return $self->{depth};
 }
 
 sub walk {
 	my ($self,$path) = @_;
 
-	if ((my $r = $onBeginWalk{ident $self}->($path)) != SUCCESS) {
+	if ((my $r = $self->{onBeginWalk}->($path)) != SUCCESS) {
 		return $r;
 	}
 
 	if (-l $path) {
 
-		if ((my $r = $onLink{ident $self}->($path)) != SUCCESS) {
+		if ((my $r = $self->{onLink}->($path)) != SUCCESS) {
 			return $r;
 		}
 
 	} elsif (-d $path) {
 
-		if ((my $r = $onDirEnter{ident $self}->($path)) != SUCCESS) {
+		if ($self->{depth} != 0) {
+			if ($self->{depth_count} == $self->{depth}) {
+				return SUCCESS;
+			}
+		}
+
+		$self->{depth_count}++;
+		if ((my $r = $self->{onDirEnter}->($path)) != SUCCESS) {
 			return $r;
 		}
 
@@ -115,11 +116,12 @@ sub walk {
 
 		closedir $dirh;
 
-		if ((my $r = $onDirLeave{ident $self}->($path)) != SUCCESS) {
+		$self->{depth_count}--;
+		if ((my $r = $self->{onDirLeave}->($path)) != SUCCESS) {
 			return $r;
 		}
 	} else {
-		if ((my $r = $onFile{ident $self}->($path)) != SUCCESS) {
+		if ((my $r = $self->{onFile}->($path)) != SUCCESS) {
 			return $r;
 		}
 	}
@@ -139,7 +141,8 @@ Walk through your homedir and print out all filenames:
 
 	use File::DirWalk;
 
-	my $dw = new File::DirWalk; $dw->onFile(sub {
+	my $dw = new File::DirWalk;
+	$dw->onFile(sub {
 		my ($file) = @_;
 		print "$file\n";
 
@@ -147,6 +150,37 @@ Walk through your homedir and print out all filenames:
 	});
 
 	$dw->walk($ENV{'HOME'});
+
+Walk through your homedir and print out all directories:
+
+	use File::DirWalk;
+
+	my $dw = new File::DirWalk;
+	$dw->onDirEnter(sub {
+		my ($dir) = @_;
+		print "$dir\n";
+
+		return File::DirWalk::SUCCESS;
+	});
+
+	$dw->walk($ENV{'HOME'});
+
+Walk through your homedir and print out all directories
+with depth 3:
+
+	use File::DirWalk;
+
+	my $dw = new File::DirWalk;
+	$dw->onDirEnter(sub {
+		my ($dir) = @_;
+		print "$dir\n";
+
+		return File::DirWalk::SUCCESS;
+	});
+
+	$dw->setDepth(3);
+	$dw->walk($ENV{'HOME'});
+
 
 =head1 DESCRIPTION
 
@@ -192,6 +226,15 @@ to the given function when called. Function must return true.
 Specify a function to be run on each file/directory within another directory.
 The name is passed to the function when called. Function must return true.
 
+=item C<setDepth($int)>
+
+Set the directory depth:
+By default the directory depth is set to 0.
+
+=item C<getDepth>
+
+Get the directory depth;
+
 =item C<walk($path)>
 
 Begin the walk through the given directory tree. This method returns if the walk
@@ -204,8 +247,9 @@ directory- or filename  is passed to the function as the argument when called.
 The function must return true, otherwise the recursive walk is aborted and
 C<walk> returns. You don't need to define a callback if you don't need to.
 
-The module provides the following constants: SUCCESS, FAILED and ABORTED (1, 0
-and -1) which you can use within your callback code.
+The module provides the following constants: SUCCESS, FAILED, ABORTED and PRUNE (1, 0, -1, -10)
+which you can use within your callback code.
+DirWalk will stop processing the current directory if PRUNE is returned by your callback.
 
 =head1 BUGS
 
@@ -216,6 +260,8 @@ Please mail the author if you encounter any bugs.
 Jens Luedicke E<lt>jensl@cpan.orgE<gt> web: L<http://perldude.de/>
 
 =head1 CHANGES
+
+Version 0.3: add PRUNE constant. add option to specify the directory depth.
 
 Version 0.2: platform portability fixes and more documentation
 
@@ -229,7 +275,7 @@ CPAN module.
 
 =head1 COPYRIGHT AND LICENCE
 
-Copyright (c) 2005 Jens Luedicke. All rights reserved. This program is free
+Copyright (c) 2005-2006 Jens Luedicke. All rights reserved. This program is free
 software; you can redistribute it and/or modify it under the same terms as Perl
 itself.
 
