@@ -6,7 +6,7 @@ package File::DirWalk;
 use base qw(Exporter);
 
 our $VERSION = '0.3';
-our @EXPORT = qw(FAILED SUCCESS $ABORTED PRUNE);
+our @EXPORT = qw(FAILED SUCCESS ABORTED PRUNE);
 
 use strict;
 use warnings;
