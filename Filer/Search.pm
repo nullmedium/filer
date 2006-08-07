@@ -15,73 +15,58 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::Search;
-use Class::Std::Utils;
 
 use strict;
 use warnings;
 
-my %filechooser_button;
-my %file_pattern_entry;
-my %grep_pattern_entry;
-my %file_pattern;
-my %grep_pattern;
-my %follow_symlinks_checkbutton;
-my %first_match_checkbutton;
-my %searching_label;
-my %search_stop;
-my %treestore;
-my %treeview;
-my %parent_iter;
-my %dirwalk;
-
 sub new {
 	my ($class,$filer) = @_;
-	my $self = bless anon_scalar(), $class;
+	my $self = bless {}, $class;
 	my ($dialog,$table,$label,$button,$hbox,$sw);
 
-	$dialog = new Gtk2::Dialog("Search", undef, 'modal', 'gtk-close' => 'close');
+	$dialog = Gtk2::Dialog->new("Search", undef, 'modal', 'gtk-close' => 'close');
 	$dialog->set_size_request(600,400);
 	$dialog->set_has_separator(1);
 	$dialog->set_position('center');
 	$dialog->set_modal(1);
 
-	$table = new Gtk2::Table(5,2);
+	$table = Gtk2::Table->new(5,2);
 	$table->set_homogeneous(0);
 	$table->set_col_spacings(5);
 	$table->set_row_spacings(1);
 	$dialog->vbox->pack_start($table,0,0,5);
 
-	$label = new Gtk2::Label("Search in: ");
+	$label = Gtk2::Label->new("Search in: ");
 	$label->set_alignment(0.0,0.0);
 	$table->attach($label, 0, 1, 0, 1, [ "fill" ], [], 0, 0);
 
-	$filechooser_button{ident $self} = new Gtk2::FileChooserButton("Search in ...", 'GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER');
-	$filechooser_button{ident $self}->set_current_folder($filer->get_active_pane->get_item);
-       	$table->attach($filechooser_button{ident $self}, 1, 2, 0, 1, [ "fill", "expand" ], [], 0, 0);
+	$self->{filechooser_button} = Gtk2::FileChooserButton->new("Search in ...", 'GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER');
+	$self->{filechooser_button}->set_current_folder($filer->get_active_pane->get_item);
+       	$table->attach($self->{filechooser_button}, 1, 2, 0, 1, [ "fill", "expand" ], [], 0, 0);
  
-	$label = new Gtk2::Label("Filename: ");
+	$label = Gtk2::Label->new("Filename: ");
 	$label->set_alignment(0.0,0.0);
 	$table->attach($label, 0, 1, 1, 2, [ "fill" ], [], 0, 0);
 
- 	$file_pattern_entry{ident $self} = new Gtk2::Entry;
-	$table->attach($file_pattern_entry{ident $self}, 1, 2, 1, 2, [ "fill", "expand" ], [], 0, 0);
+ 	$self->{file_pattern_entry} = Gtk2::Entry->new;
+	$table->attach($self->{file_pattern_entry}, 1, 2, 1, 2, [ "fill", "expand" ], [], 0, 0);
 
-	$label = new Gtk2::Label("Content: ");
+	$label = Gtk2::Label->new("Content: ");
 	$label->set_alignment(0.0,0.0);
 	$table->attach($label, 0, 1, 2, 3, [ "fill" ], [], 0, 0);
 
-	$grep_pattern_entry{ident $self} = new Gtk2::Entry;
-	$table->attach($grep_pattern_entry{ident $self}, 1, 2, 2, 3, [ "fill", "expand" ], [], 0, 0);
+	$self->{grep_pattern_entry} = Gtk2::Entry->new;
+	$table->attach($self->{grep_pattern_entry}, 1, 2, 2, 3, [ "fill", "expand" ], [], 0, 0);
 
-	$follow_symlinks_checkbutton{ident $self} = new Gtk2::CheckButton("Follow symlinks");
-	$follow_symlinks_checkbutton{ident $self}->set_alignment(0.0,0.0);
-	$table->attach($follow_symlinks_checkbutton{ident $self}, 0, 2, 3, 4, [ "fill" ], [], 0, 0);
+	$self->{follow_symlinks_checkbutton} = Gtk2::CheckButton->new("Follow symlinks");
+	$self->{follow_symlinks_checkbutton}->set_alignment(0.0,0.0);
+	$table->attach($self->{follow_symlinks_checkbutton}, 0, 2, 3, 4, [ "fill" ], [], 0, 0);
 
-	$first_match_checkbutton{ident $self} = new Gtk2::CheckButton("List only first line with given content string");
-	$first_match_checkbutton{ident $self}->set_alignment(0.0,0.0);
-	$table->attach($first_match_checkbutton{ident $self}, 0, 2, 4, 5, [ "fill" ], [], 0, 0);
+	$self->{first_match_checkbutton} = Gtk2::CheckButton->new("List only first line with given content string");
+	$self->{first_match_checkbutton}->set_alignment(0.0,0.0);
+	$table->attach($self->{first_match_checkbutton}, 0, 2, 4, 5, [ "fill" ], [], 0, 0);
 
-	$hbox = new Gtk2::HButtonBox;
+	$hbox = Gtk2::HButtonBox->new;
 	$hbox->set_layout_default('end');
 	$hbox->set_spacing(5);
 	$table->attach($hbox, 0, 3, 5, 6, [ "fill", "expand" ], [], 0, 0);
@@ -96,31 +81,31 @@ sub new {
 
 	$button = Gtk2::Button->new_from_stock("gtk-stop");
 	$button->signal_connect("clicked", sub {
-		$search_stop{ident $self} = 1;
+		$self->{search_stop} = 1;
 	});
 	$hbox->add($button);
 
 	$button = Gtk2::Button->new_from_stock("gtk-clear");
 	$button->signal_connect("clicked", sub {
-		$treestore{ident $self}->clear;
-		$searching_label{ident $self}->set_markup("");
+		$self->{treestore}->clear;
+		$self->{searching_label}->set_markup("");
 	});
 	$hbox->add($button);
 
-	$searching_label{ident $self} = new Gtk2::Label;
-	$searching_label{ident $self}->set_use_markup(1);
-	$searching_label{ident $self}->set_alignment(0.0,0.0);
-	$dialog->vbox->pack_start($searching_label{ident $self},0,0,5);
+	$self->{searching_label} = Gtk2::Label->new;
+	$self->{searching_label}->set_use_markup(1);
+	$self->{searching_label}->set_alignment(0.0,0.0);
+	$dialog->vbox->pack_start($self->{searching_label},0,0,5);
 
-	$sw = new Gtk2::ScrolledWindow;
+	$sw = Gtk2::ScrolledWindow->new;
 	$sw->set_policy('automatic','automatic');
 	$sw->set_shadow_type('etched-in');
 	$dialog->vbox->pack_start($sw,1,1,0);
 
-	$treestore{ident $self} = new Gtk2::TreeStore('Glib::String');
-	$treeview{ident $self}  = Gtk2::TreeView->new_with_model($treestore{ident $self});
-	$treeview{ident $self}->insert_column_with_attributes(0, "Search Results", new Gtk2::CellRendererText, text => 0);
-	$sw->add($treeview{ident $self});
+	$self->{treestore} = Gtk2::TreeStore->new('Glib::String');
+	$self->{treeview}  = Gtk2::TreeView->new_with_model($self->{treestore});
+	$self->{treeview}->insert_column_with_attributes(0, "Search Results", Gtk2::CellRendererText->new, text => 0);
+	$sw->add($self->{treeview});
 
 	$dialog->show_all;
 
@@ -130,31 +115,13 @@ sub new {
 	return $self;
 }
 
-sub DESTROY {
-	my ($self) = @_;
-
-	delete $filechooser_button{ident $self};
-	delete $file_pattern_entry{ident $self};
-	delete $grep_pattern_entry{ident $self};
-	delete $file_pattern{ident $self};
-	delete $grep_pattern{ident $self};
-	delete $follow_symlinks_checkbutton{ident $self};
-	delete $first_match_checkbutton{ident $self};
-	delete $searching_label{ident $self};
-	delete $search_stop{ident $self};
-	delete $treestore{ident $self};
-	delete $treeview{ident $self};
-	delete $parent_iter{ident $self};
-	delete $dirwalk{ident $self};
-}
-
 sub init_dirwalk {
 	my ($self) = @_;
 
-	$dirwalk{ident $self} = new File::DirWalk;
+	$self->{dirwalk} = File::DirWalk->new;
 
-	$dirwalk{ident $self}->onBeginWalk(sub {
-		if ($search_stop{ident $self} == 1) {
+	$self->{dirwalk}->onBeginWalk(sub {
+		if ($self->{search_stop} == 1) {
 			return 0;
 		}
 
@@ -162,11 +129,11 @@ sub init_dirwalk {
 		return 1;
 	});
 
-	$dirwalk{ident $self}->onDirEnter(sub {
+	$self->{dirwalk}->onDirEnter(sub {
 		my ($path) = @_;
 		my $dirname_file = File::Basename::dirname($path);
 
- 		$searching_label{ident $self}->set_markup("<b>Searching in:</b> $dirname_file");
+ 		$self->{searching_label}->set_markup("<b>Searching in:</b> $dirname_file");
 		return 1;
 	});
 
@@ -174,25 +141,25 @@ sub init_dirwalk {
 		my ($file) = @_;
 		my $dirname_file      = File::Basename::dirname($file);
 		my $basename_file     = File::Basename::basename($file);
-		my $file_pattern      = $file_pattern{ident $self};
-		my $grep_pattern      = $grep_pattern{ident $self};
+		my $file_pattern      = $self->{file_pattern};
+		my $grep_pattern      = $self->{grep_pattern};
 
 		if ($basename_file !~ /\A$file_pattern\Z/) {
 			return 1;
 		}
 
 		if (not defined $grep_pattern) {
-			if (not defined $parent_iter{ident $self}->{$dirname_file}) {
-				$parent_iter{ident $self}->{$dirname_file} = 
-					$treestore{ident $self}->insert_with_values(
+			if (not defined $self->{parent_iter}->{$dirname_file}) {
+				$self->{parent_iter}->{$dirname_file} = 
+					$self->{treestore}->insert_with_values(
 						undef,
 						-1,
 						0, $dirname_file
 					);
 			}
 
-			$treestore{ident $self}->insert_with_values(
-				$parent_iter{ident $self}->{$dirname_file},
+			$self->{treestore}->insert_with_values(
+				$self->{parent_iter}->{$dirname_file},
 				-1,
 				0, $basename_file
 			);
@@ -204,35 +171,35 @@ sub init_dirwalk {
 
 				while (<$fh>) {
 
-					if ($search_stop{ident $self} == 1) {
+					if ($self->{search_stop} == 1) {
 						return 0;
 					}
 
 					if (/$grep_pattern/) {
 						++$hits;
 
-						if (not defined $parent_iter{ident $self}->{$dirname_file}) {
-							$parent_iter{ident $self}->{$dirname_file} = 
-								$treestore{ident $self}->insert_with_values(
+						if (not defined $self->{parent_iter}->{$dirname_file}) {
+							$self->{parent_iter}->{$dirname_file} = 
+								$self->{treestore}->insert_with_values(
 									undef,
 									-1,
 									0, $dirname_file
 								);
 						}
 
-						$treestore{ident $self}->insert_with_values(
-							$parent_iter{ident $self}->{$dirname_file},
+						$self->{treestore}->insert_with_values(
+							$self->{parent_iter}->{$dirname_file},
 							-1,
 							0, "Line $.: $basename_file"
 						);
 
-						if ($first_match_checkbutton{ident $self}->get_active) {
+						if ($self->{first_match_checkbutton}->get_active) {
 							last;
 						}
 
 						if ($hits >= 500 or $. >= 10000)  {
-							$treestore{ident $self}->insert_with_values(
-								$parent_iter{ident $self}->{$dirname_file},
+							$self->{treestore}->insert_with_values(
+								$self->{parent_iter}->{$dirname_file},
 								-1,
 								0, "..."
 							);
@@ -251,41 +218,41 @@ sub init_dirwalk {
 		return 1;
 	};
 
-	$dirwalk{ident $self}->onFile($f);
+	$self->{dirwalk}->onFile($f);
 
-	if ($follow_symlinks_checkbutton{ident $self}->get_active) {
-		$dirwalk{ident $self}->onLink($f);
+	if ($self->{follow_symlinks_checkbutton}->get_active) {
+		$self->{dirwalk}->onLink($f);
 	}
 }
 
 sub start_search {
 	my ($self) = @_;
 
-	my $path                   = $filechooser_button{ident $self}->get_filename;
-	$file_pattern{ident $self} = $file_pattern_entry{ident $self}->get_text;
-	$grep_pattern{ident $self} = $grep_pattern_entry{ident $self}->get_text;
+	my $path              = $self->{filechooser_button}->get_filename;
+	$self->{file_pattern} = $self->{file_pattern_entry}->get_text;
+	$self->{grep_pattern} = $self->{grep_pattern_entry}->get_text;
 
-	$file_pattern{ident $self} =~ s/\//\\\//g;
-	$file_pattern{ident $self} =~ s/\./\\./g;
-	$file_pattern{ident $self} =~ s/\*/\.*/g;
-	$file_pattern{ident $self} =~ s/\?/\./g;
+	$self->{file_pattern} =~ s/\//\\\//g;
+	$self->{file_pattern} =~ s/\./\\./g;
+	$self->{file_pattern} =~ s/\*/\.*/g;
+	$self->{file_pattern} =~ s/\?/\./g;
 
-	if ($file_pattern{ident $self} eq "") {
-		$file_pattern{ident $self} = "*";
+	if ($self->{file_pattern} eq "") {
+		$self->{file_pattern} = "*";
 	}
 
-	if ($grep_pattern{ident $self} eq "") {
-		delete $grep_pattern{ident $self};
+	if ($self->{grep_pattern} eq "") {
+		delete $self->{grep_pattern};
 	}
 
-	$treestore{ident $self}->clear;
-	$parent_iter{ident $self} = {};
-	$search_stop{ident $self} = 0;
+	$self->{treestore}->clear;
+	$self->{parent_iter} = {};
+	$self->{search_stop} = 0;
 
-	$dirwalk{ident $self}->walk($path);
+	$self->{dirwalk}->walk($path);
 
-	$searching_label{ident $self}->set_markup("<b>Searching finished</b>");
-	$treeview{ident $self}->expand_all;
+	$self->{searching_label}->set_markup("<b>Searching finished</b>");
+	$self->{treeview}->expand_all;
 }
 
 1;

@@ -15,7 +15,6 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::Config;
-use Class::Std::Utils;
 
 use strict;
 use warnings;
@@ -40,25 +39,20 @@ my $default_config = {
 	Bookmarks		=> [],
 };
 
-my %config_home;
-my %config_file;
-my %config;
-
 sub new {
 	my ($class) = @_;
-	my $self = bless anon_scalar(), $class;
-	my $xdg_config_home = File::BaseDir->new->xdg_config_home;
-	$config_home{ident $self} = Filer::Tools->catpath($xdg_config_home, "filer");
-	$config_file{ident $self} = Filer::Tools->catpath($config_home{ident $self}, "config.yml");
+	my $self = bless {}, $class;
+	$self->{config_home} = Filer::Tools->catpath($XDG_CONFIG_HOME, "filer");
+	$self->{config_file} = Filer::Tools->catpath($self->{config_home}, "config.yml");
 
-	if (! -e $config_home{ident $self}) {
- 		mkdir($config_home{ident $self});
+	if (! -e $self->{config_home}) {
+ 		mkdir($self->{config_home});
 	}
 
-	if (! -e $config_file{ident $self}) {
-		$config{ident $self} = $default_config;
+	if (! -e $self->{config_file}) {
+		$self->{config} = $default_config;
 	} else {
-		$config{ident $self} = LoadFile($config_file{ident $self});
+		$self->{config} = LoadFile($self->{config_file});
 	}
 
 	return $self;
@@ -66,32 +60,29 @@ sub new {
 
 sub DESTROY {
 	my ($self) = @_;
-	DumpFile($config_file{ident $self}, $config{ident $self});
-
-	delete $config_home{ident $self};
-	delete $config_file{ident $self};
-	delete $config{ident $self};
+	DumpFile($self->{config_file}, $self->{config});
 }
 
 sub set_option {
 	my ($self,$option,$value) = @_;
-	$config{ident $self}->{$option} = $value;
+	$self->{config}->{$option} = $value;
 }
 
 sub set_options {
 	my ($self,%vals) = @_;
 	
 	while (my ($option,$value) = each %vals) {
-		$config{ident $self}->{$option} = $value;
+		$self->{config}->{$option} = $value;
 	}
 }
 
 sub get_option {
 	my ($self,$option) = @_;
 
-	return (defined $config{ident $self}->{$option})
-		? $config{ident $self}->{$option}
-		: $default_config->{$option};
+# 	return (defined $self->{config}->{$option})
+# 		? $self->{config}->{$option}
+# 		: $default_config->{$option};
+	return $self->{config}->{$option};
 }
 
 1;

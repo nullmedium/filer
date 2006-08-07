@@ -17,8 +17,6 @@
 package Filer::Copy;
 use base qw(Filer::CopyJobDialog);
 
-use Class::Std::Utils;
-
 use strict;
 use warnings;
 
@@ -35,23 +33,8 @@ sub new {
 	return $self;
 }
 
-sub DESTROY {
-	my ($self) = @_;
-}
-
-sub deep_count_bytes {
-	my ($self,$FILES) = @_;
-
-	for (@{$FILES}) {
-		my $fi = Filer::FileInfo->new($_);
-		$self->set_total_bytes($self->total_bytes + $fi->deep_count_bytes);
-	}
-}
-
 sub copy {
 	my ($self,$FILES,$DEST) = @_;
-
-	$self->deep_count_bytes($FILES);
 
 	my $dirwalk  = new File::DirWalk;
 	my $filecopy = new Filer::FileCopy($self);
@@ -89,22 +72,53 @@ sub copy {
 		my $my_dest = Filer::Tools->catpath($DEST, basename($file));
 
 		if (-e $my_dest) {
+			if ($self->skip_all == $TRUE) {
+				return File::DirWalk::SUCCESS;
+			}
+
 			if (dirname($file) eq dirname($my_dest)) {
 
 				$my_dest = Filer::Tools->suggest_filename_helper($my_dest);
 
 			} else {
-				# TODO: Ask Overwrite Dialog
+				my $dialog = Filer::FileExistsDialog->new($file, $my_dest);
+				my $r = $dialog->show;
+				
+				if ($r == $Filer::FileExistsDialog::RENAME) {
 
-				Filer::Dialog->msgbox_error("File $file exists at $my_dest!\n");
-				return File::DirWalk::ABORTED;
+					$my_dest = $dialog->get_suggested_filename;
+					
+				} elsif ($r == $Filer::FileExistsDialog::OVERWRITE) {
+
+					# do nothing. 
+				
+				} elsif ($r == $Filer::FileExistsDialog::SKIP) {
+
+					$dialog->destroy;
+					return File::DirWalk::SUCCESS;
+
+				} elsif ($r == $Filer::FileExistsDialog::SKIP_ALL) {
+
+					# next time we encounter en existing file, return SUCCESS. 
+					$self->set_skip_all($TRUE);
+					$dialog->destroy;
+					return File::DirWalk::SUCCESS;
+
+				} elsif ($r eq 'cancel') {
+
+					$dialog->destroy;
+					return File::DirWalk::ABORTED;
+				}
+				
+				$dialog->destroy;
 			}
 		}
 
 		$self->update_progress_label("$file\n$my_dest");
-		return $filecopy->filecopy($file,$my_dest);
+ 		return $filecopy->filecopy($file,$my_dest);
  	});
 
+	$self->set_total_bytes(Filer::Tools->deep_count_bytes($FILES));
 	$self->show_job_dialog;
 
 	foreach my $source (@{$FILES}) {

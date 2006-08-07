@@ -32,7 +32,7 @@ use Glib::Object::Subclass
 sub INIT_INSTANCE {
 	my ($self) = @_;
 	$self->{n_columns}    = 7;
-	$self->{column_types} = [qw(Glib::Scalar Glib::Object Glib::String Glib::String Glib::String Glib::String Glib::String)];
+	$self->{column_types} = [qw(Glib::Scalar Glib::Object Glib::String Glib::Int Glib::String Glib::String Glib::Int)];
 	$self->{list}         = [];
 
 	$self->{sort_column_id}  = $COL_NAME;
@@ -142,11 +142,10 @@ sub GET_VALUE {
 	if ($column == $COL_FILEINFO) { return $record; }
 	if ($column == $COL_ICON) { return $record->get_mimetype_icon; }
 	if ($column == $COL_NAME) { return $record->get_basename; }
-	if ($column == $COL_SIZE) { return $record->get_size; }
-#	if ($column == $COL_SIZE) { if ($record->is_dir) { return $record->deep_count_files } else { return $record->get_size; } }
-	if ($column == $COL_TYPE) { return $record->get_mimetype; }
+	if ($column == $COL_SIZE) { return $record->get_raw_size; }
+	if ($column == $COL_TYPE) { return $record->get_description; }
 	if ($column == $COL_MODE) { return $record->get_mode; }
-	if ($column == $COL_DATE) { return $record->get_mtime; }
+	if ($column == $COL_DATE) { return $record->get_raw_mtime; }
 }
 
 #
@@ -417,20 +416,20 @@ sub drag_data_delete {
 # 	$self->row_changed($self->get_path($treeiter), $treeiter);
 # }
 
-# sub append_fileinfo {
-# 	my ($self,$fi) = @_;
-# 
-# 	$self->{list}->add($fi);
-# 
-# 	my $pos = (@{$self->{list}} - 1);
-# 
-# 	# inform the tree view and other interested objects
-# 	# (e.g. tree row references) that we have inserted
-# 	# a new row, and where it was inserted
-# 
-# 	my $path = Gtk2::TreePath->new_from_indices($pos);
-# 	$self->row_inserted($path, $self->get_iter($path));
-# }
+sub append_fileinfo {
+	my ($self,$fi) = @_;
+
+	push @{$self->{list}}, $fi;
+
+	my $pos = (@{$self->{list}} - 1);
+
+	# inform the tree view and other interested objects
+	# (e.g. tree row references) that we have inserted
+	# a new row, and where it was inserted
+
+	my $path = Gtk2::TreePath->new_from_indices($pos);
+	$self->row_inserted($path, $self->get_iter($path));
+}
 
 sub clear {
 	my ($self) = @_;
@@ -446,16 +445,12 @@ sub clear {
 	return 1;
 }
 
-# use Filer::RowStore;
-
 sub set_dir_contents {
 	my ($self,$list) = @_;
 
 	$self->clear;
 
 	$self->{list} = $list;
-
-	$self->sort;
 
 	my $len = @{$self->{list}};
 	
@@ -464,32 +459,24 @@ sub set_dir_contents {
 		my $iter = $self->get_iter($path);
 		$self->row_inserted($path,$iter);
 	}
-}
 
-# sub foreach {
-# 	my ($self,$func,$data) = @_;
-# 
-# 	for (my $i = 0; $i < @{$self->{list}}; $i++) {
-# 		my $path = Gtk2::TreePath->new_from_indices($i);
-# 		my $iter = $self->get_iter($path);
-# 		my $r    = $func->($self,$path,$iter,$data);
-# 
-# 		last if ($r);
-# 	}
-# }
+	$self->sort;
+}
 
 sub foreach {
 	my ($self,$func,$data) = @_;
 
-	for (my $i = 0; $i < @{$self->{list}}; $i++) {
+	my $len = @{$self->{list}};
+	
+	for (my $i = 0; $i < $len; $i++) {
 		my $path = Gtk2::TreePath->new_from_indices($i);
 		my $iter = $self->get_iter($path);
-		my $name = $self->get($iter, $COL_NAME);
-		my $r    = $func->($self,$iter,$name);
+		my $fi   = $self->get($iter, $COL_FILEINFO);
 		
-		last if ($r);
+		last if (!$func->($self,$iter,$fi));
 	}
 }
+
 sub remove {
 	my ($self,$iter) = @_;
 
@@ -499,11 +486,6 @@ sub remove {
 
  	splice @{$self->{list}}, $pos, 1;
 	$self->row_deleted($path);
-}
-
-sub get_data {
-	my ($self) = @_;
-	return $self->{list};
 }
 
 1;

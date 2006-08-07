@@ -84,9 +84,9 @@ sub extract_archive {
 	foreach my $f (@{$files}) {
 		my $type = mimetype($f);
 
-		my $cmdline =	($type eq $TAR)	 ? "tar -x -C $path -f $f"  :
-				($type eq $TGZ)	 ? "tar -xz -C $path -f $f" :
-				($type eq $TBZ2) ? "tar -xj -C $path -f $f" :
+		my $cmdline =	($type eq $TAR)	 ? "tar -xv -C $path -f $f"  :
+				($type eq $TGZ)	 ? "tar -xvz -C $path -f $f" :
+				($type eq $TBZ2) ? "tar -xvj -C $path -f $f" :
 				($type eq $GZ)	 ? "gzip -d $f"             :
 				($type eq $BZ2)	 ? "bzip2 -d $f"            :
 				($type eq $ZIP)	 ? "unzip $f -d $path"      :
@@ -97,6 +97,7 @@ sub extract_archive {
 		}
 	}
 
+	print "$path\n";
 	return $path;
 }
 

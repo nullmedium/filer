@@ -1,5 +1,6 @@
 DirWalk.pm
 MANIFEST
+META.yml
 Makefile.PL
 README
 configure

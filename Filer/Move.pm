@@ -16,7 +16,6 @@
 
 package Filer::Move;
 use base qw(Filer::MoveJobDialog);
-use Class::Std::Utils;
 
 use strict;
 use warnings;
@@ -32,10 +31,6 @@ sub new {
 	my $self = $class->SUPER::new();
 
 	return $self;
-}
-
-sub DESTROY {
-	my ($self) = @_;
 }
 
 sub move {
@@ -70,11 +65,6 @@ sub move_by_copy_delete {
 
 	my $dirwalk  = new File::DirWalk;
 	my $filecopy = new Filer::FileCopy($self);
-
-	for (@{$FILES}) {
-		my $fi = Filer::FileInfo->new($_);
-		$self->set_total_bytes($self->total_bytes + $fi->deep_count_bytes);
-	}
 
 	$dirwalk->onBeginWalk(sub {
 		return (!$self->cancelled) ? File::DirWalk::SUCCESS : File::DirWalk::ABORTED;
@@ -121,10 +111,24 @@ sub move_by_copy_delete {
 				$my_dest = Filer::Tools->suggest_filename_helper($my_dest);
 
 			} else {
-				# TODO: Ask Overwrite Dialog
+				my $dialog = Filer::FileExistsDialog->new($file, $my_dest);
+				my $r = $dialog->show;
+				
+				if ($r == $Filer::FileExistsDialog::RENAME) {
 
-				Filer::Dialog->msgbox_error("File $file exists at $my_dest!\n");
-				return File::DirWalk::ABORTED;
+					$my_dest = $dialog->get_suggested_filename;
+					
+				} elsif ($r == $Filer::FileExistsDialog::OVERWRITE) {
+
+					# do nothing. 
+				
+				} elsif ($r eq 'cancel') {
+
+					$dialog->destroy;
+					return File::DirWalk::ABORTED;
+				}
+				
+				$dialog->destroy;
 			}
 		}
 
@@ -134,9 +138,13 @@ sub move_by_copy_delete {
 
 		unlink($file) || return File::DirWalk::FAILED;
 
+		$self->update_progress_label("$file\n$my_dest");
+ 		$self->update_progressbar($self->completed_bytes/$self->total_bytes);
+
 		return File::DirWalk::SUCCESS;
  	});
 
+	$self->set_total_bytes(Filer::Tools->deep_count_bytes($FILES));
 	$self->show_job_dialog;
 
 	foreach my $source (@{$FILES}) {

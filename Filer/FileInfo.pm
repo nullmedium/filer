@@ -15,79 +15,48 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::FileInfo;
-use Class::Std::Utils;
 
 use strict;
 use warnings;
 
 use Readonly;
 
-use Memoize qw(memoize);
-use File::Basename qw(basename);
+use File::Basename qw(basename dirname);
 use File::MimeInfo::Magic qw(mimetype describe);
 use Stat::lsMode qw(format_mode);
-use YAML::Syck qw(LoadFile DumpFile);
 
 use Filer::Stat qw(:stat);
 use Filer::Tools;
+use Filer::Constants;
 use Filer::FilePaneConstants;
 
 # $File::MimeInfo::DEBUG = 1;
 
-# class attributes:
-# my $mimetype_icons; 
-# my %thumbnails;
+sub get_homedir {
+	return Filer::FileInfo->new($HOMEDIR);
+}
 
-# attributes;
-my %filepath;
-my %basename;
-my %mimetype;
-my %stat;
-
-# memoize('new');
-
-# sub set_mimetype_icons {
-# 	my ($self,$icons) = @_;
-# 	$mimetype_icons = $icons; 
-# }
+sub get_rootdir {
+	return Filer::FileInfo->new($ROOTDIR);
+}
 
 sub new {
 	my ($class,$filepath) = @_;
-	my $self = bless anon_scalar(), $class;
+	my $self = bless {}, $class;
 
-	$filepath{ident $self} = $filepath;
+	$self->{filepath} = $filepath;
 
 	return $self;
 }
 
-sub rename {
-	my ($self,$newname) = @_;
-	
-	if (CORE::rename($filepath{ident $self}, $newname)) {
-		$filepath{ident $self} = $newname;
-		return 1;
-	} else {
-		return 0;
-	}
-}
-
-sub DESTROY {
-	my ($self) = @_;
-
-	delete $filepath{ident $self};
-	delete $basename{ident $self};
-	delete $mimetype{ident $self};
-	delete $stat{ident $self};
-}
-
 sub get_path {
 	my ($self) = @_;
-	return $filepath{ident $self};
+	return $self->{filepath};
 }
 
 sub get_uri {
 	my ($self) = @_;
-# 	my $uri = "file://$filepath{ident $self}";
+#	my $uri = "file://$self->{filepath}";
 # 	my $str = ""; 
 # 
 # 	foreach my $c (split //, $uri) {
@@ -98,59 +67,57 @@ sub get_uri {
 # 		}
 # 	}
 
-	my $uri = URI::file->new($filepath{ident $self});
-
-	return $uri->as_string;
+	my $uri = Glib->filename_to_uri($self->{filepath}, "localhost");
+	print $uri, "\n";
+	return $uri;
 }
 
 sub get_basename {
 	my ($self) = @_;
-	return $basename{ident $self} ||= basename($filepath{ident $self});
+	return $self->{basename} ||= basename($self->{filepath});
+}
+
+sub get_dirname {
+	my ($self) = @_;
+	return dirname($self->{filepath});
 }
 
 sub get_mimetype {
 	my ($self) = @_;
-	$mimetype{ident $self} ||= mimetype($filepath{ident $self});
+	$self->{mimetype} ||= mimetype($self->{filepath});
 
-# 	if ($mimetype{ident $self} eq "inode/mount-point") {
-# 		$mimetype{ident $self} = "inode/directory";
-# 	}
+	if ($self->{mimetype} eq "inode/mount-point") {
+		$self->{mimetype} = "inode/directory";
+	}
 	
-	return $mimetype{ident $self};
+	return $self->{mimetype};
 }
 
 sub get_mimetype_handler {
 	my ($self) = @_;
 
-	my $mime_file = Filer::Tools->catpath(File::BaseDir::xdg_config_home, "filer", "mime-2.yml");
-
-	if (-e $mime_file) {
-		my $mime = LoadFile($mime_file);
-		return $mime->{$self->get_mimetype};	
-	}
-
-	return undef;
+	my $mh = Filer::MimeTypeHandler->new;
+	return $mh->get_mimetype_handler($self->get_mimetype);
 }
 
 sub set_mimetype_handler {
 	my ($self,$handler) = @_;
 
-	my $mime_file = Filer::Tools->catpath(File::BaseDir::xdg_config_home, "filer", "mime-2.yml");
-	my $mime      = {};
-
-	if (-e $mime_file) {
-		$mime = LoadFile($mime_file);
-	}
-
-	$mime->{$self->get_mimetype} = $handler;	
-
-	DumpFile($mime_file, $mime);
+	my $mh = Filer::MimeTypeHandler->new;
+	return $mh->set_mimetype_handler($self->get_mimetype,$handler);
 }
 
 sub get_mimetype_icon {
 	my ($self) = @_;
 	my $icon = Filer::MimeTypeIcon->new($self->get_mimetype);
-	return $icon->get_icon;
+
+	my $pixbuf = $icon->get_icon;
+
+	if ($self->is_hidden) {
+		$pixbuf->saturate_and_pixelate($pixbuf, 0.5, $TRUE)
+	}
+
+	return $pixbuf;
 }
 
 sub get_description {
@@ -160,7 +127,7 @@ sub get_description {
 
 sub get_stat {
 	my ($self) = @_;
-	return $stat{ident $self} ||= [ stat($filepath{ident $self}) ];
+	return $self->{stat} ||= [ stat($self->{filepath}) ];
 }
 
 sub get_raw_size {
@@ -190,7 +157,7 @@ sub get_raw_mode {
 
 sub get_size {
 	my ($self) = @_;
-	return Filer::Tools->calculate_size($self->get_raw_size);
+	return Filer::Tools->humanize_size($self->get_raw_size);
 }
 
 sub get_mtime {
@@ -217,22 +184,22 @@ sub get_mode {
 
 sub exist {
 	my ($self) = @_;
-	return (-e $filepath{ident $self});
+	return (-e $self->{filepath});
 }
 
 sub is_readable {
 	my ($self) = @_;
-	return (-R $filepath{ident $self});
+	return (-R $self->{filepath});
 }
 
 sub is_symlink {
 	my ($self) = @_;
-	return (-l $filepath{ident $self});
+	return (-l $self->{filepath});
 }
 
 sub is_dir {
 	my ($self) = @_;
-	return (-d $filepath{ident $self});
+	return (-d $self->{filepath});
 }
 
 sub is_file {
@@ -242,52 +209,17 @@ sub is_file {
 
 sub is_executable {
 	my ($self) = @_;
-	return (-x $filepath{ident $self});
+	return (-x $self->{filepath});
 }
 
 sub is_hidden {
 	my ($self) = @_;
-	return ($basename{ident $self} =~ /^\./);
+	return ($self->{basename} =~ /^\./);
 }
 
 sub is_supported_archive {
 	my ($self) = @_;
 	return Filer::Archive->is_supported_archive($self->get_mimetype);
 }
-
-
-sub deep_count_files {
-	my ($self) = @_;
-
-	my $dirwalk = new File::DirWalk;
-	my $count = 0;
-
-	$dirwalk->onFile(sub {
-		++$count;
-		return 1;
-	});
-
-	$dirwalk->walk($filepath{ident $self});
-
-	return $count;
-}
-
-sub deep_count_bytes {
-	my ($self) = @_;
-	
-	my $dirwalk = new File::DirWalk;
-	my $count;
-
-	$dirwalk->onFile(sub {
-		my ($file) = @_;
-		$count += -s $file;
-		return 1;
-	});
-
-	$dirwalk->walk($filepath{ident $self});
-
-	return $count;
-}
-
 
 1;

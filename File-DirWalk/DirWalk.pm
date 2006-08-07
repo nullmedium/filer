@@ -18,6 +18,7 @@ use constant SUCCESS 	=> 1;
 use constant FAILED 	=> 0;
 use constant ABORTED 	=> -1;
 use constant PRUNE 	=> -10;
+use constant SKIP 	=> -11;
 
 sub new {
 	my ($class) = @_;

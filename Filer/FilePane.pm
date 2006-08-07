@@ -15,8 +15,7 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::FilePane;
-use base qw(Filer::FilePaneInterface);
-use Class::Std::Utils;
+use base qw(Filer::FilePaneInterface Filer::FilePaneDND);
 
 use strict;
 use warnings;
@@ -26,136 +25,132 @@ use Cwd qw(abs_path);
 use File::Basename;
 
 use Filer::Constants;
-use Filer::DND;
 
 use Filer::ListStore;
 use Filer::FilePaneInterface;
-
-# attributes:
-# all other attributes are imported by Filer::FilePaneInterface
-
-my %overrides;
-my %path_combo;
-my %location_bar;
-my %navigation_box;
-my %navigation_buttons;
-my %status;
 
 Readonly my $SELECT   => 0;
 Readonly my $UNSELECT => 1;
 
 sub new {
 	my ($class,$filer,$side) = @_;
-	my $self = bless anon_scalar(), $class;
+	my $self = $class->SUPER::new($filer,$side);
+	$self = bless $self, $class;
 
-	$filer{ident $self}               = $filer;
-	$side{ident $self}                = $side;
-	$overrides{ident $self}           = {};
-	$mouse_motion_select{ident $self} = $FALSE;
+# 	$self->{overrides}           = {};
 
-	$vbox{ident $self} = new Gtk2::VBox(0,0);
+	$self->{location_bar} = Gtk2::HBox->new(0,0);
+	$self->{vbox}->pack_start($self->{location_bar}, 0, 1, 0);
 
-	$location_bar{ident $self} = new Gtk2::HBox(0,0);
-	$vbox{ident $self}->pack_start($location_bar{ident $self}, 0, 1, 0);
-
-	my $button1 = new Gtk2::Button("Up");
+	my $button1 = Gtk2::Button->new("Up");
 	$button1->signal_connect("clicked", sub {
 		$self->open_path_helper($self->get_updir);
 	});
-	$location_bar{ident $self}->pack_start($button1, 0, 1, 0);
+	$self->{location_bar}->pack_start($button1, 0, 1, 0);
 
-	$path_combo{ident $self} = Gtk2::ComboBoxEntry->new_text;
-	$location_bar{ident $self}->pack_start($path_combo{ident $self}, 1, 1, 0);
+	$self->{path_combo} = Gtk2::ComboBoxEntry->new_text;
+	$self->{location_bar}->pack_start($self->{path_combo}, 1, 1, 0);
 
-	my $button2 = new Gtk2::Button("Go");
+	my $button2 = Gtk2::Button->new("Go");
 	$button2->signal_connect("clicked", sub {
-		$self->open_file(new Filer::FileInfo($path_combo{ident $self}->get_active_text));
+		$self->open_file(Filer::FileInfo->new($self->{path_combo}->get_active_text));
 	});
-	$location_bar{ident $self}->pack_start($button2, 0, 1, 0);
+	$self->{location_bar}->pack_start($button2, 0, 1, 0);
 
-	$navigation_box{ident $self} = new Gtk2::HBox(0,0);
-	$vbox{ident $self}->pack_start($navigation_box{ident $self}, 0, 1, 0);
+	$self->{navigation_box} = Gtk2::HBox->new(0,0);
+	$self->{vbox}->pack_start($self->{navigation_box}, 0, 1, 0);
 
-	$treemodel{ident $self} = Filer::ListStore->new;
-	$treeview{ident $self}  = Gtk2::TreeView->new($treemodel{ident $self});
-	$treeview{ident $self}->set_rules_hint(1);
-	$treeview{ident $self}->set_enable_search(1);
-	$treeview{ident $self}->signal_connect("grab-focus", sub { $self->treeview_grab_focus_cb(@_) });
-	$treeview{ident $self}->signal_connect("key-press-event", sub { $self->treeview_event_cb(@_) });
-	$treeview{ident $self}->signal_connect("button-press-event", sub { $self->treeview_event_cb(@_) });
-	$treeview{ident $self}->signal_connect("button-release-event", sub { $self->treeview_event_cb(@_) });
-	$treeview{ident $self}->signal_connect("motion-notify-event", sub { $self->treeview_event_cb(@_) });
+	$self->{treemodel} = Filer::ListStore->new;
+	$self->{treeview}  = Gtk2::TreeView->new($self->{treemodel});
+	$self->{treeview}->set_rules_hint($TRUE);
+	$self->{treeview}->set_enable_search($TRUE);
+	$self->{treeview}->signal_connect("grab-focus", sub { $self->treeview_grab_focus_cb(@_) });
+	$self->{treeview}->signal_connect("key-press-event", sub { $self->treeview_event_cb(@_) });
+	$self->{treeview}->signal_connect("button-press-event", sub { $self->treeview_event_cb(@_) });
+	$self->{treeview}->signal_connect("button-release-event", sub { $self->treeview_event_cb(@_) });
+	$self->{treeview}->signal_connect("motion-notify-event", sub { $self->treeview_event_cb(@_) });
+
+# 	$self->{treefilter} = Gtk2::TreeModelFilter->new($self->{treemodel});
+# 	$self->{treefilter}->set_visible_func(sub {
+# 		my ($model,$iter) = @_;
+# 		my $fi   = $model->get($iter, $COL_FILEINFO);
+# 
+# 		return 0 if (!$self->{ShowHiddenFiles} && $fi->is_hidden);
+# 		return 1;
+# 	});
+# 
+# 	$self->{treesort} = Gtk2::TreeModelSort->new($self->{treefilter});
+# 	$self->{treeview}->set_model($self->{treesort});
 
 	# Drag and Drop
-	my $dnd = new Filer::DND($filer{ident $self},$self);
-	$treeview{ident $self}->drag_dest_set('all', ['move','copy'], $dnd->target_table);
-	$treeview{ident $self}->drag_source_set(['button1_mask','shift-mask'], ['move','copy'], $dnd->target_table);
-	$treeview{ident $self}->signal_connect("drag_data_get", sub { $dnd->filepane_treeview_drag_data_get(@_) });
-	$treeview{ident $self}->signal_connect("drag_data_received", sub { $dnd->filepane_treeview_drag_data_received(@_) });
+	$self->{treeview}->drag_dest_set('all', ['move','copy'], $self->target_table);
+	$self->{treeview}->drag_source_set(['button1_mask','shift-mask'], ['move','copy'], $self->target_table);
+	$self->{treeview}->signal_connect("drag_data_get", sub { $self->drag_data_get(@_) });
+#	$self->{treeview}->signal_connect("drag_motion", sub { $self->drag_motion(@_) });
+	$self->{treeview}->signal_connect("drag_data_received", sub { $self->drag_data_received(@_) });
 
-	$treeselection{ident $self} = $treeview{ident $self}->get_selection;
-	$treeselection{ident $self}->set_mode("multiple");
+	$self->{treeselection} = $self->{treeview}->get_selection;
+	$self->{treeselection}->set_mode("multiple");
 
-	my $scrolled_window = new Gtk2::ScrolledWindow;
+	my $scrolled_window = Gtk2::ScrolledWindow->new;
 	$scrolled_window->set_policy('automatic','automatic');
 	$scrolled_window->set_shadow_type('etched-in');
-	$vbox{ident $self}->pack_start($scrolled_window, 1, 1, 0);
-	$scrolled_window->add($treeview{ident $self});
+	$scrolled_window->add($self->{treeview});
+	$self->{vbox}->pack_start($scrolled_window, 1, 1, 0);
 
 	# a column with a pixbuf renderer and a text renderer
-	my $col = new Gtk2::TreeViewColumn;
+	my $col = Gtk2::TreeViewColumn->new;
 	$col->set_sort_column_id($COL_NAME);
-	$col->set_sort_indicator(1);
+	$col->set_sort_indicator($TRUE);
 	$col->set_title("Name");
 	$col->set_sizing('GTK_TREE_VIEW_COLUMN_AUTOSIZE');
 
-	my $cell0 = new Gtk2::CellRendererPixbuf;
+	my $cell0 = Gtk2::CellRendererPixbuf->new;
 	$col->pack_start($cell0, 0);
 	$col->add_attribute($cell0, pixbuf => $COL_ICON);
 
-	my $cell1 = new Gtk2::CellRendererText;
+	my $cell1 = Gtk2::CellRendererText->new;
 	$col->pack_start($cell1, 1);
 	$col->add_attribute($cell1, text => $COL_NAME);
 
-	$treeview{ident $self}->append_column($col);
+	$self->{treeview}->append_column($col);
 
-	my @cols = qw(Fileinfo Icon Name Size Mode Type Date);
+	my %cols = ();
+	$cols{$COL_SIZE} = "Size";
+#	$cols{$COL_MODE} = "Mode";
+	$cols{$COL_TYPE} = "Type";
+	$cols{$COL_DATE} = "Date Modified";
 
-	for (my $n = $COL_SIZE; $n <= $#cols; $n++) {
-		my $cell = new Gtk2::CellRendererText;
-		my $col = Gtk2::TreeViewColumn->new_with_attributes($cols[$n], $cell, text => $n);
-		$col->set_sort_column_id($n);
- 		$col->set_sort_indicator(1);
+	foreach (sort keys %cols) {
+		my $cell;
+		my $col;
+
+		if ($_ == $COL_SIZE) {
+			$cell = Filer::CellRendererSize->new;
+			$cell->set(humanize => $FALSE);
+			$col  = Gtk2::TreeViewColumn->new_with_attributes($cols{$_}, $cell, size => $_);
+		} elsif ($_ == $COL_DATE) {
+			$cell = Filer::CellRendererDate->new;
+#			$cell->set(dateformat => "%o %b %Y");
+			$cell->set(dateformat => "%x");
+			$col  = Gtk2::TreeViewColumn->new_with_attributes($cols{$_}, $cell, seconds => $_);
+		} else {
+			$cell = Gtk2::CellRendererText->new;
+			$col  = Gtk2::TreeViewColumn->new_with_attributes($cols{$_}, $cell, text => $_);
+		}
+
+		$col->set_sort_column_id($_);
+ 		$col->set_sort_indicator($TRUE);
 		$col->set_sizing('GTK_TREE_VIEW_COLUMN_AUTOSIZE');
-		$treeview{ident $self}->append_column($col);
+		$self->{treeview}->append_column($col);
 	}
 
-	$status{ident $self} = new Gtk2::Label;
-	$status{ident $self}->set_alignment(0.0,0.5);
-	$vbox{ident $self}->pack_start($status{ident $self}, 0, 1, 2);
+	$self->{status} = Gtk2::Label->new;
+	$self->{status}->set_alignment(0.0,0.5);
+	$self->{vbox}->pack_start($self->{status}, 0, 1, 2);
 
 	return $self;
 }
-
-# sub DESTROY {
-# 	my ($self) = @_;
-# 
-# 	delete $filer{ident $self};
-# 	delete $side{ident $self};
-# 	delete $filepath{ident $self};
-# 	delete $overrides{ident $self};
-# 	delete $vbox{ident $self};
-# 	delete $treeview{ident $self};
-# 	delete $treemodel{ident $self};
-# 	delete $treeselection{ident $self};
-# 	delete $path_combo{ident $self};
-# 	delete $location_bar{ident $self};
-# 	delete $navigation_box{ident $self};
-# 	delete $navigation_buttons{ident $self};
-# 	delete $status{ident $self};
-# 	delete $mouse_motion_select{ident $self};
-# 	delete $mouse_motion_y_pos_old{ident $self};
-# }
 
 sub get_type {
 	my ($self) = @_;
@@ -164,99 +159,76 @@ sub get_type {
 
 sub get_location_bar {
 	my ($self) = @_;
-	return $location_bar{ident $self};
+	return $self->{location_bar};
 }
 
 sub get_navigation_box {
 	my ($self) = @_;
-	return $navigation_box{ident $self};
+	return $self->{navigation_box};
 }
 
 sub show_popup_menu {
 	my ($self,$e) = @_;
 
  	my $item;
-	my $uimanager  = $filer{ident $self}->get_widget("uimanager");
-	my $ui_path    = '/ui/list-popupmenu';
+	my $uimanager = $self->{filer}->get_uimanager;
+	my $ui_path   = '/ui/list-popupmenu';
 
 	my $popup_menu = $uimanager->get_widget($ui_path);
-	$popup_menu->show_all;
 
-	$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive(1);
-	$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive(1);
-	$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive(1);
-	$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive(1);
-	$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive(1);
-	$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive(1);
-#	$uimanager->get_widget("$ui_path/PopupItems1/Paste")->set_sensitive(0);
-	$uimanager->get_widget("$ui_path/PopupItems1/Paste")->set_sensitive(1);
-	$uimanager->get_widget("$ui_path/archive-menu")->set_sensitive(1);
-	$uimanager->get_widget("$ui_path/Properties")->set_sensitive(1);
+	$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($TRUE);
+	$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($TRUE);
+	$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($TRUE);
+	$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive($TRUE);
+	$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive($TRUE);
+	$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($TRUE);
+	$uimanager->get_widget("$ui_path/PopupItems1/Paste")->set_sensitive($TRUE);
+# 	$uimanager->get_widget("$ui_path/archive-menu")->set_sensitive($TRUE);
+	$uimanager->get_widget("$ui_path/Properties")->set_sensitive($TRUE);
 
-	my $bookmarks = new Filer::Bookmarks($filer{ident $self});
+# 	$uimanager->get_widget("$ui_path/archive-menu")->hide;
+
+	my $bookmarks = Filer::Bookmarks->new($self->{filer});
 	$uimanager->get_widget("$ui_path/Bookmarks")->set_submenu($bookmarks->generate_bookmarks_menu);
 
-	my ($p) = $treeview{ident $self}->get_path_at_pos($e->x,$e->y);
+	my ($p) = $self->{treeview}->get_path_at_pos($e->x,$e->y);
 
 	if (defined $p) {
-		if (! $treeselection{ident $self}->path_is_selected($p)) {
-			$treeselection{ident $self}->unselect_all;
-			$treeselection{ident $self}->select_path($p);
+		if (! $self->{treeselection}->path_is_selected($p)) {
+			$self->{treeselection}->unselect_all;
+			$self->{treeselection}->select_path($p);
 		}
 
 		if ($self->count_items == 1) {
 			my $fi = $self->get_fileinfo_list->[0];
 
 			if ($fi->is_dir) {
-				$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive(0);
-			} else {
-				# Customize archive submenu
-				if ($fi->is_supported_archive) {
-					$uimanager->get_widget("$ui_path/archive-menu/Extract")->set_sensitive(1);
-					$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive(0);
-				} else {
-					$uimanager->get_widget("$ui_path/archive-menu/Extract")->set_sensitive(0);
-					$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive(1);
-				}
+				$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
+# 			} else {
+# 				# Customize archive submenu
+# 				if ($fi->is_supported_archive) {
+# 					$uimanager->get_widget("$ui_path/archive-menu/Extract")->set_sensitive($TRUE);
+# 					$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
+# 				} else {
+# 					$uimanager->get_widget("$ui_path/archive-menu/Extract")->set_sensitive($FALSE);
+# 					$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($TRUE);
+# 				}
 			}
-
-			# add and create Open submenu
-# 			my $commands_menu = new Gtk2::Menu;
-# 			$item = $uimanager->get_widget("$ui_path/Open");
-# 			$item->set_submenu($commands_menu);
-# 
-# 			my @commands = $filer{ident $self}->get_mime->get_commands($type);
-# 
-# 			foreach my $command (@commands) {
-# 				$item = Gtk2::MenuItem->new($command);
-# 				$item->signal_connect("activate", sub {
-# 					my $command = pop;
-# 					my $param   = $self->get_item;
-# 					Filer::Tools->exec(command => "$command $param", wait => 0);
-# 				}, $command);
-# 				$commands_menu->add($item);
-# 			}
-# 
-# 			$item = new Gtk2::MenuItem("Other ...");
-# 			$item->signal_connect("activate", sub { $self->open_file_with });
-# 			$commands_menu->add($item);
-# 
-# 			$commands_menu->show_all;
 		} else {
-			$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive(0);
-			$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive(0);
-			$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive(0);
-			$uimanager->get_widget("$ui_path/Properties")->set_sensitive(0);
+			$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($FALSE);
+			$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
+			$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($FALSE);
+			$uimanager->get_widget("$ui_path/Properties")->set_sensitive($FALSE);
 		}
 	} else {
-		$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive(0);
-		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive(0);
-		$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive(0);
-		$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive(0);
-		$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive(0);
-		$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive(0);
-		$uimanager->get_widget("$ui_path/archive-menu")->set_sensitive(0);
-		$uimanager->get_widget("$ui_path/Properties")->set_sensitive(0);
+		$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($FALSE);
+		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
+		$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($FALSE);
+		$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive($FALSE);
+		$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive($FALSE);
+		$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($FALSE);
+		$uimanager->get_widget("$ui_path/archive-menu")->set_sensitive($FALSE);
+		$uimanager->get_widget("$ui_path/Properties")->set_sensitive($FALSE);
 	}
 
 	$popup_menu->show_all;
@@ -272,7 +244,7 @@ sub treeview_event_cb {
 			return 1;
 		} elsif ($e->keyval == $Gtk2::Gdk::Keysyms{'Delete'}) {
 
-			$filer{ident $self}->delete_cb;
+			$self->{filer}->delete_cb;
 			return 1;
 
 		} elsif ($e->keyval == $Gtk2::Gdk::Keysyms{'Return'}) {
@@ -283,20 +255,6 @@ sub treeview_event_cb {
 	}
 
 	if ($e->type eq "button-press") { 
-# 		if ($e->button == 2) {
-# 			$mouse_motion_select{ident $self}    = 1;
-# 			$mouse_motion_y_pos_old{ident $self} = $e->y;
-# 
-# 			my ($p) = $treeview{ident $self}->get_path_at_pos($e->x,$e->y);
-# 
-# 			if (defined $p) {
-#  				$treeselection{ident $self}->unselect_all;
-# 				$treeselection{ident $self}->select_path($p);
-# 			}
-# 
-# 			$self->set_focus;
-# 			return 1;
-# 		} elsif ($e->button == 3) {
 		if ($e->button == 3) {
 
 			$self->set_focus;
@@ -306,11 +264,11 @@ sub treeview_event_cb {
 	}
 	
 	if ($e->type eq "2button-press" and $e->button == 1) {
-		my ($p) = $treeview{ident $self}->get_path_at_pos($e->x,$e->y);
+		my ($p) = $self->{treeview}->get_path_at_pos($e->x,$e->y);
 		
 		if (defined $p) {
-			my $iter = $treemodel{ident $self}->get_iter($p);
-			my $fi   = $treemodel{ident $self}->get_fileinfo($iter);
+			my $iter = $self->{treemodel}->get_iter($p);
+			my $fi   = $self->get_fileinfo($iter);
 
 			if (defined $fi) {
 				$self->open_file($fi);
@@ -320,60 +278,40 @@ sub treeview_event_cb {
 		return 1;
 	}
 
-# 	if ($e->type eq "button-release" and $e->button == 2) {
-# #		$self->set_focus;
-# 		$mouse_motion_select{ident $self} = 0;
-# 		return 1;
-# 	}
-
-# 	if (($e->type eq "motion-notify") and ($mouse_motion_select{ident $self} == 1)) {
-# 		my ($p_old) = $treeview{ident $self}->get_path_at_pos($e->x,$mouse_motion_y_pos_old{ident $self});
-# 		my ($p_new) = $treeview{ident $self}->get_path_at_pos($e->x,$e->y);
-# 
-# 		if (defined $p_old and defined $p_new) {
-# 			$treeselection{ident $self}->unselect_all;
-# 			$treeselection{ident $self}->select_range($p_old,$p_new);
-# 		}
-# 
-# #		$self->set_focus;
-# 		return 1;
-# 	}
-
 	return 0;
 }
 
 sub get_pwd {
 	my ($self) = @_;
-	return $filepath{ident $self};
+	return $self->{filepath};
 }
 
 sub get_updir {
 	my ($self) = @_;
-	return abs_path(Filer::Tools->catpath($filepath{ident $self}, $UPDIR));
+	return abs_path(Filer::Tools->catpath($self->{filepath}, $UPDIR));
 }
 
 sub update_navigation_buttons {
 	my ($self)  = @_;
-	my $rootdir = File::Spec->rootdir;
-	my $path    = $rootdir;
+	my $path    = $ROOTDIR;
 	my $button  = undef;
 
-	foreach my $path (sort { length($b) <=> length($a) } keys %{$navigation_buttons{ident $self}}) {
+	foreach my $path (sort { length($b) <=> length($a) } keys %{$self->{navigation_buttons}}) {
 		# check if the current path button $path isn't a parentdir of $filepath
-		last if ($filepath{ident $self} =~ /^$path/);
+		last if ($self->{filepath} =~ /^$path/);
 
 		# destroy path button
-		$navigation_buttons{ident $self}->{$path}->destroy;
-		delete $navigation_buttons{ident $self}->{$path};
+		$self->{navigation_buttons}->{$path}->destroy;
+		delete $self->{navigation_buttons}->{$path};
 	}
 
-	foreach (File::Spec->splitdir($filepath{ident $self})) {
+	foreach (File::Spec->splitdir($self->{filepath})) {
 		$path = Filer::Tools->catpath($path, $_);
 
-		if (not defined $navigation_buttons{ident $self}->{$path}) {
-			my $name = basename($path) || $rootdir;
+		if (not defined $self->{navigation_buttons}->{$path}) {
+			my $name = basename($path);
 			
-			$button = Gtk2::RadioButton->new_with_label($navigation_buttons{ident $self}->{$rootdir}, $name);
+			$button = Gtk2::RadioButton->new_with_label($self->{navigation_buttons}->{$ROOTDIR}, $name);
 			$button->set(draw_indicator => 0); # i'm evil
 
 			$button->signal_connect(toggled => sub {
@@ -387,7 +325,7 @@ sub update_navigation_buttons {
 					$fd->set_weight('PANGO_WEIGHT_BOLD');
 
 					# avoid an endless loop/recursion.
-					if ($path ne $filepath{ident $self}) {
+					if ($path ne $self->{filepath}) {
 						$self->open_path($path);
 					}
 				} else {
@@ -397,14 +335,14 @@ sub update_navigation_buttons {
 				$label->modify_font($fd);
 			}, $path);
 
-			$navigation_box{ident $self}->pack_start($button,0,0,0);
-			$navigation_buttons{ident $self}->{$path} = $button;
-			$navigation_buttons{ident $self}->{$path}->show;
+			$self->{navigation_box}->pack_start($button,0,0,0);
+			$self->{navigation_buttons}->{$path} = $button;
+			$self->{navigation_buttons}->{$path}->show;
 		}
 	}
 
 	# set last button active. current directory.
-	$navigation_buttons{ident $self}->{$filepath{ident $self}}->set(active => 1);
+	$self->{navigation_buttons}->{$self->{filepath}}->set(active => 1);
 }
 
 sub open_file {
@@ -423,24 +361,11 @@ sub open_file {
 
 		Filer::Tools->exec(command => $filepath, wait => 0);
 
-	} elsif ($fileinfo->is_supported_archive) {
-
-		$self->extract_archive_temporary($filepath);
-
-	} else {
-# 		my $type    = $fileinfo->get_mimetype;
-# 		my $command = $filer{ident $self}->get_mime->get_default_command($type);
+# 	} elsif ($fileinfo->is_supported_archive) {
 # 
-# 		if ($command) {
-# 			Filer::Tools->exec(command => "$command '$filepath'", wait => 0);
-# 		} else {
-# 			if (Filer::Archive->is_supported_archive($type)) {
-# 				$self->extract_archive_temporary($filepath);
-# 			} else {
-# 				$filer{ident $self}->get_mime->run_dialog($fileinfo);
-# 			}
-# 		}
-
+# 		$self->extract_archive_temporary($filepath);
+# 
+	} else {
 		my $handler = $fileinfo->get_mimetype_handler;
 
 		if ($handler) {
@@ -462,8 +387,8 @@ sub open_file_with {
 sub open_path_helper {
 	my ($self,$filepath) = @_;
 
-	if (defined $navigation_buttons{ident $self}->{$filepath}) {
-		$navigation_buttons{ident $self}->{$filepath}->set(active => 1);
+	if (defined $self->{navigation_buttons}->{$filepath}) {
+		$self->{navigation_buttons}->{$filepath}->set(active => 1);
 	} else {
 		$self->open_path($filepath);
 		$self->update_navigation_buttons;
@@ -477,28 +402,23 @@ sub open_path {
 #  	use Time::HiRes qw(gettimeofday tv_interval);
 #  	$t0 = [gettimeofday];
 
-	if (defined $overrides{ident $self}->{$filepath}) {
-		$filepath = $overrides{ident $self}->{$filepath};
-		delete $overrides{ident $self}->{$filepath};
-	}
+# 	if (defined $self->{overrides}->{$filepath}) {
+# 		$filepath = $self->{overrides}->{$filepath};
+# 		delete $self->{overrides}->{$filepath};
+# 	}
 
-	if (! -d $filepath) {
-		$filepath = File::Spec->homedir;	
-	}
+	my $Directory    = Filer::Directory->new($filepath);
+	my $dir_contents = $Directory->all;
 
-	my $show_hidden  = $filer{ident $self}->get_config->get_option('ShowHiddenFiles');
-	my $Directory    = Filer::Directory->new(path => $filepath, hidden => $show_hidden);
-	my $dir_contents = $Directory->get_all;
-
-	$filepath{ident $self} = $filepath;
+	$self->{filepath} = $filepath;
 	
- 	$treemodel{ident $self}->set_dir_contents($dir_contents);
+ 	$self->{treemodel}->set_dir_contents($dir_contents);
 
-	$path_combo{ident $self}->insert_text(0, $filepath{ident $self});
-	$path_combo{ident $self}->set_active(0);
+	$self->{path_combo}->insert_text(0, $self->{filepath});
+	$self->{path_combo}->set_active(0);
 
 	my $status = sprintf("%d directories and %d files: %s", $Directory->dirs_count, $Directory->files_count, $Directory->total_size);
-	$status{ident $self}->set_text($status);
+	$self->{status}->set_text($status);
 
 # 	$t1 = [gettimeofday];
 # 	$elapsed = tv_interval($t0,$t1);
@@ -518,22 +438,18 @@ sub unselect_dialog {
 sub _select_dialog {
 	my ($self,$type) = @_;
 
-	my $dialog = new Gtk2::Dialog("", undef, 'modal', 'gtk-cancel' => 'cancel', 'gtk-ok' => 'ok');
-	$dialog->set_default_response('ok');
-	$dialog->set_has_separator(1);
-	$dialog->set_position('center');
-	$dialog->set_modal(1);
+	my $dialog = Filer::DefaultDialog->new;
 
-	my $hbox = new Gtk2::HBox(0,0);
+	my $hbox = Gtk2::HBox->new(0,0);
 	$dialog->vbox->pack_start($hbox,0,1,5);
 
-	my $label = new Gtk2::Label;
+	my $label = Gtk2::Label->new;
 	$hbox->pack_start($label,0,0,0);
 
-	my $entry = new Gtk2::Entry;
-	$entry->set_activates_default(1);
+	my $entry = Gtk2::Entry->new;
+	$entry->set_activates_default($TRUE);
 	$entry->set_text("*");
-	$hbox->pack_start($entry,0,0,0);
+	$hbox->pack_start($entry,1,1,0);
 
 	if ($type == $SELECT) {
 		$dialog->set_title("Select Files");
@@ -553,102 +469,59 @@ sub _select_dialog {
 		$str =~ s/\*/\.*/g;
 		$str =~ s/\?/\./g;
 
-# 		$treemodel{ident $self}->foreach(sub {
-# 			my ($model,$path,$iter) = @_;
-# 			my $item  = $model->get($iter, $COL_NAME);
-# 
-# 			if ($item =~ /\A$str\Z/)  {
-# 				if ($type == $SELECT) {
-# 					$treeselection{ident $self}->select_iter($iter);
-# 				}
-# 
-# 				if ($type == $UNSELECT) {
-# 					$treeselection{ident $self}->unselect_iter($iter);
-# 				}
-# 			}
-# 		});
-
-		$treemodel{ident $self}->foreach(sub {
-			my ($model,$iter,$filename) = @_;
+		$self->{treemodel}->foreach(sub {
+			my ($model,$iter,$fileinfo) = @_;
 			
-			print "$type\n";
-
-			if ($filename =~ /\A$str\Z/)  {
+			if ($fileinfo->get_basename =~ /\A$str\Z/)  {
 				if ($type == $SELECT) {
-					$treeselection{ident $self}->select_iter($iter);
+					$self->{treeselection}->select_iter($iter);
 				}
 
 				if ($type == $UNSELECT) {
-					$treeselection{ident $self}->unselect_iter($iter);
+					$self->{treeselection}->unselect_iter($iter);
 				}
 			}
+			
+			return 1;
 		});
 	}
 
 	$dialog->destroy;
 }
 
-sub create_tar_gz_archive {
-	my ($self) = @_;
-
-	my $archive = new Filer::Archive;
-	$archive->create_tar_gz_archive($filepath{ident $self}, $self->get_item_list);
-
-	$self->refresh;
-}
-
-sub create_tar_bz2_archive {
-	my ($self) = @_;
-
-	my $archive = new Filer::Archive;
-	$archive->create_tar_bz2_archive($filepath{ident $self}, $self->get_item_list);
-
-	$self->refresh;
-}
-
-sub extract_archive {
-	my ($self) = @_;
-
-	my $archive = new Filer::Archive;
-	$archive->extract_archive($filepath{ident $self}, $self->get_item_list);
-
-	$self->refresh;
-}
-
-sub extract_archive_temporary {
-	my ($self,$file) = @_;
-
-	my $dir = $self->get_temp_archive_dir;
-	my $archive = new Filer::Archive;
-	$archive->extract_archive($dir, [ $file ]);
-
-	$self->open_path($dir);
-}
-
-sub get_temp_archive_dir {
-	my ($self) = @_;
-	my $dir = File::Temp::tempdir(CLEANUP => 1);
-	my $tmp = File::Spec->tmpdir;
-
-	$overrides{ident $self}->{$tmp} = $filepath{ident $self};
-
-	return $dir;
-}
-
-# package Gtk2::ListStore;
+# sub create_tar_gz_archive {
+# 	my ($self) = @_;
 # 
-# sub get_value {
-# 	my ($self,$iter,$column) = @_;
-# 	
+# 	my $archive = Filer::Archive->new;
+# 	$archive->create_tar_gz_archive($self->{filepath}, $self->get_item_list);
+# 
+# 	Filer::Tools->exec(command => $cmd, wait => $FALSE);
 # }
 # 
-# sub get {
-# 	my ($self,$iter,$column) = @_;
-# 	my $val = $self->get_value($iter,$column);
+# sub create_tar_bz2_archive {
+# 	my ($self) = @_;
 # 
-# 	print "get: returning $val\n";
+# 	my $archive = Filer::Archive->new;
+# 	$archive->create_tar_bz2_archive($self->{filepath}, $self->get_item_list);
+# }
 # 
-# 	return $val;
+# sub extract_archive {
+# 	my ($self) = @_;
+# 
+# 	my $archive = Filer::Archive->new;
+# 	$archive->extract_archive($self->{filepath}, $self->get_item_list);
+# }
+# 
+# sub extract_archive_temporary {
+# 	my ($self,$file) = @_;
+# 
+# 	my $tmpdir  = File::Temp::tempdir(CLEANUP => 1);
+# 	my $archive = Filer::Archive->new;
+# 	$archive->extract_archive($tmpdir, [ $file ]);
+# 
+# 	$self->{overrides}->{$tmpdir} = $self->{filepath};
+# 
+# 	$self->open_path($tmpdir);
 # }
 
 1;

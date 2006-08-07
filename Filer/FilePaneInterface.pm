@@ -1,6 +1,5 @@
 package Filer::FilePaneInterface;
 use base qw(Exporter);
-use Class::Std::Utils;
 use Filer::FilePaneConstants;
 
 our @EXPORT = qw(
@@ -11,98 +10,93 @@ $COL_SIZE
 $COL_MODE
 $COL_TYPE
 $COL_DATE
-%filer
-%filepath
-%side
-%vbox
-%treeview
-%treemodel
-%treeselection
-%treefilter
-%mouse_motion_select
-%mouse_motion_y_pos_old
 );
-
-# attributes
-
-%filer                  = {};
-%filepath               = {};
-%side                   = {};
-%vbox                   = {};
-%treeview               = {};
-%treemodel              = {};
-%treeselection          = {};
-%treefilter             = {};
-%mouse_motion_select    = {};
-%mouse_motion_y_pos_old = {};
 
 # API methods shared between Filer::FilePane and Filer::FileTreePane
 
+sub new {
+	my ($class,$filer,$side) = @_;
+	my $self = bless {}, $class;
+
+	$self->{vbox} = Gtk2::VBox->new(0,0);
+	$self->{filer} = $filer;
+	$self->{side}  = $side;
+	
+	return $self;
+}
+
 sub get_side {
 	my ($self) = @_;
-	return $side{ident $self};
+	return $self->{side};
 }
 
 sub get_vbox {
 	my ($self) = @_;
-	return $vbox{ident $self};
+	return $self->{vbox};
 }
 
 sub get_treeview {
 	my ($self) = @_;
-	return $treeview{ident $self};
+	return $self->{treeview};
 }
 
-sub get_model {
-	my ($self) = @_;
-	return $treemodel{ident $self};
-}
+# sub get_treemodel {
+# 	my ($self) = @_;
+# 	return $self->{treeview}->get_model;
+# }
 
-sub get_model_data {
-	my ($self) = @_;
-	return $treemodel{ident $self}->get_data;
-}
+# sub get_treefilter_model {
+# 	my ($self) = @_;
+# 	return $self->{treefilter}->get_model;
+# }
+
+# sub get_model_data {
+# 	my ($self) = @_;
+# 	return $self->{treemodel}->get_data;
+# }
 
 sub set_focus {
 	my ($self) = @_;
-	$treeview{ident $self}->grab_focus;
+	$self->{treeview}->grab_focus;
 }
 
 sub treeview_grab_focus_cb {
 	my ($self) = @_;
 
-	$filer{ident $self}->set_active_pane($self);
-	$filer{ident $self}->set_inactive_pane($filer{ident $self}->get_pane(! $side{ident $self}));
+	$self->{filer}->change_active_pane($self->{side});
 
 	return 1;
 }
 
-
-
-sub get_iter {
-	my ($self) = @_;
-	return $self->get_iter_list->[0];
-}
+# sub get_iter {
+# 	my ($self) = @_;
+# 	return $self->get_iter_list->[0];
+# }
 
 sub get_iter_list {
 	my ($self) = @_;
-	my @sel    = $treeselection{ident $self}->get_selected_rows;
-	my @iters  = map { $treemodel{ident $self}->get_iter($_) } @sel;
+	my @sel    = $self->{treeselection}->get_selected_rows;
+	my @iters  = map { $self->{treemodel}->get_iter($_) } @sel;
 	return \@iters;
+}
+
+sub get_fileinfo {
+	my ($self,$iter) = @_;
+	return $self->{treemodel}->get($iter, $COL_FILEINFO);
 }
 
 sub get_fileinfo_list {
 	my ($self) = @_;
 	my @iters  = @{$self->get_iter_list};
-	my @fi     = map { $treemodel{ident $self}->get_fileinfo($_) } @iters;
+	my @fi     = map { $self->get_fileinfo($_) } @iters;
 
 	return \@fi;
 }
 
-sub get_item {
-	my ($self) = @_;
-	return $self->get_item_list->[0];
-}
+# sub get_item {
+# 	my ($self) = @_;
+# 	return $self->get_item_list->[0];
+# }
 
 sub get_item_list {
 	my ($self) = @_;
@@ -122,54 +116,52 @@ sub get_uri_list {
 
 sub get_path_by_treepath {
 	my ($self,$p) = @_;
-	my $iter      = $treemodel{ident $self}->get_iter($p);
-	my $fi        = $treemodel{ident $self}->get_fileinfo($iter);
+	my $iter      = $self->{treemodel}->get_iter($p);
+	my $fi        = $self->get_fileinfo($iter);
 	my $path      = $fi->get_path;
 
 	return $path;
 }
 
+# sub get_path_by_position {
+# 	my ($self,$x,$y) = @_;
+# 	
+# }
+
 sub count_items {
 	my ($self) = @_;
-	return $treeselection{ident $self}->count_selected_rows;
+	return $self->{treeselection}->count_selected_rows;
 }
 
 sub refresh {
 	my ($self) = @_;
-	$self->open_path($filepath{ident $self});
+	print "DEBUG $self refresh\n";
+	$self->open_path($self->{filepath});
 }
 
-sub remove_selected {
-	my ($self) = @_;
+# sub remove_selected {
+# 	my ($self) = @_;
+# 
+# 	while (1) {
+# 		my @sel  = $self->{treeselection}->get_selected_rows;
+# 		my $path = pop @sel;
+# 
+# 		last if (! defined $path);
+# 
+# 		my $iter = $self->{treemodel}->get_iter($path);
+# 		my $fi   = $self->get_fileinfo($iter);
+# 
+# 		if (! $fi->exist) {
+# 			$self->{treemodel}->remove($iter);
+# 		}
+# 	}
+# }
 
-	while (1) {
-		my @sel  = $treeselection{ident $self}->get_selected_rows;
-		my $path = pop @sel;
+sub set_show_hidden {
+	my ($self,$bool) = @_;
 
-		last if (! defined $path);
-
-		my $iter = $treemodel{ident $self}->get_iter($path);
-		my $fi   = $treemodel{ident $self}->get_fileinfo($iter);
-
-		if (! $fi->exist) {
-			$treemodel{ident $self}->remove($iter);
-		}
-	}
-}
-
-#
-# Pollute the namespaces with handy util methods
-#
-
-################################################################################
-
-package Gtk2::TreeModel;
-
-sub get_fileinfo {
-	my ($self,$iter) = @_;
-	
-	return undef if (!$iter);
-	return $self->get($iter, 0);
+	$self->{ShowHiddenFiles} = $bool;
+# 	$self->{treefilter}->refilter;
 }
 
 ################################################################################

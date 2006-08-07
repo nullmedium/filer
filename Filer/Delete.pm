@@ -24,9 +24,6 @@ use File::Basename;
 
 use Filer::Constants;
 
-use English;
-
-
 sub new {
 	my ($class) = @_;
 	my $self = $class->SUPER::new();
@@ -34,19 +31,8 @@ sub new {
 	return $self;
 }
 
-sub deep_count_files {
-	my ($self,$files) = @_;
-
-	for (@{$files}) {
-		my $fi = Filer::FileInfo->new($_);
-		$self->set_total_files($self->total_files + $fi->deep_count_files);
-	}
-}
-
 sub delete {
-	my ($self,$files) = @_;
-
-	$self->deep_count_files($files);
+	my ($self,$FILES) = @_;
 
 	my $dirwalk = new File::DirWalk;
 
@@ -55,27 +41,29 @@ sub delete {
 	});
 
 	$dirwalk->onLink(sub {
-		unlink($ARG[0]) || return File::DirWalk::FAILED;
+		unlink($_[0]) || return File::DirWalk::FAILED;
 		return File::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onDirLeave(sub {
-		rmdir($ARG[0]) || return File::DirWalk::FAILED;
+		rmdir($_[0]) || return File::DirWalk::FAILED;
 		return File::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onFile(sub {
-		unlink($ARG[0]) || return File::DirWalk::FAILED;
+		unlink($_[0]) || return File::DirWalk::FAILED;
 
-		$self->update_progress_label($ARG[0]);
+		$self->update_progress_label($_[0]);
 		$self->set_deleted_files($self->deleted_files + 1);
+		$self->update_progressbar($self->deleted_files/$self->total_files);
 
 		return File::DirWalk::SUCCESS;
 	});
 
+	$self->set_total_files(Filer::Tools->deep_count_files($FILES));
 	$self->show_job_dialog;
 
-	foreach my $source (@{$files}) {
+	foreach my $source (@{$FILES}) {
 		my $r = $dirwalk->walk($source);
 
 		if ($r == File::DirWalk::FAILED) {

@@ -1,6 +1,5 @@
 package Filer::MoveJobDialog;
 use base qw(Filer::CopyMoveJobDialogCommon Filer::JobDialog);
-use Class::Std::Utils;
 
 use strict;
 use warnings;

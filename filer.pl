@@ -32,6 +32,9 @@ BEGIN {
 # use strict;
 use warnings;
 
+use threads;
+use threads::shared;
+
 use lib "$libpath";
 use Filer;
 
@@ -42,7 +45,6 @@ Glib->install_exception_handler(sub {
 
 my $filer = new Filer;
 $filer->init_config;
-$filer->init_mimeicons;
 $filer->init_main_window;
 
 Gtk2->main;

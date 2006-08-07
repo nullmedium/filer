@@ -16,28 +16,19 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::FileCopy;
-use Class::Std::Utils;
 
 use strict;
 use warnings;
 
 use Fcntl;
 
-my %job;
-
 sub new {
 	my ($class,$job) = @_;
-	my $self = bless anon_scalar(), $class;
+	my $self = bless {}, $class;
 
-	$job{ident $self} = $job;
+	$self->{job} = $job;
 
 	return $self;
-}
-
-sub DESTROY {
-	my ($self) = @_;
-
-	delete $job{ident $self};
 }
 
 sub filecopy {
@@ -55,13 +46,14 @@ sub filecopy {
 
 	my ($r,$w,$t);
 
-	while (($r = sysread($in_fh, $buf, $buf_size)) && !$job{ident $self}->cancelled) {
+	while (($r = sysread($in_fh, $buf, $buf_size)) && !$self->{job}->cancelled) {
 
 		for ($w = 0; $w < $r; $w += $t) {
 			$t = syswrite($out_fh, $buf, $r - $w, $w)
 				or return File::DirWalk::FAILED;
 
-			$job{ident $self}->update_written_bytes($t);
+			$self->{job}->set_completed_bytes($self->{job}->completed_bytes + $t);
+			$self->{job}->update_progressbar($self->{job}->completed_bytes/$self->{job}->total_bytes);
 		}
 	}
 

@@ -1,6 +1,5 @@
 package Filer::CopyMoveJobDialogCommon;
 use base qw(Exporter);
-use Class::Std::Utils;
 
 our @EXPORT = qw(
 show_job_dialog
@@ -17,56 +16,55 @@ use warnings;
 
 use Filer::Constants;
 
-my %total_bytes;
-my %completed_bytes;
-my %timeout;
-
 sub show_job_dialog {
 	my ($self) = @_;
 	$self->show_all;
 
-	$timeout{ident $self} = Glib::Timeout->add(100, sub {
-		return 0 if ($self->cancelled);
-		return 1 if ($self->total_bytes == 0);
+	$self->{SKIP_ALL} = $FALSE;
 
-		$self->update_progressbar($self->completed_bytes/$self->total_bytes);
-		return 1;
-	});
+# 	$self->{timeout} = Glib::Timeout->add(250, sub {
+# 		return 0 if ($self->cancelled);
+# 		return 1 if ($self->total_bytes == 0);
+# 
+# 		$self->update_progressbar($self->completed_bytes/$self->total_bytes);
+# 		return 1;
+# 	});
 }
 
 sub destroy_job_dialog {
 	my ($self) = @_;
 	$self->destroy;
-	Glib::Source->remove($timeout{ident $self});
-
-	delete $timeout{ident $self};
-	delete $total_bytes{ident $self};
-	delete $completed_bytes{ident $self};
+# 	Glib::Source->remove($self->{timeout});
 }
 
 sub total_bytes {
 	my ($self) = @_;
-	return $total_bytes{ident $self};
+	return $self->{total_bytes};
 }
 
 sub set_total_bytes {
 	my ($self,$bytes) = @_;
-	$total_bytes{ident $self} = $bytes;
+	$self->{total_bytes} = $bytes;
 }
 
 sub completed_bytes {
 	my ($self) = @_;
-	return $completed_bytes{ident $self};
+	return $self->{completed_bytes};
 }
 
 sub set_completed_bytes {
 	my ($self,$bytes) = @_;
-	$completed_bytes{ident $self} = $bytes;
+	$self->{completed_bytes} = $bytes;
 }
 
-sub update_written_bytes {
-	my ($self,$bytes) = @_;
-	$completed_bytes{ident $self} += $bytes;
+sub skip_all {
+	my ($self) = @_;
+	return $self->{SKIP_ALL};
+}
+
+sub set_skip_all {
+	my ($self,$bool) = @_;
+	$self->{SKIP_ALL} = $bool;
 }
 
 1;

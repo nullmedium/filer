@@ -15,12 +15,10 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::FileTreePane;
-use Class::Std::Utils;
 
 use Filer::FilePaneInterface;
 
-require Exporter;
-our @ISA = qw(Exporter Filer::FilePaneInterface);
+our @ISA = qw(Filer::FilePaneInterface Filer::FilePaneDND);
 
 use strict;
 use warnings;
@@ -29,50 +27,54 @@ use Cwd qw(abs_path);
 use File::Basename;
 
 use Filer::Constants;
-use Filer::DND;
-
-# attributes:
-# all attributes are imported by Filer::FilePaneInterface
 
 sub new {
 	my ($class,$filer,$side) = @_;
-	my $self = bless anon_scalar(), $class;
+	my $self = $class->SUPER::new($filer,$side);
+	$self = bless $self, $class;
 
-	$filer{ident $self}               = $filer;
-	$side{ident $self}                = $side;
-	$mouse_motion_select{ident $self} = $FALSE;
+	my $hbox = Gtk2::HBox->new(0,0);
+	$self->{vbox}->pack_start($hbox, 0, 1, 0);
 
-	$vbox{ident $self} = new Gtk2::VBox(0,0);
-	$vbox{ident $self}->set_size_request(200,0);
+	$self->{treemodel} = Gtk2::TreeStore->new(qw(Glib::Scalar Glib::Object Glib::String));
+	$self->{treeview}  = Gtk2::TreeView->new($self->{treemodel});
 
-	my $hbox = new Gtk2::HBox(0,0);
-	$vbox{ident $self}->pack_start($hbox, 0, 1, 0);
+	$self->{treeview}->set_rules_hint($TRUE);
+	$self->{treeview}->set_headers_visible($FALSE);
+	$self->{treeview}->signal_connect("grab-focus", sub { $self->treeview_grab_focus_cb(@_) });
+	$self->{treeview}->signal_connect("event", sub { $self->treeview_event_cb(@_) });
+	$self->{treeview}->signal_connect("row-expanded", sub { $self->treeview_row_expanded_cb(@_) });
+	$self->{treeview}->signal_connect("row-collapsed", sub { $self->treeview_row_collapsed_cb(@_) });
 
-	$treemodel{ident $self} = new Gtk2::TreeStore(qw(Glib::Scalar Glib::Object Glib::String ));
-	$treeview{ident $self}  = new Gtk2::TreeView($treemodel{ident $self});
-
-	$treeview{ident $self}->set_rules_hint(1);
-	$treeview{ident $self}->set_headers_visible(0);
-	$treeview{ident $self}->signal_connect("grab-focus", sub { $self->treeview_grab_focus_cb(@_) });
-	$treeview{ident $self}->signal_connect("event", sub { $self->treeview_event_cb(@_) });
-	$treeview{ident $self}->signal_connect("row-expanded", sub { $self->treeview_row_expanded_cb(@_) });
-	$treeview{ident $self}->signal_connect("row-collapsed", sub { $self->treeview_row_collapsed_cb(@_) });
+# 	$self->{treefilter} = Gtk2::TreeModelFilter->new($self->{treemodel});
+# 	$self->{treeview}->set_model($self->{treefilter});
+# 
+# 	$self->{treefilter}->set_visible_func(sub {
+# 		my ($model,$iter) = @_;
+# 		my $basename = $model->get($iter, $COL_NAME);
+# 		my $show_hidden = $self->{filer}->get_config->get_option('ShowHiddenFiles');
+# 	
+# 		return 1 if (!$basename);
+# 
+# 		return 0 if (($basename =~ /^\.{1,2}$/) || ($basename =~ /^\./ && !$show_hidden));
+# 		return 1;
+# 	});
 
 	# Drag and Drop
-	my $dnd = new Filer::DND($filer{ident $self},$self);
-	$treeview{ident $self}->drag_dest_set('all', ['move','copy'], $dnd->target_table);
-	$treeview{ident $self}->drag_source_set(['button1_mask','shift-mask'], ['move','copy'], $dnd->target_table);
-	$treeview{ident $self}->signal_connect("drag_data_get", sub { $dnd->filepane_treeview_drag_data_get(@_) });
-	$treeview{ident $self}->signal_connect("drag_data_received", sub { $dnd->filepane_treeview_drag_data_received(@_) });
+	$self->{treeview}->drag_dest_set('all', ['move','copy'], $self->target_table);
+	$self->{treeview}->drag_source_set(['button1_mask','shift-mask'], ['move','copy'], $self->target_table);
+	$self->{treeview}->signal_connect("drag_data_get", sub { $self->drag_data_get(@_) });
+#	$self->{treeview}->signal_connect("drag_motion", sub { $self->drag_motion(@_) });
+	$self->{treeview}->signal_connect("drag_data_received", sub { $self->drag_data_received(@_) });
 
-	$treeselection{ident $self} = $treeview{ident $self}->get_selection;
-	$treeselection{ident $self}->set_mode("multiple");
+	$self->{treeselection} = $self->{treeview}->get_selection;
+	$self->{treeselection}->set_mode("single");
 
-	my $scrolled_window = new Gtk2::ScrolledWindow;
+	my $scrolled_window = Gtk2::ScrolledWindow->new;
 	$scrolled_window->set_policy('automatic','automatic');
 	$scrolled_window->set_shadow_type('etched-in');
-	$vbox{ident $self}->pack_start($scrolled_window, 1, 1, 0);
-	$scrolled_window->add($treeview{ident $self});
+	$scrolled_window->add($self->{treeview});
+	$self->{vbox}->pack_start($scrolled_window, 1, 1, 0);
 
 	# a column with a pixbuf renderer and a text renderer
 	my $col = Gtk2::TreeViewColumn->new;
@@ -86,25 +88,12 @@ sub new {
 	$col->pack_start($cell1, 1);
 	$col->add_attribute($cell1, text => $COL_NAME);
 
-	$treeview{ident $self}->append_column($col);
+	$self->{treeview}->append_column($col);
 
 	$self->CreateRootNodes();
 
 	return $self;
 }
-
-# sub DESTROY {
-# 	my ($self) = @_;
-# 
-# 	delete $filer{ident $self};
-# 	delete $side{ident $self};
-# 	delete $vbox{ident $self};
-# 	delete $treeview{ident $self};
-# 	delete $treemodel{ident $self};
-# 	delete $treeselection{ident $self};
-# 	delete $mouse_motion_select{ident $self};
-# 	delete $mouse_motion_y_pos_old{ident $self};
-# }
 
 sub get_type {
 	my ($self) = @_;
@@ -114,46 +103,37 @@ sub get_type {
 sub show_popup_menu {
 	my ($self,$e) = @_;
 
-	my ($p) = $treeview{ident $self}->get_path_at_pos($e->x,$e->y);
+	my ($p) = $self->{treeview}->get_path_at_pos($e->x,$e->y);
 
 	if (defined $p) {
-		if (! $treeselection{ident $self}->path_is_selected($p)) {
-			$treeselection{ident $self}->unselect_all;
-			$treeselection{ident $self}->select_path($p);
+		if (! $self->{treeselection}->path_is_selected($p)) {
+			$self->{treeselection}->select_path($p);
 		}
 
-		my $uimanager  = $filer{ident $self}->get_widget("uimanager");
-		my $ui_path    = '/ui/list-popupmenu';
+		my $uimanager = $self->{filer}->get_uimanager;
+		my $ui_path   = '/ui/list-popupmenu';
+
 		my $popup_menu = $uimanager->get_widget($ui_path);
 
-		$popup_menu->show_all;
+# 		$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($TRUE);
+# 		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($TRUE);
+		$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($TRUE);
+		$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive($TRUE);
+		$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive($TRUE);
+		$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($TRUE);
+		$uimanager->get_widget("$ui_path/PopupItems1/Paste")->set_sensitive($TRUE);
+# 		$uimanager->get_widget("$ui_path/archive-menu")->set_sensitive($TRUE);
+		$uimanager->get_widget("$ui_path/Properties")->set_sensitive($TRUE);
 
-		$uimanager->get_widget("$ui_path/Open")->show;
-		$uimanager->get_widget("$ui_path/Open")->set_sensitive(1);
-		$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive(1);
-		$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive(1);
-		$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive(1);
-		$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive(1);
-#		$uimanager->get_widget("$ui_path/PopupItems1/Paste")->set_sensitive(0);
-		$uimanager->get_widget("$ui_path/PopupItems1/Paste")->set_sensitive(1);
-		$uimanager->get_widget("$ui_path/archive-menu")->set_sensitive(1);
-		$uimanager->get_widget("$ui_path/Properties")->set_sensitive(1);
+		$uimanager->get_widget("$ui_path/PopupItems1/Open")->hide;
+		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->hide;
+		$uimanager->get_widget("$ui_path/archive-menu")->hide;
 
-		$uimanager->get_widget("$ui_path/Open")->hide;
-		$uimanager->get_widget("$ui_path/archive-menu/Extract")->hide;
-
-		my $bookmarks = new Filer::Bookmarks($filer{ident $self});
+		my $bookmarks = Filer::Bookmarks->new($self->{filer});
 		$uimanager->get_widget("$ui_path/Bookmarks")->set_submenu($bookmarks->generate_bookmarks_menu);
-
-		if ($self->count_items > 1) {
-			$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive(0);
-			$uimanager->get_widget("$ui_path/Properties")->set_sensitive(0);
-		}
 
 		$popup_menu->show_all;
 		$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
-	} else {
-		$treeselection{ident $self}->unselect_all;
 	}
 }
 
@@ -163,45 +143,29 @@ sub treeview_event_cb {
 	if ($e->type eq "key-press") {
 		if ($e->keyval == $Gtk2::Gdk::Keysyms{'Return'}) {
 
-			my $iter = $self->get_iters->[0];
-			my $p    = $treemodel{ident $self}->get_path($iter);
+			my $iter = $self->get_iter_list->[0];
+			my $p    = $self->{treemodel}->get_path($iter);
 		
 			$self->row_action($p);
 			return 1;
 
 		} elsif ($e->keyval == $Gtk2::Gdk::Keysyms{'Delete'}) {
 
-			$filer{ident $self}->delete_cb;
+			$self->{filer}->delete_cb;
 			return 1;
 		}
 	}
 
 	if ($e->type eq "button-press") {
-# 		if ($e->button == 2) {
-# 			$mouse_motion_select{ident $self}    = 1;
-# 			$mouse_motion_y_pos_old{ident $self} = $e->y;
-# 
-# 			my ($p) = $treeview{ident $self}->get_path_at_pos($e->x,$e->y);
-# 
-# 			if (defined $p) {
-# 				$treeselection{ident $self}->unselect_all;
-# 				$treeselection{ident $self}->select_path($p);
-# 			}
-# 
-# 			$self->set_focus;
-# 			return 1;
-# 
-#		} elsif ($e->button == 3) {
-
 		if ($e->button == 1) {
-			my ($p) = $treeview{ident $self}->get_path_at_pos($e->x,$e->y);
+			my ($p) = $self->{treeview}->get_path_at_pos($e->x,$e->y);
 
 			if (defined $p) {
- 				$treeselection{ident $self}->select_path($p);
+ 				$self->{treeselection}->select_path($p);
 
-				my $pane = $filer{ident $self}->get_inactive_pane;
-				my $iter = $treemodel{ident $self}->get_iter($p);
-				my $fi   = $treemodel{ident $self}->get_fileinfo($iter);
+				my $pane = $self->{filer}->get_inactive_pane;
+				my $iter = $self->{treemodel}->get_iter($p);
+				my $fi   = $self->get_fileinfo($iter);
 
 				$pane->open_file($fi);
 			}
@@ -215,7 +179,7 @@ sub treeview_event_cb {
 	}
 
 	if ($e->type eq "2button-press" and $e->button == 1) {
-		my ($p) = $treeview{ident $self}->get_path_at_pos($e->x,$e->y);
+		my ($p) = $self->{treeview}->get_path_at_pos($e->x,$e->y);
 		
 		if (defined $p) {
 			$self->row_action($p);
@@ -223,40 +187,16 @@ sub treeview_event_cb {
 		}
 	}
 
-# 	if ($e->type eq "button-release" and $e->button == 2) {
-# 		$self->set_focus;
-# 		$mouse_motion_select{ident $self} = 0;
-# 		return 1;
-# 	}
-
-# 	if (($e->type eq "motion-notify") and ($mouse_motion_select{ident $self} == 1)) {
-# 		my ($p_old) = $treeview{ident $self}->get_path_at_pos($e->x, $mouse_motion_y_pos_old{ident $self});
-# 		my ($p_new) = $treeview{ident $self}->get_path_at_pos($e->x, $e->y);
-# 
-# 		if ((defined $p_old) and (defined $p_new)) {
-# 			$treeselection{ident $self}->unselect_all;
-# 			$treeselection{ident $self}->select_range($p_old,$p_new);
-# 		}
-# 
-# 		$self->set_focus;
-# 		return 0;
-# 	}
-
 	return 0;
 }
 
 sub row_action {
 	my ($self,$treepath) = @_;
-	my $pane = $filer{ident $self}->get_inactive_pane;
-	my $iter = $treemodel{ident $self}->get_iter($treepath);
-	my $fi   = $treemodel{ident $self}->get_fileinfo($iter);
 
-	$pane->open_file($fi);
-
-	if ($treeview{ident $self}->row_expanded($treepath)) {
-		$treeview{ident $self}->collapse_row($treepath);
+	if ($self->{treeview}->row_expanded($treepath)) {
+		$self->{treeview}->collapse_row($treepath);
 	} else {
-		$treeview{ident $self}->expand_row($treepath,0);
+		$self->{treeview}->expand_row($treepath,0);
 	}
 
 	return 1;
@@ -264,8 +204,8 @@ sub row_action {
 
 sub treeview_row_expanded_cb {
 	my ($self,$treeview,$iter,$path) = @_;
-	my $fi = $treemodel{ident $self}->get_fileinfo($iter);
 
+	my $fi = $self->get_fileinfo($iter);
 	$self->DirRead($fi->get_path,$iter);
 
 	return 1;
@@ -274,120 +214,91 @@ sub treeview_row_expanded_cb {
 sub treeview_row_collapsed_cb {
 	my ($self,$treeview,$iter,$path) = @_;
 
-	while (my $i = $treemodel{ident $self}->iter_children($iter)) {
-		$treemodel{ident $self}->remove($i);
+	while (my $i = $self->{treemodel}->iter_children($iter)) {
+		$self->{treemodel}->remove($i);
 	}
 
-	$treemodel{ident $self}->append($iter);
+	$self->{treemodel}->append($iter);
 
 	return 1;
 }
 
-sub filepath {
+sub get_pwd {
 	my ($self) = @_;
-	my $path   = $self->get_item_list->[0];
-
-	if (defined $path) {
-		return abs_path($path);
-	}
-
-	return undef;
+	return $self->get_item_list->[0];
 }
-
-*get_pwd = \&filepath;
-*get_path = \&filepath;
-*get_item = \&filepath;
 
 sub get_updir {
 	my ($self) = @_;
-	return Filer::Tools->catpath($self->get_item, $UPDIR);
-}
-
-sub set_item {
-	my ($self,$fi) = @_;
-
-	$treemodel{ident $self}->set($self->get_iter,
-		$COL_FILEINFO, $fi,
-		$COL_NAME,     $fi->get_basename,
-	);
+	return abs_path(Filer::Tools->catpath($self->get_pwd, $UPDIR));
 }
 
 sub refresh {
 	my ($self) = @_;
-	my $iter   = $self->get_iter;
+	my $iter   = $self->get_iter_list->[0];
 
 	if (defined $iter) {
-		my $path = $treemodel{ident $self}->get_path($iter);
+		my $path = $self->{treemodel}->get_path($iter);
 
-		if ($treeview{ident $self}->row_expanded($path)) {
-			$treeview{ident $self}->collapse_row($path);
-			$treeview{ident $self}->expand_row($path, 2);
+		if ($self->{treeview}->row_expanded($path)) {
+			$self->{treeview}->collapse_row($path);
+			$self->{treeview}->expand_row($path, 2);
 		}
 	}
 }
 
 sub CreateRootNodes {
 	my ($self)    = @_;
-	my $iter;
 
-	my $root = Filer::Directory->get_rootdir;
-	my $home = Filer::Directory->get_homedir;
+	foreach (Filer::FileInfo->get_rootdir, Filer::FileInfo->get_homedir) {
+		my $iter = $self->{treemodel}->insert_with_values(undef, -1,
+			$COL_FILEINFO, $_,
+			$COL_ICON,     $_->get_mimetype_icon,
+			$COL_NAME,     ($_->get_basename eq "/") ? "Filesystem" : "Home",
+		);
 
-	$iter = $treemodel{ident $self}->insert_with_values(undef, -1,
-		$COL_FILEINFO, $root,
-		$COL_ICON,     $root->get_mimetype_icon,
-		$COL_NAME,     "Filesystem",
-	);
-
-	$treemodel{ident $self}->insert($iter, -1);
-
-	$iter = $treemodel{ident $self}->insert_with_values(undef, -1,
-		$COL_FILEINFO, $home,
-		$COL_ICON,     $home->get_mimetype_icon,
-		$COL_NAME,     "Home",
-	);
-
-	$treemodel{ident $self}->insert($iter, -1);
+		$self->{treemodel}->insert($iter, -1);
+	}
 }
 
 sub DirRead {
 	my ($self,$dir,$parent_iter) = @_;
 
-	my $show_hidden = $filer{ident $self}->get_config->get_option('ShowHiddenFiles');
+	my $show_hidden = $self->{filer}->get_config->get_option('ShowHiddenFiles');
 
-	my $Directory          = new Filer::Directory(path => $dir, hidden => $show_hidden);
-	my $dir_contents = $Directory->get_dirs;
+	my $Directory    = Filer::Directory->new($dir);
+	my $dir_contents = $Directory->all_dirs;
 
 	foreach my $fi (sort { $a->get_basename cmp $b->get_basename } @{$dir_contents}) {
-		my $type     = $fi->get_mimetype;
+	
 		my $icon     = $fi->get_mimetype_icon;
 		my $basename = $fi->get_basename;
 
-		my $iter = $treemodel{ident $self}->insert_with_values($parent_iter, -1,
+		my $iter = $self->{treemodel}->insert_with_values($parent_iter, -1,
 			$COL_FILEINFO, $fi,
  			$COL_ICON,     $icon,
 			$COL_NAME,     $basename,
 		);
 
-		$treemodel{ident $self}->insert($iter, -1) if ($fi->is_readable);
+		$self->{treemodel}->insert($iter, -1) if ($fi->is_readable);
 	}
 
-	my $dummy_iter = $treemodel{ident $self}->iter_nth_child($parent_iter, 0);
-	$treemodel{ident $self}->remove($dummy_iter); # remove dummy iter
+	my $dummy_iter = $self->{treemodel}->iter_nth_child($parent_iter, 0);
+	$self->{treemodel}->remove($dummy_iter); # remove dummy iter
 }
 
-sub create_tar_gz_archive {
-	my ($self) = @_;
-
-	my $archive = new Filer::Archive;
-	$archive->create_tar_gz_archive($self->get_updir, $self->get_item_list);
-}
-
-sub create_tar_bz2_archive {
-	my ($self) = @_;
-
-	my $archive = new Filer::Archive;
-	$archive->create_tar_bz2_archive($self->get_updir, $self->get_item_list);
-}
+# sub create_tar_gz_archive {
+# 	my ($self) = @_;
+# 
+# 	my $archive = Filer::Archive->new;
+# 	$archive->create_tar_gz_archive($self->get_updir, $self->get_item_list);
+# }
+# 
+# sub create_tar_bz2_archive {
+# 	my ($self) = @_;
+# 
+# 	my $archive = Filer::Archive->new;
+# 	$archive->create_tar_bz2_archive($self->get_updir, $self->get_item_list);
+# }
 
 1;
