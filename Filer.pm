@@ -358,7 +358,7 @@ sub init_main_window {
 	$self->{fm}->[$RIGHT]->start_monitoring;
 
 	$self->switch_mode;
-	$self->{pane}->[$RIGHT]->set_focus;
+	$self->change_active_pane($RIGHT);
 }
 
 sub get_uimanager {
@@ -387,7 +387,8 @@ sub window_event_cb {
 	my ($self,$w,$e,$d) = @_;
 
 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Tab'})) {
-		$self->{inactive_pane}->set_focus;
+		my $side = $self->{inactive_pane}->get_side;
+		$self->change_active_pane($side);
 		return 1;
 	}
 

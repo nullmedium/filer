@@ -116,32 +116,32 @@ sub _deep_count_bytes {
 
 # Utility functions for Gtk+ classes:
 
-package Gtk2::Gdk::Pixbuf;
-
-sub intelligent_scale {
-	my ($self,$scale) = @_;
-	my $w;
-	my $h;
-
-	my $ow = $self->get_width;
-	my $oh = $self->get_height;
-
-	if ($ow <= $scale and $oh <= $scale) {
-
-		return $self;
-
-	} else {
-		if ($ow > $oh) {
-			$w = $scale;
-			$h = $scale * ($oh/$ow);
-        	} else {
-			$h = $scale;
-			$w = $scale * ($ow/$ow);
-		}
-
-		return $self->scale_simple($w, $h, 'GDK_INTERP_BILINEAR');
-	}
-}
+# package Gtk2::Gdk::Pixbuf;
+# 
+# sub intelligent_scale {
+# 	my ($self,$scale) = @_;
+# 	my $w;
+# 	my $h;
+# 
+# 	my $ow = $self->get_width;
+# 	my $oh = $self->get_height;
+# 
+# 	if ($ow <= $scale and $oh <= $scale) {
+# 
+# 		return $self;
+# 
+# 	} else {
+# 		if ($ow > $oh) {
+# 			$w = $scale;
+# 			$h = $scale * ($oh/$ow);
+#         	} else {
+# 			$h = $scale;
+# 			$w = $scale * ($ow/$ow);
+# 		}
+# 
+# 		return $self->scale_simple($w, $h, 'GDK_INTERP_BILINEAR');
+# 	}
+# }
 
 package Gtk2::ComboBox;
 
