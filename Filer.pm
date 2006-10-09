@@ -19,16 +19,6 @@ package Filer;
 use strict;
 use warnings;
 
-use Prost 
-	'ASK'		=> 'Filer::Dialog->yesno_dialog',
-	'MSGBOX_ERROR'  => 'Filer::Dialog->msgbox_error',
-	'MAINWINDOW'    => '$self->{main_window}',
-	'PANELEFT'      => '$self->{pane}->[$LEFT]',
-	'PANERIGHT'     => '$self->{pane}->[$RIGHT]',
-	'OPTION'        => '$self->{config}->get_option',
-	'FILEINFO_LIST' => '$pane->get_fileinfo_list',
-;
-
 use Gtk2 qw(-init -threads-init);
 use Gtk2::Gdk::Keysyms;
 
@@ -96,7 +86,7 @@ sub init_config {
 	my ($self) = @_;
 	$self->{config} = Filer::Config->new;
 
-	if (OPTION("HonorUmask") == $FALSE) {
+	if ($self->{config}->get_option("HonorUmask") == $FALSE) {
 		umask 0000;
 	}
 }
@@ -109,18 +99,18 @@ sub get_config {
 sub init_main_window {
 	my ($self) = @_;
 
-	MAINWINDOW = Gtk2::Window->new('toplevel');
-	MAINWINDOW->set_title("Filer $self->{VERSION}");
+	$self->{main_window} = Gtk2::Window->new('toplevel');
+	$self->{main_window}->set_title("Filer $self->{VERSION}");
 
-	MAINWINDOW->resize(split ":", OPTION("WindowSize"));
-#	MAINWINDOW->resize(784,606);
+	$self->{main_window}->resize(split ":", $self->{config}->get_option("WindowSize"));
+#	$self->{main_window}->resize(784,606);
 
-	MAINWINDOW->signal_connect("event", sub { $self->window_event_cb(@_) });
-	MAINWINDOW->signal_connect("delete-event", sub { $self->quit_cb });
-	MAINWINDOW->set_icon(Filer::MimeTypeIcon->new("inode/directory")->get_pixbuf);
+	$self->{main_window}->signal_connect("event", sub { $self->window_event_cb(@_) });
+	$self->{main_window}->signal_connect("delete-event", sub { $self->quit_cb });
+	$self->{main_window}->set_icon(Filer::MimeTypeIcon->new("inode/directory")->get_pixbuf);
 
 	$self->{main_window_vbox} = Gtk2::VBox->new(0,0);
-	MAINWINDOW->add($self->{main_window_vbox});
+	$self->{main_window}->add($self->{main_window_vbox});
 
 	my $actions = Gtk2::ActionGroup->new("Actions");
 
@@ -277,27 +267,27 @@ sub init_main_window {
 		name => "ask-copying-action",
 		label => "Copying",
 		callback => sub { $self->ask_copy_cb($_[0]) },
-		is_active => OPTION("ConfirmCopy"),
+		is_active => $self->{config}->get_option("ConfirmCopy"),
 	},{
 		name => "ask-moving-action",
 		label => "Moving",
 		callback => sub { $self->ask_move_cb($_[0]) },
-		is_active => OPTION("ConfirmMove"),
+		is_active => $self->{config}->get_option("ConfirmMove"),
 	},{
 		name => "ask-deleting-action",
 		label => "Deleting",
 		callback => sub { $self->ask_delete_cb($_[0]) },
-		is_active => OPTION("ConfirmDelete"),
+		is_active => $self->{config}->get_option("ConfirmDelete"),
 	},{
 		name => "show-hidden-action",
 		label => "Show Hidden Files",
 		callback => sub { $self->hidden_cb($_[0]) },
 		accelerator => "<control>H",
-		is_active => OPTION("ShowHiddenFiles"),
+		is_active => $self->{config}->get_option("ShowHiddenFiles"),
 	}];
 
 	$actions->add_actions($a_entries);
-	$actions->add_radio_actions($a_radio_entries, OPTION("Mode"), sub {
+	$actions->add_radio_actions($a_radio_entries, $self->{config}->get_option("Mode"), sub {
 		my ($action) = @_;
 		$self->{config}->set_option('Mode', $action->get_current_value);
 		$self->switch_mode;
@@ -309,7 +299,7 @@ sub init_main_window {
 	$self->{uimanager}->insert_action_group($actions, 0);
 
 	my $accels = $self->{uimanager}->get_accel_group;
-	MAINWINDOW->add_accel_group($accels);
+	$self->{main_window}->add_accel_group($accels);
 
 	$self->{menubar} = $self->{uimanager}->get_widget("/ui/menubar");
  	$self->{main_window_vbox}->pack_start($self->{menubar}, 0, 0, 0);
@@ -341,26 +331,26 @@ sub init_main_window {
 	$self->{filepane1}->open_path(
 		(defined $ARGV[0] and -d $ARGV[0])
 		? $ARGV[0]
-		: OPTION('PathLeft')
+		: $self->{config}->get_option('PathLeft')
 	);
 
 	$self->{filepane2}->open_path(
 		(defined $ARGV[1] and -d $ARGV[1])
 		? $ARGV[1]
-		: OPTION('PathRight')
+		: $self->{config}->get_option('PathRight')
 	);
 
-	MAINWINDOW->show_all;
+	$self->{main_window}->show_all;
 
 	$self->{sync_button}->hide;
 	$self->{treepane}->get_vbox->hide;
 	$self->{filepane1}->get_vbox->hide;
 	$self->{filepane2}->get_vbox->show;
 	
-	PANELEFT  = $self->{filepane1};
+	$self->{pane}->[$LEFT]  = $self->{filepane1};
 	PANERIGHT = $self->{filepane2};
 
-	$self->{fm}->[$LEFT] = Filer::Monitor->new(PANELEFT);
+	$self->{fm}->[$LEFT] = Filer::Monitor->new($self->{pane}->[$LEFT]);
 	$self->{fm}->[$RIGHT] = Filer::Monitor->new(PANERIGHT);
 
 	$self->{fm}->[$LEFT]->start_monitoring;
@@ -398,7 +388,7 @@ sub change_active_pane {
 
 sub get_left_pane {
 	my ($self) = @_;
-	return PANELEFT;
+	return $self->{pane}->[$LEFT];
 }
 
 sub get_right_pane {
@@ -423,7 +413,7 @@ sub quit_cb {
 	$self->{config}->set_options(
 		'PathLeft'   => $self->{filepane1}->get_pwd,
 		'PathRight'  => $self->{filepane2}->get_pwd,
-		'WindowSize' => join ":", MAINWINDOW->get_size,
+		'WindowSize' => join ":", $self->{main_window}->get_size,
 	);
 
  	Gtk2->main_quit;
@@ -438,7 +428,7 @@ sub about_cb {
 	my $dialog = Gtk2::AboutDialog->new;
 	$dialog->set_name("Filer");
 	$dialog->set_version($self->{VERSION});
-	$dialog->set_copyright("Copyright © 2004-2005 Jens Luedicke");
+	$dialog->set_copyright("Copyright (c) 2004-2006 Jens Luedicke");
 	$dialog->set_license($license);
 	$dialog->set_website("http://perldude.de/");
 	$dialog->set_website_label("http://perldude.de/");
@@ -453,25 +443,25 @@ sub about_cb {
 sub open_cb {
 	my ($self) = @_;
 
-	my $mode = OPTION('Mode');
+	my $mode = $self->{config}->get_option('Mode');
 	my $pane =
 		($mode == $NORTON_COMMANDER_MODE) 
 		? $self->{active_pane} 
 		: PANERIGHT;
 
-	$pane->open_file(FILEINFO_LIST->[0]);
+	$pane->open_file($pane->get_fileinfo_list->[0]);
 }
 
 sub open_with_cb {
 	my ($self) = @_;
 
-	my $mode = OPTION('Mode');
+	my $mode = $self->{config}->get_option('Mode');
 	my $pane =
 		($mode == $NORTON_COMMANDER_MODE) 
 		? $self->{active_pane} 
 		: PANERIGHT;
 
-	$pane->open_file_with(FILEINFO_LIST->[0]);
+	$pane->open_file_with($pane->get_fileinfo_list->[0]);
 }
 
 sub open_terminal_cb {
@@ -483,7 +473,7 @@ sub open_terminal_cb {
 sub switch_mode {
 	my ($self) = @_;
 
-	if (OPTION('Mode') == $EXPLORER_MODE) {
+	if ($self->{config}->get_option('Mode') == $EXPLORER_MODE) {
 		$self->{filepane2}->get_location_bar->hide;
 
 		$self->{sync_button}->hide;
@@ -493,7 +483,7 @@ sub switch_mode {
 		$self->{filepane1}->get_navigation_box->hide;
 		$self->{filepane2}->get_navigation_box->show;
 
-		PANELEFT = $self->{treepane};
+		$self->{pane}->[$LEFT] = $self->{treepane};
 	} else {
 		$self->{filepane2}->get_location_bar->show;
 
@@ -504,7 +494,7 @@ sub switch_mode {
  		$self->{filepane1}->get_navigation_box->hide;
  		$self->{filepane2}->get_navigation_box->hide;
 
-		PANELEFT = $self->{filepane1};
+		$self->{pane}->[$LEFT] = $self->{filepane1};
 	}
 }
 
@@ -514,8 +504,8 @@ sub hidden_cb {
 	my $opt = ($action->get_active) ? 1 : 0;
 	$self->{config}->set_option('ShowHiddenFiles', $opt);
 
-	PANELEFT->set_show_hidden($opt);
-	PANERIGHT->set_show_hidden($opt);
+	$self->{pane}->[$LEFT]->set_show_hidden($opt);
+	$self->{pane}->[$RIGHT]->set_show_hidden($opt);
 
 	return 1;
 }
@@ -537,7 +527,7 @@ sub ask_delete_cb {
 
 # sub set_terminal_cb {
 # 	my ($self) = @_;
-# 	my $term = Filer::Dialog->ask_command_dialog("Set Terminal", OPTION('Terminal'));
+# 	my $term = Filer::Dialog->ask_command_dialog("Set Terminal", $self->{config}->get_option('Terminal'));
 # 	$self->{config}->set_option('Terminal', $term);
 # }
 
@@ -557,11 +547,11 @@ sub refresh_cb {
 
 sub go_home_cb {
 	my ($self) = @_;
-	my $opt  = OPTION('Mode');
+	my $opt  = $self->{config}->get_option('Mode');
 	my $pane =
 		($opt == $NORTON_COMMANDER_MODE)
 		? $self->{active_pane}
-		: PANERIGHT;
+		: $self->{pane}->[$RIGHT];
 
 	$pane->open_path($HOMEDIR);
 }
@@ -575,7 +565,7 @@ sub select_cb {
 	my ($self) = @_;
 	my $pane =
 		($self->{active_pane}->get_type eq "TREE")
-		? PANERIGHT
+		? $self->{pane}->[$RIGHT]
 		: $self->{active_pane};
 
 	$pane->select_dialog;
@@ -585,7 +575,7 @@ sub unselect_cb {
 	my ($self) = @_;
 	my $pane =
 		($self->{active_pane}->get_type eq "TREE")
-		? PANERIGHT
+		? $self->{pane}->[$RIGHT]
 		: $self->{active_pane};
 
 	$pane->unselect_dialog;
@@ -654,7 +644,7 @@ sub rename_cb {
 
 	return if ($pane->count_items == 0);
 
-	my $fileinfo = FILEINFO_LIST->[0];
+	my $fileinfo = $pane->get_fileinfo_list->[0];
 
 	$dialog = Filer::DefaultDialog->new("Rename");
 
@@ -684,7 +674,7 @@ sub rename_cb {
 		}
 
 		if (!rename($old,$new)) {
-			MSGBOX_ERROR("Rename failed: $!");
+			Filer::Dialog->msgbox_error("Rename failed: $!");
 		}
 	}
 
@@ -698,14 +688,14 @@ sub delete_cb {
 
 	return if ($items_count == 0);
 
-	if (OPTION("ConfirmDelete") == 1) {
+	if ($self->{config}->get_option("ConfirmDelete") == 1) {
 
 		my $message =
 		 ($items_count == 1)
 		 ? "Delete \"$items->[0]\"?"
 		 : "Delete $items_count selected files?";
 
-		return if (ASK($message) eq 'no');
+		return if (Filer::Dialog->yesno_dialog($message) eq 'no');
 	}
 
 	$self->{fm}->[$LEFT]->stop_monitoring;
@@ -742,7 +732,7 @@ sub mkdir_cb {
 		my $dir  = Filer::Tools->catpath($self->{active_pane}->get_pwd, $entry->get_text);
 
 		if (!mkdir($dir)) {
-			MSGBOX_ERROR("Make directory $dir failed: $!");
+			Filer::Dialog->msgbox_error("Make directory $dir failed: $!");
 		}
 	}
 
@@ -786,7 +776,7 @@ sub symlink_cb {
 		}
 
 		if (!symlink($target, $symlink)) {
-			MSGBOX_ERROR("Couldn't create symlink! $!");
+			Filer::Dialog->msgbox_error("Couldn't create symlink! $!");
 		}
 	}
 
@@ -796,7 +786,7 @@ sub symlink_cb {
 sub get_clipboard_contents {
 	my ($self) = @_;
 
-# 	my $display        = MAINWINDOW->get_display;
+# 	my $display        = $self->{main_window}->get_display;
 # 	my $clipboard_atom = Gtk2::Gdk::Atom->new('CLIPBOARD');
 # 	my $clipboard      = Gtk2::Clipboard->get_for_display($display, $clipboard_atom);
 # 
@@ -818,7 +808,7 @@ sub get_clipboard_contents {
 sub set_clipboard_contents {
 	my ($self,$contents) = @_;
 
-# 	my $display        = MAINWINDOW->get_display;
+# 	my $display        = $self->{main_window}->get_display;
 # 	my $clipboard_atom = Gtk2::Gdk::Atom->new('CLIPBOARD');
 # 	my $clipboard      = Gtk2::Clipboard->get_for_display($display, $clipboard_atom);
 # 

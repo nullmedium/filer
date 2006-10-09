@@ -4,11 +4,6 @@ use base qw(Gtk2::Dialog);
 use warnings;
 use strict;
 
-use Prost 
-	'CATPATH'  => "Filer::Tools->catpath",
-	'FILEINFO' => "Filer::FileInfo->new"
-;
-
 our $RENAME    = 1;
 our $OVERWRITE = 2;
 our $SKIP      = 3;
@@ -29,8 +24,8 @@ sub new {
 	);
 	$self = bless $self, $class;
 
-	$self->{fi_src}   = FILEINFO($file_src);
-	$self->{fi_dest}  = FILEINFO($file_dest);
+	$self->{fi_src}   = Filer::FileInfo->new($file_src);
+	$self->{fi_dest}  = Filer::FileInfo->new($file_dest);
 	
 	($self->action_area->get_children)[2]->set_sensitive(0);
 
@@ -89,7 +84,7 @@ sub new {
 sub get_suggested_filename {
 	my ($self) = @_;
 
-	return CATPATH($self->{fi_dest}->get_dirname, $self->{entry}->get_text);
+	return Filer::Tools->catpath($self->{fi_dest}->get_dirname, $self->{entry}->get_text);
 }
 
 1;
