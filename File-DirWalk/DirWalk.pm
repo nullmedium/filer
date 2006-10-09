@@ -5,11 +5,11 @@
 package File::DirWalk;
 use base qw(Exporter);
 
-our $VERSION = '0.3';
+our $VERSION = '0.4';
 our @EXPORT = qw(FAILED SUCCESS ABORTED PRUNE);
 
-use strict;
 use warnings;
+use strict;
 
 use File::Basename;
 use File::Spec;
@@ -18,7 +18,6 @@ use constant SUCCESS 	=> 1;
 use constant FAILED 	=> 0;
 use constant ABORTED 	=> -1;
 use constant PRUNE 	=> -10;
-use constant SKIP 	=> -11;
 
 sub new {
 	my ($class) = @_;
@@ -32,6 +31,10 @@ sub new {
 
 	$self->{depth}       = 0;
 	$self->{depth_count} = 0;
+
+	$self->{filesInDir}  = 0;
+
+# 	$self->{customResponse} = {};
 
 	return $self;
 }
@@ -68,11 +71,35 @@ sub setDepth {
 
 sub getDepth {
 	my ($self) = @_;
-	return $self->{depth};
+	return $self->{depth_count};
+}
+
+sub currentDir {
+	my ($self) = @_;
+	return $self->{currentDir};
+}
+
+sub currentPath {
+	my ($self) = @_;
+	return $self->{currentPath};
+}
+
+sub currentBasename {
+	my ($self) = @_;
+	return $self->{currentBasename};
+}
+
+sub filesInDir {
+	my ($self) = @_;
+	return $self->{filesInDir};
 }
 
 sub walk {
 	my ($self,$path) = @_;
+
+	$self->{currentDir}      = dirname($path);
+	$self->{currentBasename} = basename($path);
+	$self->{currentPath}     = $path;
 
 	if ((my $r = $self->{onBeginWalk}->($path)) != SUCCESS) {
 		return $r;
@@ -92,24 +119,28 @@ sub walk {
 			}
 		}
 
-		$self->{depth_count}++;
+		opendir my $dirh, $path || return FAILED;
+		my @dir_contents = readdir $dirh;
+		@dir_contents    = File::Spec->no_upwards(@dir_contents);
+
+		$self->{filesInDir} = scalar @dir_contents;
+
 		if ((my $r = $self->{onDirEnter}->($path)) != SUCCESS) {
 			return $r;
 		}
+		++$self->{depth_count};
 
-		opendir my $dirh, $path || return FAILED;
-		my @dir_contents = readdir $dirh;
-		@dir_contents = File::Spec->no_upwards(@dir_contents);
+		# be portable.
+		my @dirs = File::Spec->splitdir($path);
 
 		foreach my $f (@dir_contents) {
 			# be portable.
-			my @dirs = File::Spec->splitdir($path);
 			my $path = File::Spec->catfile(@dirs, $f);
 
 			my $r = $self->walk($path);
 
 			if ($r == PRUNE) {
-				last;
+				next;
 			} elsif ($r != SUCCESS) {
 				return $r;
 			}
@@ -117,10 +148,10 @@ sub walk {
 
 		closedir $dirh;
 
-		$self->{depth_count}--;
 		if ((my $r = $self->{onDirLeave}->($path)) != SUCCESS) {
 			return $r;
 		}
+		--$self->{depth_count};
 	} else {
 		if ((my $r = $self->{onFile}->($path)) != SUCCESS) {
 			return $r;
@@ -134,54 +165,49 @@ sub walk {
 
 =head1 NAME
 
-File::DirWalk - walk through a directory tree and run own code
+File::DirWalk - walk through a directory tree and run callbacks
+on files, symlinks and directories.
 
 =head1 SYNOPSIS
 
+    use File::DirWalk;
+
+    my $dw = File::DirWalk->new;
+
 Walk through your homedir and print out all filenames:
 
-	use File::DirWalk;
+    $dw->onFile(sub {
+        my ($file) = @_;
+        print "$file\n";
 
-	my $dw = new File::DirWalk;
-	$dw->onFile(sub {
-		my ($file) = @_;
-		print "$file\n";
+        return SUCCESS;
+    });
 
-		return File::DirWalk::SUCCESS;
-	});
-
-	$dw->walk($ENV{'HOME'});
+    $dw->walk($ENV{'HOME'});
 
 Walk through your homedir and print out all directories:
 
-	use File::DirWalk;
+    $dw->onDirEnter(sub {
+        my ($path) = @_;
+        print "$path\n";
 
-	my $dw = new File::DirWalk;
-	$dw->onDirEnter(sub {
-		my ($dir) = @_;
-		print "$dir\n";
+        return SUCCESS;
+    });
 
-		return File::DirWalk::SUCCESS;
-	});
-
-	$dw->walk($ENV{'HOME'});
+    $dw->walk($ENV{'HOME'});
 
 Walk through your homedir and print out all directories
 with depth 3:
 
-	use File::DirWalk;
+    $dw->onDirEnter(sub {
+        my ($path) = @_;
+        print "$path\n";
 
-	my $dw = new File::DirWalk;
-	$dw->onDirEnter(sub {
-		my ($dir) = @_;
-		print "$dir\n";
+        return SUCCESS;
+    });
 
-		return File::DirWalk::SUCCESS;
-	});
-
-	$dw->setDepth(3);
-	$dw->walk($ENV{'HOME'});
-
+    $dw->setDepth(3);
+    $dw->walk($ENV{'HOME'});
 
 =head1 DESCRIPTION
 
@@ -192,65 +218,104 @@ on files, directories and symlinks.
 
 =over 4
 
-=item C<new()>
+=item new()
 
-Create a new File::DirWalk object
+Create a new File::DirWalk object.
+The constructor takes no arguments.
 
-=item C<onBeginWalk(\&func)>
+=item onBeginWalk(\&func)
 
-Specify a function to be be run on beginning of a walk. It is called each time
-the C<walk> method is called. The directory-name is passed to the given
-function. Function must return true.
+Specify a function to be be run on beginning of a walk.
 
-=item C<onLink(\&func)>
+=item onLink(\&func)
 
-Specify a function to be run on symlinks. The symlink-filename is passed to the
-given function. Function must return true.
+Specify a function to be run on symlinks.
 
-=item C<onFile(\&func)>
+=item onFile(\&func)
 
-Specify a function to be run on regular files. The filename is passed to the
-given function when called. Function must return true.
+Specify a function to be run on regular files.
 
-=item C<onDirEnter(\&func)>
+=item onDirEnter(\&func)
 
-Specify a function to be run before entering a directory. The directory-name is
-passed to the given function when called. Function must return true.
+Specify a function to be run before entering a directory.
 
-=item C<onDirLeave(\&func)>
+=item onDirLeave(\&func)
 
-Specify a function to be run on leaving directory. The directory-name is passed
-to the given function when called. Function must return true.
+Specify a function to be run when leaving a directory.
 
-=item C<onForEach(\&func)>
+=item setDepth($int)
 
-Specify a function to be run on each file/directory within another directory.
-The name is passed to the function when called. Function must return true.
+Set the directory traversal depth.
+Default: 0
 
-=item C<setDepth($int)>
+=item getDepth
 
-Set the directory depth:
-By default the directory depth is set to 0.
+Get the directory traversal depth;
 
-=item C<getDepth>
+=item currentDir
 
-Get the directory depth;
+The directory we are in:
 
-=item C<walk($path)>
+    $dw->onBeginWalk(sub {
+        my ($path) = @_;
+
+        print "directory: " . $dir,            "\n";
+        print "directory: " . $dw->currentDir, "\n"; # same!
+
+        return SUCCESS;
+    });
+
+=item currentPath
+
+The current path:
+
+    $dw->onBeginWalk(sub {
+        my ($path) = @_;
+
+        print "directory: " . $path,            "\n";
+        print "directory: " . $dw->currentPath, "\n"; # same!
+
+        return SUCCESS;
+    });
+
+=item currentBasename
+
+=item filesInDir
+
+Returns the number of files in directory.
+Excludes . and ..
+
+=item walk($path)
 
 Begin the walk through the given directory tree. This method returns if the walk
-is finished or if one of the callbacks doesn't return true.
+is finished or if one of the callbacks doesn't return SUCCESS.
 
 =back
 
-All callback-methods expect a function reference as their argument. The
-directory- or filename  is passed to the function as the argument when called.
-The function must return true, otherwise the recursive walk is aborted and
+=head1 CALLBACKS
+
+All callback-methods expect a function reference as their argument. 
+The current path is passed to the callback function.
+
+The callback function must return SUCCESS, otherwise the recursive walk is aborted and
 C<walk> returns. You don't need to define a callback if you don't need to.
 
-The module provides the following constants: SUCCESS, FAILED, ABORTED and PRUNE (1, 0, -1, -10)
-which you can use within your callback code.
-DirWalk will stop processing the current directory if PRUNE is returned by your callback.
+=head1 CONSTANTS
+
+File::DirWalk exports the following predefined constants
+as return values:
+
+=over 4
+
+=item SUCCESS (1)
+
+=item FAILED  (0)
+
+=item ABORTED (-1)
+
+=item PRUNE   (-10)
+
+=back
 
 =head1 BUGS
 
@@ -261,6 +326,8 @@ Please mail the author if you encounter any bugs.
 Jens Luedicke E<lt>jensl@cpan.orgE<gt> web: L<http://perldude.de/>
 
 =head1 CHANGES
+
+Version 0.4: add more methods, better testing, more documentation.
 
 Version 0.3: add PRUNE constant. add option to specify the directory depth.
 

@@ -15,7 +15,7 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::FilePane;
-use base qw(Filer::FilePaneInterface Filer::FilePaneDND);
+use base qw(Filer::FilePaneInterface);
 
 use strict;
 use warnings;
@@ -25,9 +25,8 @@ use Cwd qw(abs_path);
 use File::Basename;
 
 use Filer::Constants;
-
+use Filer::FilePaneConstants;
 use Filer::ListStore;
-use Filer::FilePaneInterface;
 
 Readonly my $SELECT   => 0;
 Readonly my $UNSELECT => 1;
@@ -44,7 +43,7 @@ sub new {
 
 	my $button1 = Gtk2::Button->new("Up");
 	$button1->signal_connect("clicked", sub {
-		$self->open_path_helper($self->get_updir);
+		$self->open_path($self->get_updir);
 	});
 	$self->{location_bar}->pack_start($button1, 0, 1, 0);
 
@@ -69,18 +68,6 @@ sub new {
 	$self->{treeview}->signal_connect("button-press-event", sub { $self->treeview_event_cb(@_) });
 	$self->{treeview}->signal_connect("button-release-event", sub { $self->treeview_event_cb(@_) });
 	$self->{treeview}->signal_connect("motion-notify-event", sub { $self->treeview_event_cb(@_) });
-
-# 	$self->{treefilter} = Gtk2::TreeModelFilter->new($self->{treemodel});
-# 	$self->{treefilter}->set_visible_func(sub {
-# 		my ($model,$iter) = @_;
-# 		my $fi   = $model->get($iter, $COL_FILEINFO);
-# 
-# 		return 0 if (!$self->{ShowHiddenFiles} && $fi->is_hidden);
-# 		return 1;
-# 	});
-# 
-# 	$self->{treesort} = Gtk2::TreeModelSort->new($self->{treefilter});
-# 	$self->{treeview}->set_model($self->{treesort});
 
 	# Drag and Drop
 	$self->{treeview}->drag_dest_set('all', ['move','copy'], $self->target_table);
@@ -127,12 +114,12 @@ sub new {
 
 		if ($_ == $COL_SIZE) {
 			$cell = Filer::CellRendererSize->new;
-			$cell->set(humanize => $FALSE);
+			$cell->set(humanize => $TRUE);
 			$col  = Gtk2::TreeViewColumn->new_with_attributes($cols{$_}, $cell, size => $_);
 		} elsif ($_ == $COL_DATE) {
 			$cell = Filer::CellRendererDate->new;
-#			$cell->set(dateformat => "%o %b %Y");
-			$cell->set(dateformat => "%x");
+			$cell->set(dateformat => "%o %b %Y");
+# 			$cell->set(dateformat => "%x");
 			$col  = Gtk2::TreeViewColumn->new_with_attributes($cols{$_}, $cell, seconds => $_);
 		} else {
 			$cell = Gtk2::CellRendererText->new;
@@ -191,35 +178,26 @@ sub show_popup_menu {
 	my $bookmarks = Filer::Bookmarks->new($self->{filer});
 	$uimanager->get_widget("$ui_path/Bookmarks")->set_submenu($bookmarks->generate_bookmarks_menu);
 
-	my ($p) = $self->{treeview}->get_path_at_pos($e->x,$e->y);
+	if ($self->count_items == 1) {
+		my $fi = $self->get_fileinfo_list->[0];
 
-	if (defined $p) {
-		if (! $self->{treeselection}->path_is_selected($p)) {
-			$self->{treeselection}->unselect_all;
-			$self->{treeselection}->select_path($p);
-		}
-
-		if ($self->count_items == 1) {
-			my $fi = $self->get_fileinfo_list->[0];
-
-			if ($fi->is_dir) {
-				$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
-# 			} else {
-# 				# Customize archive submenu
-# 				if ($fi->is_supported_archive) {
-# 					$uimanager->get_widget("$ui_path/archive-menu/Extract")->set_sensitive($TRUE);
-# 					$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
-# 				} else {
-# 					$uimanager->get_widget("$ui_path/archive-menu/Extract")->set_sensitive($FALSE);
-# 					$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($TRUE);
-# 				}
-			}
-		} else {
-			$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($FALSE);
+		if ($fi->is_dir) {
 			$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
-			$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($FALSE);
-			$uimanager->get_widget("$ui_path/Properties")->set_sensitive($FALSE);
+# 		} else {
+# 			# Customize archive submenu
+# 			if ($fi->is_supported_archive) {
+# 				$uimanager->get_widget("$ui_path/archive-menu/Extract")->set_sensitive($TRUE);
+# 				$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
+# 			} else {
+# 				$uimanager->get_widget("$ui_path/archive-menu/Extract")->set_sensitive($FALSE);
+# 				$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($TRUE);
+# 			}
 		}
+	} elsif ($self->count_items > 1) {
+		$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($FALSE);
+		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
+		$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($FALSE);
+		$uimanager->get_widget("$ui_path/Properties")->set_sensitive($FALSE);
 	} else {
 		$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
@@ -240,7 +218,7 @@ sub treeview_event_cb {
 
 	if ($e->type eq "key-press") {
 		if ($e->keyval == $Gtk2::Gdk::Keysyms{'BackSpace'}) {
-			$self->open_path_helper($self->get_updir);
+			$self->open_path($self->get_updir);
 			return 1;
 		} elsif ($e->keyval == $Gtk2::Gdk::Keysyms{'Delete'}) {
 
@@ -317,17 +295,16 @@ sub update_navigation_buttons {
 			$button->signal_connect(toggled => sub {
 				my ($widget,$path) = @_;
 
+				print "toggled: $path\n";
+
 		 		my $label = $widget->get_child;
 				my $pc    = $label->get_pango_context;
 				my $fd    = $pc->get_font_description;
 
 				if ($widget->get_active) {
+					print "get_active: $path\n";
 					$fd->set_weight('PANGO_WEIGHT_BOLD');
-
-					# avoid an endless loop/recursion.
-					if ($path ne $self->{filepath}) {
-						$self->open_path($path);
-					}
+					$self->DirRead($path);
 				} else {
 					$fd->set_weight('PANGO_WEIGHT_NORMAL');
 				}
@@ -355,7 +332,7 @@ sub open_file {
 	return 0 if ((not defined $filepath) or (not -R $filepath));
 
 	if ($fileinfo->is_dir) {
-		$self->open_path_helper($filepath);
+		$self->open_path($filepath);
 
 	} elsif ($fileinfo->is_executable) {
 
@@ -384,19 +361,24 @@ sub open_file_with {
 	Filer::Dialog->open_with_dialog($fileinfo);		
 }
 
-sub open_path_helper {
+sub open_path {
 	my ($self,$filepath) = @_;
 
+	print "open_path: $filepath\n";
+	$self->DirRead($filepath);
+
 	if (defined $self->{navigation_buttons}->{$filepath}) {
+		print "$self->{navigation_buttons}->{$filepath}: set active\n";		
 		$self->{navigation_buttons}->{$filepath}->set(active => 1);
 	} else {
-		$self->open_path($filepath);
 		$self->update_navigation_buttons;
 	}
 }
 
-sub open_path {
+sub DirRead {
 	my ($self,$filepath) = @_;
+
+	print "DirRead: $filepath\n";
 
 # 	my ($t0,$t1,$elapsed);
 #  	use Time::HiRes qw(gettimeofday tv_interval);
@@ -407,22 +389,37 @@ sub open_path {
 # 		delete $self->{overrides}->{$filepath};
 # 	}
 
-	my $Directory    = Filer::Directory->new($filepath);
-	my $dir_contents = $Directory->all;
+	$self->{treemodel}->clear;
 
-	$self->{filepath} = $filepath;
+	if ($self->{filepath} ne $filepath) {
+		$self->{filepath}  = $filepath;
+		$self->{directory} = Filer::Directory->new($filepath);
+	}
+
+	my $dir_contents = $self->{directory}->all;
 	
- 	$self->{treemodel}->set_dir_contents($dir_contents);
+	foreach my $fi (@{$dir_contents}) {
+		if (($self->{ShowHiddenFiles} == $FALSE) && $fi->is_hidden) {
+			next;
+		}
+
+		$self->{treemodel}->append_fileinfo($fi);
+	}
 
 	$self->{path_combo}->insert_text(0, $self->{filepath});
 	$self->{path_combo}->set_active(0);
 
-	my $status = sprintf("%d directories and %d files: %s", $Directory->dirs_count, $Directory->files_count, $Directory->total_size);
+	my $status = sprintf("%d directories and %d files: %s", $self->{directory}->dirs_count, $self->{directory}->files_count, $self->{directory}->total_size);
 	$self->{status}->set_text($status);
 
 # 	$t1 = [gettimeofday];
 # 	$elapsed = tv_interval($t0,$t1);
 # 	print "time to load $filepath: $elapsed\n";
+}
+
+sub refresh {
+	my ($self) = @_;
+	$self->DirRead($self->{filepath});
 }
 
 sub select_dialog {

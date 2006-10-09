@@ -15,14 +15,12 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::FileInfo;
-
 use strict;
 use warnings;
+use Moose;
 
-use Readonly;
-
-use File::Basename qw(basename dirname);
-use File::MimeInfo::Magic qw(mimetype describe);
+use File::Basename; # qw(basename dirname fileparse);
+use File::MimeInfo::Magic; # qw(mimetype describe);
 use Stat::lsMode qw(format_mode);
 
 use Filer::Stat qw(:stat);
@@ -30,13 +28,20 @@ use Filer::Tools;
 use Filer::Constants;
 use Filer::FilePaneConstants;
 
+has 'filepath'    => (is => 'rw', isa => 'Str',      reader => 'get_path');
+has 'dirname'     => (is => 'rw', isa => 'Str',      reader => 'get_dirname');
+has 'basename'    => (is => 'rw', isa => 'Str',      reader => 'get_basename');
+has 'mimetype'    => (is => 'rw', isa => 'Str',      reader => 'get_mimetype');
+has 'description' => (is => 'rw', isa => 'Str',      reader => 'get_description');
+has 'stat'	  => (is => 'rw', isa => 'ArrayRef', reader => 'get_stat');
+
 # $File::MimeInfo::DEBUG = 1;
 
 sub get_homedir {
 	return Filer::FileInfo->new($HOMEDIR);
 }
 
-sub get_rootdir {
+sub get_rootdir {		
 	return Filer::FileInfo->new($ROOTDIR);
 }
 
@@ -44,19 +49,24 @@ sub new {
 	my ($class,$filepath) = @_;
 	my $self = bless {}, $class;
 
-	$self->{filepath} = $filepath;
+	$self->filepath($filepath);
+	$self->dirname(File::Basename::dirname($filepath));
+	$self->basename(File::Basename::basename($filepath));
+	$self->mimetype(File::MimeInfo::Magic::mimetype($filepath));
+	$self->description(File::MimeInfo::Magic::describe($self->mimetype));
+
+	if ($self->mimetype eq "inode/mount-point") {
+		$self->mimetype("inode/directory");
+	}
+	
+	$self->stat([ CORE::stat($filepath) ]);
 
 	return $self;
 }
 
-sub get_path {
-	my ($self) = @_;
-	return $self->{filepath};
-}
-
 sub get_uri {
-	my ($self) = @_;
-#	my $uri = "file://$self->{filepath}";
+	my $self = shift;
+#	my $uri = "file://$self->get_path";
 # 	my $str = ""; 
 # 
 # 	foreach my $c (split //, $uri) {
@@ -67,34 +77,12 @@ sub get_uri {
 # 		}
 # 	}
 
-	my $uri = Glib->filename_to_uri($self->{filepath}, "localhost");
-	print $uri, "\n";
+	my $uri = Glib->filename_to_uri($self->get_path, "localhost");
 	return $uri;
 }
 
-sub get_basename {
-	my ($self) = @_;
-	return $self->{basename} ||= basename($self->{filepath});
-}
-
-sub get_dirname {
-	my ($self) = @_;
-	return dirname($self->{filepath});
-}
-
-sub get_mimetype {
-	my ($self) = @_;
-	$self->{mimetype} ||= mimetype($self->{filepath});
-
-	if ($self->{mimetype} eq "inode/mount-point") {
-		$self->{mimetype} = "inode/directory";
-	}
-	
-	return $self->{mimetype};
-}
-
 sub get_mimetype_handler {
-	my ($self) = @_;
+	my $self = shift;
 
 	my $mh = Filer::MimeTypeHandler->new;
 	return $mh->get_mimetype_handler($self->get_mimetype);
@@ -108,10 +96,10 @@ sub set_mimetype_handler {
 }
 
 sub get_mimetype_icon {
-	my ($self) = @_;
-	my $icon = Filer::MimeTypeIcon->new($self->get_mimetype);
+	my $self = shift;
 
-	my $pixbuf = $icon->get_icon;
+	my $icon   = Filer::MimeTypeIcon->new($self->get_mimetype);
+	my $pixbuf = $icon->get_pixbuf;
 
 	if ($self->is_hidden) {
 		$pixbuf->saturate_and_pixelate($pixbuf, 0.5, $TRUE)
@@ -120,105 +108,94 @@ sub get_mimetype_icon {
 	return $pixbuf;
 }
 
-sub get_description {
-	my ($self) = @_;
-	return describe($self->get_mimetype);
-}
-
-sub get_stat {
-	my ($self) = @_;
-	return $self->{stat} ||= [ stat($self->{filepath}) ];
-}
-
 sub get_raw_size {
-	my ($self) = @_;
+	my $self = shift;
 	return $self->get_stat->[$STAT_SIZE];
 }
 
 sub get_raw_mtime {
-	my ($self) = @_;
+	my $self = shift;
 	return $self->get_stat->[$STAT_MTIME];
 }
 
 sub get_raw_uid {
-	my ($self) = @_;
+	my $self = shift;
 	return $self->get_stat->[$STAT_UID];
 }
 
 sub get_raw_gid {
-	my ($self) = @_;
+	my $self = shift;
 	return $self->get_stat->[$STAT_GID];
 }
 
 sub get_raw_mode {
-	my ($self) = @_;
+	my $self = shift;
 	return $self->get_stat->[$STAT_MODE];
 }
 
 sub get_size {
-	my ($self) = @_;
+	my $self = shift;
 	return Filer::Tools->humanize_size($self->get_raw_size);
 }
 
 sub get_mtime {
-	my ($self) = @_;
-	my $time = localtime($self->get_raw_mtime || 0);
-	return $time;
+	my $self = shift;
+	return scalar localtime($self->get_raw_mtime || 0);
 }
 
 sub get_uid {
-	my ($self) = @_;
+	my $self = shift;
 	return getpwuid($self->get_raw_uid);
 }
 
 sub get_gid {
-	my ($self) = @_;
+	my $self = shift;
 	return getgrgid($self->get_raw_gid);
 }
 
 sub get_mode {
-	my ($self) = @_;
+	my $self = shift;
 	my $format = format_mode($self->get_raw_mode);
 	return $format;
 }
 
 sub exist {
-	my ($self) = @_;
-	return (-e $self->{filepath});
+	my $self = shift;
+	return (-e $self->get_path);
 }
 
 sub is_readable {
-	my ($self) = @_;
-	return (-R $self->{filepath});
+	my $self = shift;
+	return (-R $self->get_path);
 }
 
 sub is_symlink {
-	my ($self) = @_;
-	return (-l $self->{filepath});
+	my $self = shift;
+	return (-l $self->get_path);
 }
 
 sub is_dir {
-	my ($self) = @_;
-	return (-d $self->{filepath});
+	my $self = shift;
+	return (-d $self->get_path);
 }
 
 sub is_file {
-	my ($self) = @_;
+	my $self = shift;
 	return (!$self->is_dir);
 }
 
 sub is_executable {
-	my ($self) = @_;
-	return (-x $self->{filepath});
+	my $self = shift;
+	return (-x $self->get_path);
 }
 
 sub is_hidden {
-	my ($self) = @_;
-	return ($self->{basename} =~ /^\./);
+	my $self = shift;
+	return ($self->get_basename =~ /^\./);
 }
 
 sub is_supported_archive {
-	my ($self) = @_;
+	my $self = shift;
 	return Filer::Archive->is_supported_archive($self->get_mimetype);
 }
 

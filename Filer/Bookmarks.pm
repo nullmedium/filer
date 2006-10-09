@@ -125,7 +125,22 @@ sub generate_bookmarks_menu {
 	foreach ($self->get_bookmarks) {
 		$menuitem = Gtk2::MenuItem->new($_);
 		$menuitem->signal_connect("activate", sub {
-			$self->{filer}->get_active_pane->open_path_helper(pop @_);
+			my $path = pop @_;
+
+			if (-e $path && -d $path) {
+				my $mode = $self->{config}->get_option('Mode');
+				my $pane;
+
+				if ($mode == $EXPLORER_MODE) {
+					$pane = $self->{filer}->get_right_pane;		
+				} else {
+					$pane = $self->{filer}->get_active_pane;
+				}
+
+				$pane->open_path($path);
+			} else {
+				Filer::Dialog->msgbox_error("Path '$path' doesn't exist!");
+			}
 		},$_);
 
 		$menuitem->show;

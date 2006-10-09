@@ -1,24 +1,20 @@
-package Filer::CellRendererSize;
+#     Copyright (C) 2006 Jens Luedicke <jens.luedicke@gmail.com>
+#
+#     This program is free software; you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation; either version 2 of the License, or
+#     (at your option) any later version.
+#
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program; if not, write to the Free Software
+#     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-#
-# Copyright (C) 2003 by Torsten Schoenfeld
-# 
-# This library is free software; you can redistribute it and/or modify it under
-# the terms of the GNU Library General Public License as published by the Free
-# Software Foundation; either version 2.1 of the License, or (at your option)
-# any later version.
-# 
-# This library is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU Library General Public License for
-# more details.
-# 
-# You should have received a copy of the GNU Library General Public License
-# along with this library; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place - Suite 330, Boston, MA  02111-1307  USA.
-#
-# $Header: /cvsroot/gtk2-perl/gtk2-perl-xs/Gtk2/examples/cellrenderer_date.pl,v 1.7 2005/09/07 03:07:08 muppetman Exp $
-#
+package Filer::CellRendererSize;
 
 use warnings;
 use strict;
@@ -43,7 +39,7 @@ sub INIT_INSTANCE {
 sub humanize_size {
 	my ($cell) = shift;
 
-	my $size    = $cell->get('size');
+	my $size     = $cell->get('size');
 	my $humanize = $cell->get('humanize');
 
 	if ($humanize) {
@@ -64,7 +60,7 @@ sub calc_size {
 }
 
 sub GET_SIZE {
-	my ($cell, $widget, $cell_area) = @_;
+	my ($cell,$widget,$cell_area) = @_;
 
 	my $layout = $cell->get_layout($widget);
 	$layout->set_text($cell->humanize_size());
@@ -73,12 +69,12 @@ sub GET_SIZE {
 }
 
 sub get_layout {
-	my ($cell, $widget) = @_;
+	my ($cell,$widget) = @_;
 	return $widget->create_pango_layout("");
 }
 
 sub RENDER {
-	my ($cell, $window, $widget, $background_area, $cell_area, $expose_area, $flags) = @_;
+	my ($cell,$window,$widget,$background_area,$cell_area,$expose_area,$flags) = @_;
 	my $state;
 
 	if ($flags & 'selected') {

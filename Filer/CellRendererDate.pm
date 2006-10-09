@@ -1,25 +1,20 @@
+#     Copyright (C) 2006 Jens Luedicke <jens.luedicke@gmail.com>
+#
+#     This program is free software; you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation; either version 2 of the License, or
+#     (at your option) any later version.
+#
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program; if not, write to the Free Software
+#     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 package Filer::CellRendererDate;
-
-#
-# Copyright (C) 2003 by Torsten Schoenfeld
-# 
-# This library is free software; you can redistribute it and/or modify it under
-# the terms of the GNU Library General Public License as published by the Free
-# Software Foundation; either version 2.1 of the License, or (at your option)
-# any later version.
-# 
-# This library is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU Library General Public License for
-# more details.
-# 
-# You should have received a copy of the GNU Library General Public License
-# along with this library; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place - Suite 330, Boston, MA  02111-1307  USA.
-#
-# $Header: /cvsroot/gtk2-perl/gtk2-perl-xs/Gtk2/examples/cellrenderer_date.pl,v 1.7 2005/09/07 03:07:08 muppetman Exp $
-#
-
 
 use warnings;
 use strict;
@@ -27,7 +22,7 @@ use strict;
 use Gtk2;
 
 use Date::Format qw(strftime time2str);
-use Date::Calc qw(Delta_Days);
+# use Date::Calc qw(Delta_Days);
 
 use Glib::Object::Subclass
 	"Gtk2::CellRenderer",
@@ -50,33 +45,35 @@ sub get_date_string {
 	my $seconds    = $cell->get('seconds');
 	my $dateformat = $cell->get('dateformat');
 
-	my @now  = localtime(time());
-	my @then = localtime($seconds);
+# 	my @now  = localtime(time());
+# 	my @then = localtime($seconds);
+# 
+# 	my $d = Delta_Days(1900 + $then[5],$then[4]+1,$then[3], 1900 + $now[5], $now[4]+1, $now[3]);
+# 	
+# 	if ($d == 0) {
+# 
+# 		return "Today";
+# 
+# 	} elsif ($d == 1) {
+# 
+# 		return "Yesterday";
+# 
+# 	} else {
+# 		my $date; 
+# 
+# 		if ($d > 1 && $d < 7) {
+# 
+# 			$date = time2str("%A", $seconds);
+# 
+# 		} else {
 
-	my $d = Delta_Days(1900 + $then[5],$then[4]+1,$then[3], 1900 + $now[5], $now[4]+1, $now[3]);
-	
-	if ($d == 0) {
+			my $date = time2str($dateformat, $seconds);
+# 		}
+# 
+# 		return $date;
+# 	}
 
-		return "Today";
-
-	} elsif ($d == 1) {
-
-		return "Yesterday";
-
-	} else {
-		my $date; 
-
-		if ($d > 1 && $d < 7) {
-
-			$date = time2str("%A", $seconds);
-
-		} else {
-
-			$date = time2str($dateformat, $seconds);
-		}
-
-		return $date;
-	}
+	return $date;
 }
 
 sub calc_size {
@@ -87,7 +84,7 @@ sub calc_size {
 }
 
 sub GET_SIZE {
-	my ($cell, $widget, $cell_area) = @_;
+	my ($cell,$widget,$cell_area) = @_;
 
 	my $layout = $cell->get_layout($widget);
 	$layout->set_text($cell->get_date_string());
@@ -101,7 +98,7 @@ sub get_layout {
 }
 
 sub RENDER {
-	my ($cell, $window, $widget, $background_area, $cell_area, $expose_area, $flags) = @_;
+	my ($cell,$window,$widget,$background_area,$cell_area,$expose_area,$flags) = @_;
 	my $state;
 
 	if ($flags & 'selected') {

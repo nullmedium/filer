@@ -1,5 +1,21 @@
+#     Copyright (C) 2004-2006 Jens Luedicke <jens.luedicke@gmail.com>
+#
+#     This program is free software; you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation; either version 2 of the License, or
+#     (at your option) any later version.
+#
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program; if not, write to the Free Software
+#     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 package Filer::FilePaneInterface;
-use base qw(Exporter);
+use base qw(Exporter Filer::FilePaneDND);
 use Filer::FilePaneConstants;
 
 our @EXPORT = qw(
@@ -21,6 +37,10 @@ sub new {
 	$self->{vbox} = Gtk2::VBox->new(0,0);
 	$self->{filer} = $filer;
 	$self->{side}  = $side;
+
+	$self->{ShowHiddenFiles} = $filer->get_config->get_option("ShowHiddenFiles");
+	
+	$self->{directory} = "";
 	
 	return $self;
 }
@@ -40,21 +60,6 @@ sub get_treeview {
 	return $self->{treeview};
 }
 
-# sub get_treemodel {
-# 	my ($self) = @_;
-# 	return $self->{treeview}->get_model;
-# }
-
-# sub get_treefilter_model {
-# 	my ($self) = @_;
-# 	return $self->{treefilter}->get_model;
-# }
-
-# sub get_model_data {
-# 	my ($self) = @_;
-# 	return $self->{treemodel}->get_data;
-# }
-
 sub set_focus {
 	my ($self) = @_;
 	$self->{treeview}->grab_focus;
@@ -63,15 +68,12 @@ sub set_focus {
 sub treeview_grab_focus_cb {
 	my ($self) = @_;
 
+	print "treeview_grab_focus_cb: $self->{side}\n";
+
 	$self->{filer}->change_active_pane($self->{side});
 
 	return 1;
 }
-
-# sub get_iter {
-# 	my ($self) = @_;
-# 	return $self->get_iter_list->[0];
-# }
 
 sub get_iter_list {
 	my ($self) = @_;
@@ -92,11 +94,6 @@ sub get_fileinfo_list {
 
 	return \@fi;
 }
-
-# sub get_item {
-# 	my ($self) = @_;
-# 	return $self->get_item_list->[0];
-# }
 
 sub get_item_list {
 	my ($self) = @_;
@@ -123,20 +120,9 @@ sub get_path_by_treepath {
 	return $path;
 }
 
-# sub get_path_by_position {
-# 	my ($self,$x,$y) = @_;
-# 	
-# }
-
 sub count_items {
 	my ($self) = @_;
 	return $self->{treeselection}->count_selected_rows;
-}
-
-sub refresh {
-	my ($self) = @_;
-	print "DEBUG $self refresh\n";
-	$self->open_path($self->{filepath});
 }
 
 # sub remove_selected {
@@ -159,9 +145,8 @@ sub refresh {
 
 sub set_show_hidden {
 	my ($self,$bool) = @_;
-
 	$self->{ShowHiddenFiles} = $bool;
-# 	$self->{treefilter}->refilter;
+	$self->refresh;
 }
 
 ################################################################################

@@ -49,9 +49,8 @@ sub new {
 	my ($class,$mimetype) = @_;
 	my $self = bless {}, $class;
 
-	$self->{mimetype}   = $mimetype;	
-	$self->{desaturate} = 0;
-	$self->{icontheme}  = Gtk2::IconTheme->get_default;
+	$self->{mimetype}  = $mimetype;	
+	$self->{icontheme} = Gtk2::IconTheme->get_default;
 
 	return $self;
 }
@@ -59,7 +58,7 @@ sub new {
 sub lookup_icon {
 	my ($self) = @_;
 
-	my ($media,$subtype) = split /\//, $self->{mimetype}; 
+	my ($media,$subtype) = split "/", $self->{mimetype}; 
 	my $icon = undef;
 
 	if ($self->{icontheme}->has_icon("gnome-mime-$media-$subtype")) {
@@ -92,7 +91,7 @@ sub lookup_icon {
 	return $icon;
 }
 
-sub get_icon {
+sub get_pixbuf {
 	my ($self) = @_;
 	my $icon;
 	my $pixbuf;

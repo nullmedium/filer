@@ -15,10 +15,7 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::FileTreePane;
-
-use Filer::FilePaneInterface;
-
-our @ISA = qw(Filer::FilePaneInterface Filer::FilePaneDND);
+use base qw(Filer::FilePaneInterface);
 
 use strict;
 use warnings;
@@ -27,6 +24,7 @@ use Cwd qw(abs_path);
 use File::Basename;
 
 use Filer::Constants;
+use Filer::FilePaneConstants;
 
 sub new {
 	my ($class,$filer,$side) = @_;
@@ -45,20 +43,6 @@ sub new {
 	$self->{treeview}->signal_connect("event", sub { $self->treeview_event_cb(@_) });
 	$self->{treeview}->signal_connect("row-expanded", sub { $self->treeview_row_expanded_cb(@_) });
 	$self->{treeview}->signal_connect("row-collapsed", sub { $self->treeview_row_collapsed_cb(@_) });
-
-# 	$self->{treefilter} = Gtk2::TreeModelFilter->new($self->{treemodel});
-# 	$self->{treeview}->set_model($self->{treefilter});
-# 
-# 	$self->{treefilter}->set_visible_func(sub {
-# 		my ($model,$iter) = @_;
-# 		my $basename = $model->get($iter, $COL_NAME);
-# 		my $show_hidden = $self->{filer}->get_config->get_option('ShowHiddenFiles');
-# 	
-# 		return 1 if (!$basename);
-# 
-# 		return 0 if (($basename =~ /^\.{1,2}$/) || ($basename =~ /^\./ && !$show_hidden));
-# 		return 1;
-# 	});
 
 	# Drag and Drop
 	$self->{treeview}->drag_dest_set('all', ['move','copy'], $self->target_table);
@@ -127,7 +111,7 @@ sub show_popup_menu {
 
 		$uimanager->get_widget("$ui_path/PopupItems1/Open")->hide;
 		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->hide;
-		$uimanager->get_widget("$ui_path/archive-menu")->hide;
+# 		$uimanager->get_widget("$ui_path/archive-menu")->hide;
 
 		my $bookmarks = Filer::Bookmarks->new($self->{filer});
 		$uimanager->get_widget("$ui_path/Bookmarks")->set_submenu($bookmarks->generate_bookmarks_menu);
@@ -163,11 +147,11 @@ sub treeview_event_cb {
 			if (defined $p) {
  				$self->{treeselection}->select_path($p);
 
-				my $pane = $self->{filer}->get_inactive_pane;
+				my $pane = $self->{filer}->get_right_pane;
 				my $iter = $self->{treemodel}->get_iter($p);
 				my $fi   = $self->get_fileinfo($iter);
 
-				$pane->open_file($fi);
+				$pane->open_path($fi->get_path);
 			}
 
 		} elsif ($e->button == 3) {
@@ -248,13 +232,13 @@ sub refresh {
 }
 
 sub CreateRootNodes {
-	my ($self)    = @_;
+	my ($self) = @_;
 
 	foreach (Filer::FileInfo->get_rootdir, Filer::FileInfo->get_homedir) {
 		my $iter = $self->{treemodel}->insert_with_values(undef, -1,
 			$COL_FILEINFO, $_,
 			$COL_ICON,     $_->get_mimetype_icon,
-			$COL_NAME,     ($_->get_basename eq "/") ? "Filesystem" : "Home",
+			$COL_NAME,     $_->get_basename, # eq $ROOTDIR) ? "Filesystem" : "Home",
 		);
 
 		$self->{treemodel}->insert($iter, -1);
@@ -264,12 +248,12 @@ sub CreateRootNodes {
 sub DirRead {
 	my ($self,$dir,$parent_iter) = @_;
 
-	my $show_hidden = $self->{filer}->get_config->get_option('ShowHiddenFiles');
+	$self->{directory} = Filer::Directory->new($dir);
 
-	my $Directory    = Filer::Directory->new($dir);
-	my $dir_contents = $Directory->all_dirs;
+	my $dir_contents = $self->{directory}->all_dirs;
 
 	foreach my $fi (sort { $a->get_basename cmp $b->get_basename } @{$dir_contents}) {
+		next if (($self->{ShowHiddenFiles} == $FALSE) && $fi->is_hidden);
 	
 		my $icon     = $fi->get_mimetype_icon;
 		my $basename = $fi->get_basename;

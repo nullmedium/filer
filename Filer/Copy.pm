@@ -44,13 +44,13 @@ sub copy {
 	});
 
 	$dirwalk->onLink(sub {
-		my $file = pop;
+		my $file = $_[0];
 		symlink(readlink($file), Filer::Tools->catpath($DEST, basename($file))) || return File::DirWalk::FAILED;
 		return File::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onDirEnter(sub {
-		my $dir = pop;
+		my $dir = $_[0];
 		$DEST   = Filer::Tools->catpath($DEST, basename($dir));
 
 		if ((-e $DEST) and (dirname($dir) eq dirname($DEST))) {
@@ -68,7 +68,7 @@ sub copy {
 	});
 
 	$dirwalk->onFile(sub {
-		my $file    = pop;
+		my $file    = $_[0];
 		my $my_dest = Filer::Tools->catpath($DEST, basename($file));
 
 		if (-e $my_dest) {
@@ -82,7 +82,7 @@ sub copy {
 
 			} else {
 				my $dialog = Filer::FileExistsDialog->new($file, $my_dest);
-				my $r = $dialog->show;
+				my $r = $dialog->run;
 				
 				if ($r == $Filer::FileExistsDialog::RENAME) {
 

@@ -17,7 +17,10 @@ use Filer::FilePaneConstants;
 use Glib::Object::Subclass
 	Glib::Object::,
 	interfaces => [qw(Gtk2::TreeModel Gtk2::TreeSortable Gtk2::TreeDragDest Gtk2::TreeDragSource)],
-	;
+# 	properties => [
+# 		Glib::ParamSpec->boolean("show-hidden", "Show Hidden", "Show Hidden", TRUE, [qw(readable writable)]),
+# 	]
+;
 
 ################################################################################
 # Gtk2::TreeModel
@@ -40,6 +43,16 @@ sub INIT_INSTANCE {
 
 	$self->{stamp}        = sprintf '%d', rand (1<<31);
 }
+
+# sub GET_PROPERTY {
+# 	my ($self,$pspec) = @_;
+# 	return ($self->{prop}->{$pspec->get_name} || $pspec->get_default_value);
+# }
+# 
+# sub SET_PROPERTY {
+# 	my ($self,$pspec,$newval) = @_;
+# 	$self->{prop}->{$pspec->get_name} = $newval;
+# }
 
 #
 #  this is called just before a custom list is
@@ -411,24 +424,23 @@ sub drag_data_delete {
 # 	# that we did not create in the first place.
 # 	my $iter = $treeiter->to_arrayref($self->{stamp});
 # 	
-# 	
-# 	
 # 	$self->row_changed($self->get_path($treeiter), $treeiter);
 # }
 
 sub append_fileinfo {
 	my ($self,$fi) = @_;
 
-	push @{$self->{list}}, $fi;
-
-	my $pos = (@{$self->{list}} - 1);
-
 	# inform the tree view and other interested objects
 	# (e.g. tree row references) that we have inserted
 	# a new row, and where it was inserted
 
+	push @{$self->{list}}, $fi;
+
+	my $pos  = @{$self->{list}} - 1;
 	my $path = Gtk2::TreePath->new_from_indices($pos);
 	$self->row_inserted($path, $self->get_iter($path));
+
+	$self->sort;
 }
 
 sub clear {
@@ -445,23 +457,52 @@ sub clear {
 	return 1;
 }
 
-sub set_dir_contents {
-	my ($self,$list) = @_;
-
-	$self->clear;
-
-	$self->{list} = $list;
-
-	my $len = @{$self->{list}};
-	
-	for (my $i = 0; $i < $len; $i++) {
-		my $path = Gtk2::TreePath->new_from_indices($i);
-		my $iter = $self->get_iter($path);
-		$self->row_inserted($path,$iter);
-	}
-
-	$self->sort;
-}
+# sub set_show_hidden {
+# 	my ($self,$show_hidden) = @_;
+# 
+# # 	if ($self->{show_hidden} || $show_hidden) {
+# # 		return;
+# # 	}
+# # 
+# # 	$self->{show_hidden} = $show_hidden;
+# # 
+# # 	if (! $show_hidden) {
+# # 
+# # 		for (my $i = 0; $i < @{$self->{list}}; $i++) {
+# # 			my $fi = $self->{list}->[$i];
+# # 		
+# # 			my @delete = ();
+# # 
+# # 			if ($fi->is_hidden) {
+# # 				my $path    = Gtk2::TreePath->new_from_indices($i);
+# # 				my @indices = $path->get_indices;
+# # 				my $pos     = $indices[0];
+# # 
+# # # 				splice @{$self->{list}}, $pos, 1;
+# # 				push @delete, $pos;
+# # 				$self->row_deleted($path);
+# # 				
+# # 				push @{$self->{hidden}}, $fi;
+# # 			}
+# # 		}
+# # 
+# # 		foreach (@delete) {
+# # 			splice @{$self->{list}}, $_, 1;
+# # 		}
+# # 	} else {
+# # 		for (my $i = 0; $i < @{$self->{hidden}}; $i++) {
+# # 			my $fi = $self->{hidden}->[$i];
+# # 
+# # 			my $path    = Gtk2::TreePath->new_from_indices($i);
+# # 			my @indices = $path->get_indices;
+# # 			my $pos     = $indices[0];
+# # 
+# # 			$self->row_inserted($path, $self->get_iter($path));
+# # 
+# # 			push @{$self->{list}}, $fi;			
+# # 		}
+# # 	}
+# }
 
 sub foreach {
 	my ($self,$func,$data) = @_;

@@ -142,36 +142,6 @@ sub yesno_dialog {
 # 	return $text;
 # }
 
-sub source_target_dialog {
-	my $dialog = Filer::DefaultDialog->new("");
-
-	my $table = Gtk2::Table->new(2,2);
-	$table->set_homogeneous(0);
-	$table->set_col_spacings(5);
-	$table->set_row_spacings(1);
-	$dialog->vbox->pack_start($table,0,0,5);
-
-	my $source_label = Gtk2::Label->new;
-	$source_label->set_justify('left');
-	$source_label->set_use_markup(1);
-	$source_label->set_alignment(0.0,0.0);
-	$table->attach($source_label, 0, 1, 0, 1, [ "fill" ], [], 0, 0);
-
-	my $source_entry = Gtk2::Entry->new;
-	$table->attach($source_entry, 1, 2, 0, 1, [ "expand","fill" ], [], 0, 0);
-
-	my $target_label = Gtk2::Label->new;
-	$target_label->set_justify('left');
-	$target_label->set_use_markup(1);
-	$target_label->set_alignment(0.0,0.0);
-	$table->attach($target_label, 0, 1, 1, 2, [ "fill" ], [], 0, 0);
-
-	my $target_entry = Gtk2::Entry->new;
-	$table->attach($target_entry, 1, 2, 1, 2, [ "expand","fill" ], [], 0, 0);
-
-	return ($dialog,$source_label,$target_label,$source_entry,$target_entry);
-}
-
 sub mixed_button_new {
 	my ($self,$stock,$text) = @_;
 
@@ -200,7 +170,8 @@ sub open_with_dialog {
 		"Open With",
 		undef,
 		'modal',
-		'gtk-close' => 'close'
+		'gtk-close' => 'close',
+		'gtk-ok' => 'ok',
 	);
 
 	$dialog->set_has_separator(1);
@@ -220,7 +191,7 @@ sub open_with_dialog {
 
 	my $type_label = Gtk2::Label->new;
 	$type_label->set_justify('left');
-	$type_label->set_text($fileinfo->get_mimetype);
+	$type_label->set_text($fileinfo->get_description);
 	$type_label->set_alignment(0.0,0.0);
 	$table->attach($type_label, 1, 3, 0, 1, [ "expand","fill" ], [], 0, 0);
 
@@ -255,17 +226,11 @@ sub open_with_dialog {
 	});
 	$table->attach($cmd_browse_button, 2, 3, 1, 2, [ "fill" ], [], 0, 0);
 
-	my $button = Filer::Dialog->mixed_button_new('gtk-ok',"Run");
-	$dialog->add_action_widget($button, 'ok');
-	
 	$dialog->show_all;
 
 	if ($dialog->run eq 'ok') {
 		my $command = $command_entry->get_text;
 		$fileinfo->set_mimetype_handler($command);
-
-		$dialog->destroy;
-		Filer::Tools->exec(command => "$command " . $fileinfo->get_path, wait => 0);
 	}
 
 	$dialog->destroy;

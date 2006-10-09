@@ -71,7 +71,7 @@ sub move_by_copy_delete {
 	});
 
 	$dirwalk->onLink(sub {
-		my $file = pop;
+		my $file = $_[0];
 
 		symlink(readlink($file), Filer::Tools->catpath($DEST, basename($file))) || return File::DirWalk::FAILED;
 		unlink($file) || return File::DirWalk::FAILED;
@@ -80,7 +80,7 @@ sub move_by_copy_delete {
 	});
 
 	$dirwalk->onDirEnter(sub {
-		my $dir = pop;
+		my $dir = $_[0];
 		$DEST   = Filer::Tools->catpath($DEST, basename($dir));
 
 		if ((-e $DEST) and (dirname($dir) eq dirname($DEST))) {
@@ -93,7 +93,7 @@ sub move_by_copy_delete {
 	});
 
 	$dirwalk->onDirLeave(sub {
-		my $dir = pop;
+		my $dir = $_[0];
 		$DEST   = abs_path(Filer::Tools->catpath($DEST, $UPDIR));
 
 		rmdir($dir) || return File::DirWalk::FAILED;
@@ -102,7 +102,7 @@ sub move_by_copy_delete {
 	});
 
 	$dirwalk->onFile(sub {
-		my $file = pop;
+		my $file = $_[0];
 		my $my_dest = Filer::Tools->catpath($DEST, basename($file));
 
 		if (-e $my_dest) {
@@ -112,7 +112,7 @@ sub move_by_copy_delete {
 
 			} else {
 				my $dialog = Filer::FileExistsDialog->new($file, $my_dest);
-				my $r = $dialog->show;
+				my $r = $dialog->run;
 				
 				if ($r == $Filer::FileExistsDialog::RENAME) {
 
@@ -122,6 +122,18 @@ sub move_by_copy_delete {
 
 					# do nothing. 
 				
+				} elsif ($r == $Filer::FileExistsDialog::SKIP) {
+
+					$dialog->destroy;
+					return File::DirWalk::SUCCESS;
+
+				} elsif ($r == $Filer::FileExistsDialog::SKIP_ALL) {
+
+					# next time we encounter en existing file, return SUCCESS. 
+					$self->set_skip_all($TRUE);
+					$dialog->destroy;
+					return File::DirWalk::SUCCESS;
+
 				} elsif ($r eq 'cancel') {
 
 					$dialog->destroy;

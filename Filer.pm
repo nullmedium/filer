@@ -19,12 +19,20 @@ package Filer;
 use strict;
 use warnings;
 
+use Prost 
+	'ASK'		=> 'Filer::Dialog->yesno_dialog',
+	'MSGBOX_ERROR'  => 'Filer::Dialog->msgbox_error',
+	'MAINWINDOW'    => '$self->{main_window}',
+	'PANELEFT'      => '$self->{pane}->[$LEFT]',
+	'PANERIGHT'     => '$self->{pane}->[$RIGHT]',
+	'OPTION'        => '$self->{config}->get_option',
+	'FILEINFO_LIST' => '$pane->get_fileinfo_list',
+;
+
 use Gtk2 qw(-init -threads-init);
 use Gtk2::Gdk::Keysyms;
 
 use Fcntl;
-use Memoize;
-use URI::file;
 use File::Spec;
 use File::BaseDir;
 use File::Basename;
@@ -51,6 +59,7 @@ require Filer::Dialog;
 require Filer::DefaultDialog;
 require Filer::PropertiesDialog;
 require Filer::FileExistsDialog;
+require Filer::SourceTargetDialog;
 
 require Filer::CellRendererSize;
 require Filer::CellRendererDate;
@@ -87,7 +96,7 @@ sub init_config {
 	my ($self) = @_;
 	$self->{config} = Filer::Config->new;
 
-	if ($self->{config}->get_option("HonorUmask") == $FALSE) {
+	if (OPTION("HonorUmask") == $FALSE) {
 		umask 0000;
 	}
 }
@@ -100,18 +109,18 @@ sub get_config {
 sub init_main_window {
 	my ($self) = @_;
 
-	$self->{main_window} = Gtk2::Window->new('toplevel');
-	$self->{main_window}->set_title("Filer $self->{VERSION}");
+	MAINWINDOW = Gtk2::Window->new('toplevel');
+	MAINWINDOW->set_title("Filer $self->{VERSION}");
 
-	$self->{main_window}->resize(split ":", $self->{config}->get_option("WindowSize"));
-#	$self->{main_window}->resize(784,606);
+	MAINWINDOW->resize(split ":", OPTION("WindowSize"));
+#	MAINWINDOW->resize(784,606);
 
-	$self->{main_window}->signal_connect("event", sub { $self->window_event_cb(@_) });
-	$self->{main_window}->signal_connect("delete-event", sub { $self->quit_cb });
-	$self->{main_window}->set_icon(Filer::MimeTypeIcon->new("inode/directory")->get_icon);
+	MAINWINDOW->signal_connect("event", sub { $self->window_event_cb(@_) });
+	MAINWINDOW->signal_connect("delete-event", sub { $self->quit_cb });
+	MAINWINDOW->set_icon(Filer::MimeTypeIcon->new("inode/directory")->get_pixbuf);
 
 	$self->{main_window_vbox} = Gtk2::VBox->new(0,0);
-	$self->{main_window}->add($self->{main_window_vbox});
+	MAINWINDOW->add($self->{main_window_vbox});
 
 	my $actions = Gtk2::ActionGroup->new("Actions");
 
@@ -268,27 +277,27 @@ sub init_main_window {
 		name => "ask-copying-action",
 		label => "Copying",
 		callback => sub { $self->ask_copy_cb($_[0]) },
-		is_active => $self->{config}->get_option("ConfirmCopy"),
+		is_active => OPTION("ConfirmCopy"),
 	},{
 		name => "ask-moving-action",
 		label => "Moving",
 		callback => sub { $self->ask_move_cb($_[0]) },
-		is_active => $self->{config}->get_option("ConfirmMove"),
+		is_active => OPTION("ConfirmMove"),
 	},{
 		name => "ask-deleting-action",
 		label => "Deleting",
 		callback => sub { $self->ask_delete_cb($_[0]) },
-		is_active => $self->{config}->get_option("ConfirmDelete"),
+		is_active => OPTION("ConfirmDelete"),
 	},{
 		name => "show-hidden-action",
 		label => "Show Hidden Files",
 		callback => sub { $self->hidden_cb($_[0]) },
 		accelerator => "<control>H",
-		is_active => $self->{config}->get_option("ShowHiddenFiles"),
+		is_active => OPTION("ShowHiddenFiles"),
 	}];
 
 	$actions->add_actions($a_entries);
-	$actions->add_radio_actions($a_radio_entries, $self->{config}->get_option("Mode"), sub {
+	$actions->add_radio_actions($a_radio_entries, OPTION("Mode"), sub {
 		my ($action) = @_;
 		$self->{config}->set_option('Mode', $action->get_current_value);
 		$self->switch_mode;
@@ -300,13 +309,13 @@ sub init_main_window {
 	$self->{uimanager}->insert_action_group($actions, 0);
 
 	my $accels = $self->{uimanager}->get_accel_group;
-	$self->{main_window}->add_accel_group($accels);
+	MAINWINDOW->add_accel_group($accels);
 
 	$self->{menubar} = $self->{uimanager}->get_widget("/ui/menubar");
  	$self->{main_window_vbox}->pack_start($self->{menubar}, 0, 0, 0);
 
 	$self->{toolbar} = $self->{uimanager}->get_widget("/ui/toolbar");
-	$self->{toolbar}->set_style('GTK_TOOLBAR_TEXT');
+	$self->{toolbar}->set_style('GTK_TOOLBAR_ICONS');
 	$self->{sync_button} = $self->{uimanager}->get_widget("/ui/toolbar/Synchronize");
 	$self->{main_window_vbox}->pack_start($self->{toolbar}, 0, 0, 0);
 
@@ -329,36 +338,37 @@ sub init_main_window {
 	$bookmarks_menu->set_submenu($bookmarks->generate_bookmarks_menu);
 	$bookmarks_menu->show;
 
-	$self->{filepane1}->open_path_helper(
+	$self->{filepane1}->open_path(
 		(defined $ARGV[0] and -d $ARGV[0])
 		? $ARGV[0]
-		: $self->{config}->get_option('PathLeft')
+		: OPTION('PathLeft')
 	);
 
-	$self->{filepane2}->open_path_helper(
+	$self->{filepane2}->open_path(
 		(defined $ARGV[1] and -d $ARGV[1])
 		? $ARGV[1]
-		: $self->{config}->get_option('PathRight')
+		: OPTION('PathRight')
 	);
 
-	$self->{main_window}->show_all;
+	MAINWINDOW->show_all;
 
 	$self->{sync_button}->hide;
 	$self->{treepane}->get_vbox->hide;
 	$self->{filepane1}->get_vbox->hide;
 	$self->{filepane2}->get_vbox->show;
 	
-	$self->{pane}->[$LEFT]  = $self->{filepane1};
-	$self->{pane}->[$RIGHT] = $self->{filepane2};
+	PANELEFT  = $self->{filepane1};
+	PANERIGHT = $self->{filepane2};
 
-	$self->{fm}->[$LEFT] = Filer::Monitor->new($self->{pane}->[$LEFT]);
-	$self->{fm}->[$RIGHT] = Filer::Monitor->new($self->{pane}->[$RIGHT]);
+	$self->{fm}->[$LEFT] = Filer::Monitor->new(PANELEFT);
+	$self->{fm}->[$RIGHT] = Filer::Monitor->new(PANERIGHT);
 
 	$self->{fm}->[$LEFT]->start_monitoring;
 	$self->{fm}->[$RIGHT]->start_monitoring;
 
 	$self->switch_mode;
-	$self->change_active_pane($RIGHT);
+
+	PANERIGHT->set_focus;
 }
 
 sub get_uimanager {
@@ -381,14 +391,26 @@ sub change_active_pane {
 
 	$self->{active_pane}   = $self->{pane}->[ $side];
 	$self->{inactive_pane} = $self->{pane}->[!$side];
+
+# 	print "active_pane: $self->{pane}->[ $side]\n";
+# 	print "inactive_pane: $self->{pane}->[ !$side]\n";
+}
+
+sub get_left_pane {
+	my ($self) = @_;
+	return PANELEFT;
+}
+
+sub get_right_pane {
+	my ($self) = @_;
+	return PANERIGHT;
 }
 
 sub window_event_cb {
 	my ($self,$w,$e,$d) = @_;
 
 	if (($e->type eq "key-press" and $e->keyval == $Gtk2::Gdk::Keysyms{'Tab'})) {
-		my $side = $self->{inactive_pane}->get_side;
-		$self->change_active_pane($side);
+		$self->{inactive_pane}->set_focus;
 		return 1;
 	}
 
@@ -401,7 +423,7 @@ sub quit_cb {
 	$self->{config}->set_options(
 		'PathLeft'   => $self->{filepane1}->get_pwd,
 		'PathRight'  => $self->{filepane2}->get_pwd,
-		'WindowSize' => join ":", $self->{main_window}->get_size,
+		'WindowSize' => join ":", MAINWINDOW->get_size,
 	);
 
  	Gtk2->main_quit;
@@ -425,53 +447,43 @@ sub about_cb {
 		"Bjoern Martensen <bjoern.martensen\@gmail.com>"
 	);
 
-#	$dialog->set_artists("Crystal SVG 16x16 mimetype icons by Everaldo (http://www.everaldo.com)");
-
 	$dialog->show;
 }
 
 sub open_cb {
 	my ($self) = @_;
 
-	my $mode = $self->{config}->get_option('Mode');
+	my $mode = OPTION('Mode');
 	my $pane =
 		($mode == $NORTON_COMMANDER_MODE) 
 		? $self->{active_pane} 
-		: $self->{pane}->[$RIGHT];
+		: PANERIGHT;
 
-	$pane->open_file($pane->get_fileinfo_list->[0]);
+	$pane->open_file(FILEINFO_LIST->[0]);
 }
 
 sub open_with_cb {
 	my ($self) = @_;
 
-	my $mode = $self->{config}->get_option('Mode');
+	my $mode = OPTION('Mode');
 	my $pane =
 		($mode == $NORTON_COMMANDER_MODE) 
 		? $self->{active_pane} 
-		: $self->{pane}->[$RIGHT];
+		: PANERIGHT;
 
-	$pane->open_file_with($pane->get_fileinfo_list->[0]);
+	$pane->open_file_with(FILEINFO_LIST->[0]);
 }
 
 sub open_terminal_cb {
 	my ($self) = @_;
 	my $path = $self->{active_pane}->get_pwd;
-
-	if (-d $path) {
-#		my $term = $self->{config}->get_option("Terminal");
-#		Filer::Tools->exec(command => "$term --working-directory $path", wait => 0);
-#		Filer::Tools->exec(command => "cd $path && $term", wait => 0);
-# 		Filer::Tools->exec(command => "exo-open --launch TerminalEmulator", wait => 0);
-
-		Filer::Tools->exec(command => "Terminal --working-directory $path", wait => 0);
-	}
+	Filer::Tools->exec(command => "Terminal --working-directory $path", wait => 0);
 }
 
 sub switch_mode {
 	my ($self) = @_;
 
-	if ($self->{config}->get_option('Mode') == $EXPLORER_MODE) {
+	if (OPTION('Mode') == $EXPLORER_MODE) {
 		$self->{filepane2}->get_location_bar->hide;
 
 		$self->{sync_button}->hide;
@@ -481,7 +493,7 @@ sub switch_mode {
 		$self->{filepane1}->get_navigation_box->hide;
 		$self->{filepane2}->get_navigation_box->show;
 
-		$self->{pane}->[$LEFT] = $self->{treepane};
+		PANELEFT = $self->{treepane};
 	} else {
 		$self->{filepane2}->get_location_bar->show;
 
@@ -492,7 +504,7 @@ sub switch_mode {
  		$self->{filepane1}->get_navigation_box->hide;
  		$self->{filepane2}->get_navigation_box->hide;
 
-		$self->{pane}->[$LEFT] = $self->{filepane1};
+		PANELEFT = $self->{filepane1};
 	}
 }
 
@@ -502,8 +514,8 @@ sub hidden_cb {
 	my $opt = ($action->get_active) ? 1 : 0;
 	$self->{config}->set_option('ShowHiddenFiles', $opt);
 
-	$self->{pane}->[$LEFT]->set_show_hidden($opt);
-	$self->{pane}->[$RIGHT]->set_show_hidden($opt);
+	PANELEFT->set_show_hidden($opt);
+	PANERIGHT->set_show_hidden($opt);
 
 	return 1;
 }
@@ -525,7 +537,7 @@ sub ask_delete_cb {
 
 # sub set_terminal_cb {
 # 	my ($self) = @_;
-# 	my $term = Filer::Dialog->ask_command_dialog("Set Terminal", $self->{config}->get_option('Terminal'));
+# 	my $term = Filer::Dialog->ask_command_dialog("Set Terminal", OPTION('Terminal'));
 # 	$self->{config}->set_option('Terminal', $term);
 # }
 
@@ -545,25 +557,25 @@ sub refresh_cb {
 
 sub go_home_cb {
 	my ($self) = @_;
-	my $opt  = $self->{config}->get_option('Mode');
+	my $opt  = OPTION('Mode');
 	my $pane =
 		($opt == $NORTON_COMMANDER_MODE)
 		? $self->{active_pane}
-		: $self->{pane}->[$RIGHT];
+		: PANERIGHT;
 
-	$pane->open_path_helper($HOMEDIR);
+	$pane->open_path($HOMEDIR);
 }
 
 sub synchronize_cb {
 	my ($self) = @_;
-	$self->{inactive_pane}->open_path_helper($self->{active_pane}->get_pwd);
+	$self->{inactive_pane}->open_path($self->{active_pane}->get_pwd);
 }
 
 sub select_cb {
 	my ($self) = @_;
 	my $pane =
 		($self->{active_pane}->get_type eq "TREE")
-		? $self->{pane}->[$RIGHT]
+		? PANERIGHT
 		: $self->{active_pane};
 
 	$pane->select_dialog;
@@ -573,7 +585,7 @@ sub unselect_cb {
 	my ($self) = @_;
 	my $pane =
 		($self->{active_pane}->get_type eq "TREE")
-		? $self->{pane}->[$RIGHT]
+		? PANERIGHT
 		: $self->{active_pane};
 
 	$pane->unselect_dialog;
@@ -642,7 +654,7 @@ sub rename_cb {
 
 	return if ($pane->count_items == 0);
 
-	my $fileinfo = $pane->get_fileinfo_list->[0];
+	my $fileinfo = FILEINFO_LIST->[0];
 
 	$dialog = Filer::DefaultDialog->new("Rename");
 
@@ -655,7 +667,7 @@ sub rename_cb {
 
 	$entry = Gtk2::Entry->new;
 	$entry->set_text($fileinfo->get_basename);
-	$entry->set_activates_default(1);
+	$entry->set_activates_default($TRUE);
 	$hbox->pack_start($entry, 1,1,0);
 
 	$dialog->show_all;
@@ -672,7 +684,7 @@ sub rename_cb {
 		}
 
 		if (!rename($old,$new)) {
-			Filer::Dialog->msgbox_error("Rename failed: $!");
+			MSGBOX_ERROR("Rename failed: $!");
 		}
 	}
 
@@ -686,14 +698,14 @@ sub delete_cb {
 
 	return if ($items_count == 0);
 
-	if ($self->{config}->get_option("ConfirmDelete") == 1) {
+	if (OPTION("ConfirmDelete") == 1) {
 
 		my $message =
 		 ($items_count == 1)
 		 ? "Delete \"$items->[0]\"?"
 		 : "Delete $items_count selected files?";
 
-		return if (Filer::Dialog->yesno_dialog($message) eq 'no');
+		return if (ASK($message) eq 'no');
 	}
 
 	$self->{fm}->[$LEFT]->stop_monitoring;
@@ -721,7 +733,7 @@ sub mkdir_cb {
 
 	$entry = Gtk2::Entry->new;
 	$entry->set_text("New_Folder");
-	$entry->set_activates_default(1);
+	$entry->set_activates_default($TRUE);
 	$dialog->vbox->pack_start($entry, 1,1,0);
 
 	$dialog->show_all;
@@ -730,7 +742,7 @@ sub mkdir_cb {
 		my $dir  = Filer::Tools->catpath($self->{active_pane}->get_pwd, $entry->get_text);
 
 		if (!mkdir($dir)) {
-			Filer::Dialog->msgbox_error("Make directory $dir failed: $!");
+			MSGBOX_ERROR("Make directory $dir failed: $!");
 		}
 	}
 
@@ -742,8 +754,6 @@ sub symlink_cb {
 
 	return if ($self->{active_pane}->count_items == 0);
 
-	my ($dialog,$symlink_label,$target_label,$symlink_entry,$target_entry) = Filer::Dialog->source_target_dialog;
-
 	my $active_pwd      = $self->{active_pane}->get_pwd;
 	my $inactive_pwd    = $self->{inactive_pane}->get_pwd;
 
@@ -751,17 +761,21 @@ sub symlink_cb {
 	my $active_selected = $fi->get_path;
 	my $active_basename = $fi->get_basename;	
 
-	$dialog->set_title("Symlink");
+	my $dialog = Filer::SourceTargetDialog->new("Symlink");
 
+	my $symlink_label = $dialog->get_source_label;
 	$symlink_label->set_markup("<b>Symlink: </b>");
+
+	my $symlink_entry = $dialog->get_source_entry;
 	$symlink_entry->set_text(Filer::Tools->catpath($inactive_pwd, $active_basename));
-	$symlink_entry->set_activates_default(1);
+	$symlink_entry->set_activates_default($TRUE);
 
+	my $target_label = $dialog->get_target_label;
 	$target_label->set_markup("<b>linked object: </b>");
-	$target_entry->set_text($active_selected);
-	$target_entry->set_activates_default(1);
 
-	$dialog->show_all;
+	my $target_entry  = $dialog->get_target_entry;
+	$target_entry->set_text($active_selected);
+	$target_entry->set_activates_default($TRUE);
 
 	if ($dialog->run eq 'ok') {
 		my $symlink = $symlink_entry->get_text;
@@ -772,7 +786,7 @@ sub symlink_cb {
 		}
 
 		if (!symlink($target, $symlink)) {
-			Filer::Dialog->msgbox_error("Couldn't create symlink! $!");
+			MSGBOX_ERROR("Couldn't create symlink! $!");
 		}
 	}
 
@@ -782,7 +796,7 @@ sub symlink_cb {
 sub get_clipboard_contents {
 	my ($self) = @_;
 
-# 	my $display        = $self->{main_window}->get_display;
+# 	my $display        = MAINWINDOW->get_display;
 # 	my $clipboard_atom = Gtk2::Gdk::Atom->new('CLIPBOARD');
 # 	my $clipboard      = Gtk2::Clipboard->get_for_display($display, $clipboard_atom);
 # 
@@ -804,7 +818,7 @@ sub get_clipboard_contents {
 sub set_clipboard_contents {
 	my ($self,$contents) = @_;
 
-# 	my $display        = $self->{main_window}->get_display;
+# 	my $display        = MAINWINDOW->get_display;
 # 	my $clipboard_atom = Gtk2::Gdk::Atom->new('CLIPBOARD');
 # 	my $clipboard      = Gtk2::Clipboard->get_for_display($display, $clipboard_atom);
 # 

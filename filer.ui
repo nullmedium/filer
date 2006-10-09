@@ -87,7 +87,7 @@
     </placeholder>
     <separator/>
     <placeholder name="PopupItems2">
-      <menuitem name="Open Terminal" action="open-terminal-action"/>
+      <menuitem name="OpenTerminal" action="open-terminal-action"/>
     </placeholder>
 <!--
     <separator/>

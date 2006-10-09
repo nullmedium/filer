@@ -37,9 +37,7 @@ sub new {
 
 	$self->{active_pane} = $filer->get_active_pane;
 
-	my ($table,$label,$checkbutton,$entry);
-	my ($frame,$type_label,$icon_image,$icon_entry,$icon_browse_button);
-	my ($button,$alignment,$hbox,$vbox);
+	my ($table,$frame,$label,$button,$vbox);
 
 	$self->set_has_separator(1);
 	$self->set_position('center');
@@ -63,6 +61,16 @@ sub new {
 	$label->set_alignment(0.0,0.0);
 	$table->attach($label, 0, 1, 1, 2, [ "fill" ], [ ], 0, 0);
 
+	$label = new Gtk2::Label("<b>Mimetype:</b>");
+	$label->set_use_markup(1);
+	$label->set_alignment(0.0,0.0);
+	$table->attach($label, 0, 1, 2, 3, [ "fill" ], [ ], 0, 0);
+
+	$label = new Gtk2::Label("<b>Open with:</b>");
+	$label->set_use_markup(1);
+	$label->set_alignment(0.0,0.0);
+	$table->attach($label, 0, 1, 3, 4, [ "fill" ], [ ], 0, 0);
+
 	$self->{path_label} = new Gtk2::Label;
 	$self->{path_label}->set_alignment(0.0,0.0);
 	$self->{path_label}->set_ellipsize('PANGO_ELLIPSIZE_MIDDLE');
@@ -71,6 +79,21 @@ sub new {
 	$self->{size_label} = new Gtk2::Label;
 	$self->{size_label}->set_alignment(0.0,0.0);
 	$table->attach($self->{size_label}, 1, 2, 1, 2, [ "fill" ], [ ], 0, 0);
+
+	$self->{mimetype_label} = new Gtk2::Label;
+	$self->{mimetype_label}->set_alignment(0.0,0.0);
+	$table->attach($self->{mimetype_label}, 1, 2, 2, 3, [ "fill" ], [ ], 0, 0);
+
+	$self->{openw_label} = new Gtk2::Label;
+	$self->{openw_label}->set_alignment(0.0,0.0);
+	$table->attach($self->{openw_label}, 1, 2, 3, 4, [ "fill" ], [ ], 0, 0);
+
+	$self->{openw_button} = new Gtk2::Button("Change");
+	$self->{openw_button}->signal_connect(clicked => sub {
+		Filer::Dialog->open_with_dialog($self->{fileinfo});
+		$self->init;
+	});
+	$table->attach($self->{openw_button}, 2, 3, 3, 4, [ "fill" ], [ ], 0, 0);
 
 	# Permissions
 
@@ -221,7 +244,7 @@ sub new {
 sub init {
 	my ($self) = @_;
 
-	$self->{fileinfo} = $self->{active_pane}->get_fileinfo_list->[0];
+	$self->{fileinfo}    = $self->{active_pane}->get_fileinfo_list->[0];
 	$self->{owner} = $self->{fileinfo}->get_uid;
 	$self->{group} = $self->{fileinfo}->get_gid;
 
@@ -231,6 +254,7 @@ sub init {
 	open (my $passwd_h, "/etc/passwd") || die "/etc/passwd: $!";
 	while (<$passwd_h>) {
 		chomp;
+		next if (!$_);
 		my ($user) = split ":";
 		push @users, $user;
 	}
@@ -239,6 +263,7 @@ sub init {
 	open (my $group_h, "/etc/group") || die "/etc/group: $!";
 	while (<$group_h>) {
 		chomp;
+		next if (!$_);
 		my ($group) = split ":";
 		push @groups, $group;
 	}
@@ -262,6 +287,12 @@ sub init {
 	$self->{oth_w_cb}->set_active($S_IWOTH & $mode);
 	$self->{oth_x_cb}->set_active($S_IXOTH & $mode);
 
+	if ($self->{fileinfo}->is_dir) {
+		$self->{own_x_cb}->set_label("Search");
+		$self->{grp_x_cb}->set_label("Search");
+		$self->{oth_x_cb}->set_label("Search");
+	}
+
 	$self->{owner_combo}->insert_text(0, $self->{owner});
 	$self->{owner_combo}->append_text($_) for (sort @users);
 	$self->{owner_combo}->set_sensitive(($ENV{USER} eq 'root') ? 1 : 0);
@@ -272,13 +303,19 @@ sub init {
 	$self->{group_combo}->set_active(0);
 
 	$self->{path_label}->set_text($self->{fileinfo}->get_path);
+	$self->{mimetype_label}->set_text($self->{fileinfo}->get_mimetype);
 
 	if ($self->{fileinfo}->is_dir) {
 		my $thread = threads->create(sub {
 			$self->deep_count;
 		});
+
+		$self->{openw_label}->hide;
+		$self->{openw_button}->hide;
 	} else {
 		$self->{size_label}->set_text($self->{fileinfo}->get_size . " (" . $self->{fileinfo}->get_raw_size . " Bytes)");
+
+		$self->{openw_label}->set_text($self->{fileinfo}->get_mimetype_handler);
 	}
 }
 
@@ -286,7 +323,7 @@ sub ok {
 	my ($self) = @_;
 
 	my @files = @{$self->{active_pane}->get_item_list};
-	my $mode  = oct(($self->{properties_mode} * 1000) + ($self->{owner_mode} * 100) +  ($self->{group_mode} * 10) + ($self->{other_mode}));
+	my $mode  = oct(($self->{properties_mode} * 1000) + ($self->{owner_mode} * 100) + ($self->{group_mode} * 10) + ($self->{other_mode}));
 	my $uid   = getpwnam($self->{owner_combo}->get_active_text);
 	my $gid   = getgrnam($self->{group_combo}->get_active_text);
 
@@ -298,16 +335,13 @@ sub ok {
 
 	if ($@) {
 		Filer::Dialog->msgbox_error("Error: $@: $!");
-		last;
 	}
 }
 
 sub mode_change {
 	my ($self,$w,$mode_ref,$x) = @_;
 	${$mode_ref} += ($w->get_active) ? $x : -$x;
-
-	print "${$mode_ref}\n";
-};
+}
 
 sub deep_count {
 	my ($self) = @_;

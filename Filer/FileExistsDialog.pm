@@ -1,7 +1,13 @@
 package Filer::FileExistsDialog;
+use base qw(Gtk2::Dialog);
 
 use warnings;
 use strict;
+
+use Prost 
+	'CATPATH'  => "Filer::Tools->catpath",
+	'FILEINFO' => "Filer::FileInfo->new"
+;
 
 our $RENAME    = 1;
 our $OVERWRITE = 2;
@@ -11,12 +17,7 @@ our $SKIP_ALL  = 4;
 sub new {
 	my ($class,$file_src,$file_dest) = @_;
 
-	my $self = bless {}, $class;
-
-	$self->{fi_src}   = Filer::FileInfo->new($file_src);
-	$self->{fi_dest}  = Filer::FileInfo->new($file_dest);
-	
-	$self->{dialog} = Gtk2::Dialog->new(
+	my $self = $class->SUPER::new(
 		"File Already Exists",
 		undef,
 		'modal',
@@ -26,11 +27,14 @@ sub new {
 		"Overwrite"   => $OVERWRITE,
 		"gtk-cancel"  => 'cancel',
 	);
+	$self = bless $self, $class;
 
-	($self->{dialog}->action_area->get_children)[2]->set_sensitive(0);
-	($self->{dialog}->action_area->get_children)[3]->set_sensitive(0);
+	$self->{fi_src}   = FILEINFO($file_src);
+	$self->{fi_dest}  = FILEINFO($file_dest);
+	
+	($self->action_area->get_children)[2]->set_sensitive(0);
 
-	$self->{dialog}->set_position('center');
+	$self->set_position('center');
 
 	my $label = Gtk2::Label->new;
 	$label->set_use_markup(1);
@@ -40,7 +44,7 @@ sub new {
 		"  modified on " . $self->{fi_dest}->get_mtime . "\n" 	
 	);
 	$label->set_alignment(0.0,0.0);
-	$self->{dialog}->vbox->pack_start($label, 1,1,5);
+	$self->vbox->pack_start($label, 1,1,5);
 
 	$label = Gtk2::Label->new;
 	$label->set_use_markup(1);
@@ -50,20 +54,20 @@ sub new {
 		"  modified on " . $self->{fi_dest}->get_mtime . "\n" 	
 	);
 	$label->set_alignment(0.0,0.0);
-	$self->{dialog}->vbox->pack_start($label, 1,1,5);
+	$self->vbox->pack_start($label, 1,1,5);
 
 	my $hbox = Gtk2::HBox->new(0,0);
-	$self->{dialog}->vbox->pack_start($hbox, 1,1,5);
+	$self->vbox->pack_start($hbox, 1,1,5);
 
 	$self->{entry} = Gtk2::Entry->new;
 	$self->{entry}->set_text($self->{fi_src}->get_basename);
 	$self->{entry}->signal_connect(changed => sub {
-		my $str = $self->get_suggested_filename;
+		my $file = $self->get_suggested_filename;
 
-		my @buttons = $self->{dialog}->action_area->get_children;
+		my @buttons = $self->action_area->get_children;
 		my $button  = $buttons[2];
 		
-		if (-e $str) {
+		if (-e $file) {
 			$button->set_sensitive(0);
 		} else {
 			$button->set_sensitive(1);
@@ -78,27 +82,14 @@ sub new {
 	});
 	$hbox->pack_start($button, 1,1,5);
 
+	$self->show_all;
 	return $self;
-}
-
-sub show {
-	my ($self) = @_;
-	
-	$self->{dialog}->show_all;
-	my $r = $self->{dialog}->run;
-	return $r;
-}
-
-sub destroy {
-	my ($self) = @_;
-
-	$self->{dialog}->destroy;
 }
 
 sub get_suggested_filename {
 	my ($self) = @_;
 
-	return Filer::Tools->catpath($self->{fi_dest}->get_dirname, $self->{entry}->get_text);
+	return CATPATH($self->{fi_dest}->get_dirname, $self->{entry}->get_text);
 }
 
 1;
