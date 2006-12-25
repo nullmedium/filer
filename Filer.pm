@@ -348,17 +348,17 @@ sub init_main_window {
 	$self->{filepane2}->get_vbox->show;
 	
 	$self->{pane}->[$LEFT]  = $self->{filepane1};
-	PANERIGHT = $self->{filepane2};
+	$self->{pane}->[$RIGHT] = $self->{filepane2};
 
 	$self->{fm}->[$LEFT] = Filer::Monitor->new($self->{pane}->[$LEFT]);
-	$self->{fm}->[$RIGHT] = Filer::Monitor->new(PANERIGHT);
+	$self->{fm}->[$RIGHT] = Filer::Monitor->new($self->{pane}->[$RIGHT]);
 
 	$self->{fm}->[$LEFT]->start_monitoring;
 	$self->{fm}->[$RIGHT]->start_monitoring;
 
 	$self->switch_mode;
 
-	PANERIGHT->set_focus;
+	$self->{pane}->[$RIGHT]->set_focus;
 }
 
 sub get_uimanager {
@@ -393,7 +393,7 @@ sub get_left_pane {
 
 sub get_right_pane {
 	my ($self) = @_;
-	return PANERIGHT;
+	return $self->{pane}->[$RIGHT];
 }
 
 sub window_event_cb {
@@ -447,7 +447,7 @@ sub open_cb {
 	my $pane =
 		($mode == $NORTON_COMMANDER_MODE) 
 		? $self->{active_pane} 
-		: PANERIGHT;
+		: $self->{pane}->[$RIGHT];
 
 	$pane->open_file($pane->get_fileinfo_list->[0]);
 }
@@ -459,7 +459,7 @@ sub open_with_cb {
 	my $pane =
 		($mode == $NORTON_COMMANDER_MODE) 
 		? $self->{active_pane} 
-		: PANERIGHT;
+		: $self->{pane}->[$RIGHT];
 
 	$pane->open_file_with($pane->get_fileinfo_list->[0]);
 }
