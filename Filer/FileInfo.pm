@@ -45,6 +45,7 @@ sub new {
 	my $self = bless {}, $class;
 
 	$self->{filepath} = $filepath;
+	$self->{basename} = basename($filepath);
 
 	return $self;
 }
@@ -111,7 +112,7 @@ sub get_mimetype_icon {
 	my ($self) = @_;
 	my $icon = Filer::MimeTypeIcon->new($self->get_mimetype);
 
-	my $pixbuf = $icon->get_icon;
+	my $pixbuf = $icon->get_pixbuf;
 
 	if ($self->is_hidden) {
 		$pixbuf->saturate_and_pixelate($pixbuf, 0.5, $TRUE)

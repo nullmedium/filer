@@ -115,10 +115,11 @@ sub copy {
 		}
 
 		$self->update_progress_label("$file\n$my_dest");
+
  		return $filecopy->filecopy($file,$my_dest);
  	});
 
-	$self->set_total_bytes(Filer::Tools->deep_count_bytes($FILES));
+	$self->set_total(Filer::Tools->deep_count_bytes($FILES));
 	$self->show_job_dialog;
 
 	foreach my $source (@{$FILES}) {

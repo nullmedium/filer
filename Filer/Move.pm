@@ -151,12 +151,11 @@ sub move_by_copy_delete {
 		unlink($file) || return File::DirWalk::FAILED;
 
 		$self->update_progress_label("$file\n$my_dest");
- 		$self->update_progressbar($self->completed_bytes/$self->total_bytes);
 
 		return File::DirWalk::SUCCESS;
  	});
 
-	$self->set_total_bytes(Filer::Tools->deep_count_bytes($FILES));
+	$self->set_total(Filer::Tools->deep_count_bytes($FILES));
 	$self->show_job_dialog;
 
 	foreach my $source (@{$FILES}) {

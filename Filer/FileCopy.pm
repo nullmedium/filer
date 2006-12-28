@@ -52,8 +52,7 @@ sub filecopy {
 			$t = syswrite($out_fh, $buf, $r - $w, $w)
 				or return File::DirWalk::FAILED;
 
-			$self->{job}->set_completed_bytes($self->{job}->completed_bytes + $t);
-			$self->{job}->update_progressbar($self->{job}->completed_bytes/$self->{job}->total_bytes);
+			$self->{job}->set_completed($self->{job}->get_completed + $t);
 		}
 	}
 

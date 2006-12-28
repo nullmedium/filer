@@ -22,7 +22,6 @@ use strict;
 use Gtk2;
 
 use Date::Format qw(strftime time2str);
-# use Date::Calc qw(Delta_Days);
 
 use Glib::Object::Subclass
 	"Gtk2::CellRenderer",
@@ -45,33 +44,7 @@ sub get_date_string {
 	my $seconds    = $cell->get('seconds');
 	my $dateformat = $cell->get('dateformat');
 
-# 	my @now  = localtime(time());
-# 	my @then = localtime($seconds);
-# 
-# 	my $d = Delta_Days(1900 + $then[5],$then[4]+1,$then[3], 1900 + $now[5], $now[4]+1, $now[3]);
-# 	
-# 	if ($d == 0) {
-# 
-# 		return "Today";
-# 
-# 	} elsif ($d == 1) {
-# 
-# 		return "Yesterday";
-# 
-# 	} else {
-# 		my $date; 
-# 
-# 		if ($d > 1 && $d < 7) {
-# 
-# 			$date = time2str("%A", $seconds);
-# 
-# 		} else {
-
-			my $date = time2str($dateformat, $seconds);
-# 		}
-# 
-# 		return $date;
-# 	}
+	my $date = time2str($dateformat, $seconds);
 
 	return $date;
 }

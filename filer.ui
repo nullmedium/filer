@@ -42,10 +42,6 @@
 	<menuitem name="Deleting" action="ask-deleting-action" />
       </menu>
       <menuitem name="ShowHidden" action="show-hidden-action" />
-      <separator/>
-<!--      <menuitem name="SetTerminal" action="set-terminal-action" />
-      <separator/> -->
-<!--      <menuitem name="FileAssoc" action="file-assoc-action" /> -->
     </menu>
 
     <menu name="help-menu" action="HelpMenuAction">
@@ -89,14 +85,6 @@
     <placeholder name="PopupItems2">
       <menuitem name="OpenTerminal" action="open-terminal-action"/>
     </placeholder>
-<!--
-    <separator/>
-    <menu name="archive-menu" action="ArchiveMenuAction">
-      <menuitem name="CreateTGZ" action="create-tgz-action"/>
-      <menuitem name="CreateTBZ2" action="create-tbz2-action"/>
-      <menuitem name="Extract" action="extract-action"/>
-    </menu>
--->
     <menuitem name="Bookmarks" action="BookmarksMenuAction"/>
     <separator/>
     <menuitem name="Properties" action="properties-action"/>

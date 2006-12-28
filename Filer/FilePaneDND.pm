@@ -99,6 +99,8 @@ sub drag_data_received {
 	}
 
 	$context->finish (0, 0, $time);
+
+	$self->refresh;
 }
 
 # sub drag_motion {

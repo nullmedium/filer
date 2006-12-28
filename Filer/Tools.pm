@@ -9,20 +9,11 @@ use File::Spec;
 use Proc::Simple;
 
 sub exec {
-	my ($self,%opts) = @_;
+	my ($self,$cmd) = @_;
 
-	my $cmd  = $opts{command} || die "no command defined!";
-	my $wait = $opts{wait};
-
-	my $myproc = Proc::Simple->new();        # Create a new process object
+	my $myproc = Proc::Simple->new();
 	$myproc->start($cmd);
-
-	if ($wait) {
-		while ($myproc->poll()) {};           # Poll Running Process
-	}
 }
-
-####
 
 sub catpath {
 	my ($self,$dir,@p) = @_;
@@ -142,15 +133,5 @@ sub _deep_count_bytes {
 # 		return $self->scale_simple($w, $h, 'GDK_INTERP_BILINEAR');
 # 	}
 # }
-
-package Gtk2::ComboBox;
-
-sub set_popdown_strings {
-	my ($self,@strings) = @_;
-	
-	foreach (@strings) {
-		$self->append_text($_);
-	}
-}
 
 1;

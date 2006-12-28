@@ -41,9 +41,7 @@ require Filer::Directory;
 require Filer::FileInfo;
 require Filer::MimeTypeIcon;
 require Filer::MimeTypeHandler;
-require Filer::Monitor;
 require Filer::Tools;
-require Filer::Archive;
 
 require Filer::Dialog;
 require Filer::DefaultDialog;
@@ -72,7 +70,7 @@ sub new {
 	my ($class) = @_;
 	my $self = bless {}, $class;
 
-	$self->{VERSION} = "0.0.13-svn";
+	$self->{VERSION} = "0.0.15-svn";
 
 	return $self;
 }
@@ -230,21 +228,6 @@ sub init_main_window {
 		label => "Synchronize",
 		tooltip => "Synchronize Folders",
 		callback => sub { $self->synchronize_cb },
-# 	},{
-# 		name => "ArchiveMenuAction",
-# 		label => "Archive",
-# 	},{
-# 		name => "create-tgz-action",
-# 		label => "Create tar.gz",
-# 		callback => sub { $self->{active_pane}->create_tar_gz_archive; }
-# 	},{
-# 		name => "create-tbz2-action",
-# 		label => "Create tar.bz2",
-# 		callback => sub { $self->{active_pane}->create_tar_bz2_archive; }
-# 	},{
-# 		name => "extract-action",
-# 		label => "Extract",
-# 		callback => sub { $self->{active_pane}->extract_archive; }
 	},{
 		name => "properties-action",
 		stock_id => "gtk-properties",
@@ -350,12 +333,6 @@ sub init_main_window {
 	$self->{pane}->[$LEFT]  = $self->{filepane1};
 	$self->{pane}->[$RIGHT] = $self->{filepane2};
 
-	$self->{fm}->[$LEFT] = Filer::Monitor->new($self->{pane}->[$LEFT]);
-	$self->{fm}->[$RIGHT] = Filer::Monitor->new($self->{pane}->[$RIGHT]);
-
-	$self->{fm}->[$LEFT]->start_monitoring;
-	$self->{fm}->[$RIGHT]->start_monitoring;
-
 	$self->switch_mode;
 
 	$self->{pane}->[$RIGHT]->set_focus;
@@ -381,9 +358,6 @@ sub change_active_pane {
 
 	$self->{active_pane}   = $self->{pane}->[ $side];
 	$self->{inactive_pane} = $self->{pane}->[!$side];
-
-# 	print "active_pane: $self->{pane}->[ $side]\n";
-# 	print "inactive_pane: $self->{pane}->[ !$side]\n";
 }
 
 sub get_left_pane {
@@ -467,7 +441,7 @@ sub open_with_cb {
 sub open_terminal_cb {
 	my ($self) = @_;
 	my $path = $self->{active_pane}->get_pwd;
-	Filer::Tools->exec(command => "Terminal --working-directory $path", wait => 0);
+	Filer::Tools->exec("Terminal --working-directory $path");
 }
 
 sub switch_mode {
@@ -524,12 +498,6 @@ sub ask_delete_cb {
 	my ($self,$action) = @_;
 	$self->{config}->set_option('ConfirmDelete', ($action->get_active) ? 1 : 0);
 }
-
-# sub set_terminal_cb {
-# 	my ($self) = @_;
-# 	my $term = Filer::Dialog->ask_command_dialog("Set Terminal", $self->{config}->get_option('Terminal'));
-# 	$self->{config}->set_option('Terminal', $term);
-# }
 
 sub set_properties {
 	my ($self) = @_;
@@ -596,9 +564,6 @@ sub paste_cb {
 	my $dest   = $self->{active_pane}->get_pwd;
 	my $do;
 
-	$self->{fm}->[$LEFT]->stop_monitoring;
-	$self->{fm}->[$RIGHT]->stop_monitoring;
-
 	if ($action eq "copy") {
 
 		$do = Filer::Copy->new;
@@ -612,8 +577,6 @@ sub paste_cb {
 	}
 
 	$self->refresh_cb;
-	$self->{fm}->[$LEFT]->start_monitoring;
-	$self->{fm}->[$RIGHT]->start_monitoring;
 }
 
 sub cut_cb {
@@ -698,16 +661,10 @@ sub delete_cb {
 		return if (Filer::Dialog->yesno_dialog($message) eq 'no');
 	}
 
-	$self->{fm}->[$LEFT]->stop_monitoring;
-	$self->{fm}->[$RIGHT]->stop_monitoring;
-
-
 	my $delete = Filer::Delete->new;
 	$delete->delete($items);
 
 	$self->refresh_cb;
-	$self->{fm}->[$LEFT]->start_monitoring;
-	$self->{fm}->[$RIGHT]->start_monitoring;
 }
 
 sub mkdir_cb {
@@ -737,6 +694,8 @@ sub mkdir_cb {
 	}
 
 	$dialog->destroy;
+
+	$self->refresh_cb;
 }
 
 sub symlink_cb {
@@ -781,39 +740,18 @@ sub symlink_cb {
 	}
 
 	$dialog->destroy;
+
+	$self->refresh_cb;
 }
 
 sub get_clipboard_contents {
 	my ($self) = @_;
-
-# 	my $display        = $self->{main_window}->get_display;
-# 	my $clipboard_atom = Gtk2::Gdk::Atom->new('CLIPBOARD');
-# 	my $clipboard      = Gtk2::Clipboard->get_for_display($display, $clipboard_atom);
-# 
-# 	my $contents = "";
-# 
-# 	$clipboard->request_text(sub {
-# 		my ($c,$t) = @_;
-# 		return if (!$t);
-# 
-# 		$contents = $t;
-# 	});
-# 
-# 	return $contents;
-	
 	my $c = Clipboard->paste;
 	return $c;
 }
 
 sub set_clipboard_contents {
 	my ($self,$contents) = @_;
-
-# 	my $display        = $self->{main_window}->get_display;
-# 	my $clipboard_atom = Gtk2::Gdk::Atom->new('CLIPBOARD');
-# 	my $clipboard      = Gtk2::Clipboard->get_for_display($display, $clipboard_atom);
-# 
-#  	$clipboard->set_text($contents);
-
 	Clipboard->copy($contents);
 }
 

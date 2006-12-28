@@ -76,93 +76,6 @@ sub yesno_dialog {
 	return $r;
 }
 
-# sub ask_command_dialog {
-# 	my ($class,$title,$default) = @_;
-# 	my ($dialog,$label,$entry,$button);
-# 	my $text;
-# 
-# 	$dialog = Gtk2::Dialog->new(
-# 		$title,
-# 		undef,
-# 		'modal',
-# 		'gtk-cancel' => 'cancel',
-# 		'gtk-ok'     => 'ok'
-# 	);
-# 
-# 	$dialog->set_size_request(450,150);
-# 	$dialog->set_has_separator(1);
-# 	$dialog->set_position('center');
-# 	$dialog->set_default_response('ok');
-# 
-# 	$label = Gtk2::Label->new;
-# 	$label->set_use_markup(1);
-# 	$label->set_markup($title);
-# 	$label->set_alignment(0.0,0.0);
-# 	$dialog->vbox->pack_start($label, 1,1,5);
-# 
-# 	my $hbox = Gtk2::HBox->new(0,0);
-# 	$dialog->vbox->pack_start($hbox, 0,0,5);
-# 
-# 	$entry = Gtk2::Entry->new;
-# 	$entry->set_text($default);
-# 	$entry->set_activates_default(1);
-# 	$hbox->pack_start($entry, 1,1,5);
-# 
-# 	$button = Gtk2::Button->new;
-# 	$button->add(Gtk2::Image->new_from_stock('gtk-open', 'button'));
-# 	$button->signal_connect("clicked", sub {
-# 		my $fs = Gtk2::FileChooserDialog->new(
-# 			"Select Command",
-# 			undef,
-# 			'GTK_FILE_CHOOSER_ACTION_OPEN',
-# 			'gtk-cancel' => 'cancel',
-# 			'gtk-ok'     => 'ok'
-# 		);
-# 
-# 		$fs->set_filename($entry->get_text);
-# 
-# 		if ($fs->run eq 'ok') {
-# 			$entry->set_text($fs->get_filename);
-# 		}
-# 
-# 		$fs->destroy;
-# 	});
-# 	$hbox->pack_start($button, 0,0,0);
-# 
-# 	$dialog->show_all;
-# 
-# 	if ($dialog->run eq 'ok') {
-# 		$text = $entry->get_text;
-# 	} else {
-# 		$text = $default;
-# 	}
-# 
-# 	$dialog->destroy;
-# 
-# 	return $text;
-# }
-
-sub mixed_button_new {
-	my ($self,$stock,$text) = @_;
-
-	my $button = Gtk2::Button->new;
-	my $align = Gtk2::Alignment->new(0.5, 0.5, 0.0, 0.0);
-	$button->add($align);
-
-	my $image = Gtk2::Image->new_from_stock($stock, 'button');
-	my $label = Gtk2::Label->new_with_mnemonic($text);
-	$label->set_mnemonic_widget($button);
-
-	my $hbox = Gtk2::HBox->new(0, 2);
-	$hbox->pack_start($image, 0, 0, 0);
-	$hbox->pack_end($label, 0, 0, 0);
-
-	$align->add($hbox);
-	$align->show_all;
-
-	return $button;
-}
-
 sub open_with_dialog {
 	my ($class,$fileinfo) = @_;
 
@@ -171,7 +84,7 @@ sub open_with_dialog {
 		undef,
 		'modal',
 		'gtk-close' => 'close',
-		'gtk-ok' => 'ok',
+		'gtk-ok'    => 'ok',
 	);
 
 	$dialog->set_has_separator(1);

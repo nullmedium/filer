@@ -41,6 +41,8 @@ sub new {
 	});
 
 	$self->set_cancelled($FALSE);
+	$self->set_total(0);
+	$self->set_completed(0);
 	
 	return $self;
 }
@@ -78,6 +80,27 @@ sub update_progressbar {
 	$self->{progressbar}->set_fraction($fraction);
 
 	while (Gtk2->events_pending) { Gtk2->main_iteration; }
+}
+
+sub set_total {
+	my ($self,$total) = @_;
+	$self->{progress_total} = $total;
+}
+
+sub set_completed {
+	my ($self,$completed) = @_;
+	$self->{progress_completed} = $completed;
+	$self->update_progressbar(($self->{progress_completed} + 1) / ($self->{progress_total} + 1));
+}
+
+sub get_total {
+	my ($self) = @_;
+	return $self->{progress_total};
+}
+
+sub get_completed {
+	my ($self) = @_;
+	return $self->{progress_completed};
 }
 
 1;

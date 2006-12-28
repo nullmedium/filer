@@ -54,13 +54,12 @@ sub delete {
 		unlink($_[0]) || return File::DirWalk::FAILED;
 
 		$self->update_progress_label($_[0]);
-		$self->set_deleted_files($self->deleted_files + 1);
-		$self->update_progressbar($self->deleted_files/$self->total_files);
+		$self->set_completed($self->get_completed + 1);
 
 		return File::DirWalk::SUCCESS;
 	});
 
-	$self->set_total_files(Filer::Tools->deep_count_files($FILES));
+	$self->set_total(Filer::Tools->deep_count_files($FILES));
 	$self->show_job_dialog;
 
 	foreach my $source (@{$FILES}) {

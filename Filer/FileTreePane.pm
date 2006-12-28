@@ -99,19 +99,15 @@ sub show_popup_menu {
 
 		my $popup_menu = $uimanager->get_widget($ui_path);
 
-# 		$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($TRUE);
-# 		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($TRUE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($TRUE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive($TRUE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive($TRUE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($TRUE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Paste")->set_sensitive($TRUE);
-# 		$uimanager->get_widget("$ui_path/archive-menu")->set_sensitive($TRUE);
 		$uimanager->get_widget("$ui_path/Properties")->set_sensitive($TRUE);
 
 		$uimanager->get_widget("$ui_path/PopupItems1/Open")->hide;
 		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->hide;
-# 		$uimanager->get_widget("$ui_path/archive-menu")->hide;
 
 		my $bookmarks = Filer::Bookmarks->new($self->{filer});
 		$uimanager->get_widget("$ui_path/Bookmarks")->set_submenu($bookmarks->generate_bookmarks_menu);
@@ -270,19 +266,5 @@ sub DirRead {
 	my $dummy_iter = $self->{treemodel}->iter_nth_child($parent_iter, 0);
 	$self->{treemodel}->remove($dummy_iter); # remove dummy iter
 }
-
-# sub create_tar_gz_archive {
-# 	my ($self) = @_;
-# 
-# 	my $archive = Filer::Archive->new;
-# 	$archive->create_tar_gz_archive($self->get_updir, $self->get_item_list);
-# }
-# 
-# sub create_tar_bz2_archive {
-# 	my ($self) = @_;
-# 
-# 	my $archive = Filer::Archive->new;
-# 	$archive->create_tar_bz2_archive($self->get_updir, $self->get_item_list);
-# }
 
 1;

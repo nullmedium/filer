@@ -36,8 +36,6 @@ sub new {
 	my $self = $class->SUPER::new($filer,$side);
 	$self = bless $self, $class;
 
-# 	$self->{overrides}           = {};
-
 	$self->{location_bar} = Gtk2::HBox->new(0,0);
 	$self->{vbox}->pack_start($self->{location_bar}, 0, 1, 0);
 
@@ -63,17 +61,15 @@ sub new {
 	$self->{treeview}  = Gtk2::TreeView->new($self->{treemodel});
 	$self->{treeview}->set_rules_hint($TRUE);
 	$self->{treeview}->set_enable_search($TRUE);
-	$self->{treeview}->signal_connect("grab-focus", sub { $self->treeview_grab_focus_cb(@_) });
-	$self->{treeview}->signal_connect("key-press-event", sub { $self->treeview_event_cb(@_) });
-	$self->{treeview}->signal_connect("button-press-event", sub { $self->treeview_event_cb(@_) });
-	$self->{treeview}->signal_connect("button-release-event", sub { $self->treeview_event_cb(@_) });
-	$self->{treeview}->signal_connect("motion-notify-event", sub { $self->treeview_event_cb(@_) });
+
+	$self->{treeview}->signal_connect("grab-focus",           sub { $self->treeview_grab_focus_cb(@_) });
+	$self->{treeview}->signal_connect("key-press-event",      sub { $self->treeview_event_cb(@_) });
+	$self->{treeview}->signal_connect("button-press-event",   sub { $self->treeview_event_cb(@_) });
 
 	# Drag and Drop
 	$self->{treeview}->drag_dest_set('all', ['move','copy'], $self->target_table);
 	$self->{treeview}->drag_source_set(['button1_mask','shift-mask'], ['move','copy'], $self->target_table);
-	$self->{treeview}->signal_connect("drag_data_get", sub { $self->drag_data_get(@_) });
-#	$self->{treeview}->signal_connect("drag_motion", sub { $self->drag_motion(@_) });
+	$self->{treeview}->signal_connect("drag_data_get",      sub { $self->drag_data_get(@_) });
 	$self->{treeview}->signal_connect("drag_data_received", sub { $self->drag_data_received(@_) });
 
 	$self->{treeselection} = $self->{treeview}->get_selection;
@@ -104,7 +100,7 @@ sub new {
 
 	my %cols = ();
 	$cols{$COL_SIZE} = "Size";
-#	$cols{$COL_MODE} = "Mode";
+# 	$cols{$COL_MODE} = "Mode";
 	$cols{$COL_TYPE} = "Type";
 	$cols{$COL_DATE} = "Date Modified";
 
@@ -170,10 +166,7 @@ sub show_popup_menu {
 	$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive($TRUE);
 	$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($TRUE);
 	$uimanager->get_widget("$ui_path/PopupItems1/Paste")->set_sensitive($TRUE);
-# 	$uimanager->get_widget("$ui_path/archive-menu")->set_sensitive($TRUE);
 	$uimanager->get_widget("$ui_path/Properties")->set_sensitive($TRUE);
-
-# 	$uimanager->get_widget("$ui_path/archive-menu")->hide;
 
 	my $bookmarks = Filer::Bookmarks->new($self->{filer});
 	$uimanager->get_widget("$ui_path/Bookmarks")->set_submenu($bookmarks->generate_bookmarks_menu);
@@ -183,15 +176,6 @@ sub show_popup_menu {
 
 		if ($fi->is_dir) {
 			$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
-# 		} else {
-# 			# Customize archive submenu
-# 			if ($fi->is_supported_archive) {
-# 				$uimanager->get_widget("$ui_path/archive-menu/Extract")->set_sensitive($TRUE);
-# 				$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
-# 			} else {
-# 				$uimanager->get_widget("$ui_path/archive-menu/Extract")->set_sensitive($FALSE);
-# 				$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($TRUE);
-# 			}
 		}
 	} elsif ($self->count_items > 1) {
 		$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($FALSE);
@@ -205,13 +189,13 @@ sub show_popup_menu {
 		$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($FALSE);
-		$uimanager->get_widget("$ui_path/archive-menu")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/Properties")->set_sensitive($FALSE);
 	}
 
 	$popup_menu->show_all;
 	$popup_menu->popup(undef, undef, undef, undef, $e->button, $e->time);
 }
+
 
 sub treeview_event_cb {
 	my ($self,$w,$e) = @_;
@@ -234,7 +218,6 @@ sub treeview_event_cb {
 
 	if ($e->type eq "button-press") { 
 		if ($e->button == 3) {
-
 			$self->set_focus;
 			$self->show_popup_menu($e);
 			return 1;
@@ -295,14 +278,11 @@ sub update_navigation_buttons {
 			$button->signal_connect(toggled => sub {
 				my ($widget,$path) = @_;
 
-				print "toggled: $path\n";
-
 		 		my $label = $widget->get_child;
 				my $pc    = $label->get_pango_context;
 				my $fd    = $pc->get_font_description;
 
 				if ($widget->get_active) {
-					print "get_active: $path\n";
 					$fd->set_weight('PANGO_WEIGHT_BOLD');
 					$self->DirRead($path);
 				} else {
@@ -336,17 +316,13 @@ sub open_file {
 
 	} elsif ($fileinfo->is_executable) {
 
-		Filer::Tools->exec(command => $filepath, wait => 0);
+		Filer::Tools->exec($filepath);
 
-# 	} elsif ($fileinfo->is_supported_archive) {
-# 
-# 		$self->extract_archive_temporary($filepath);
-# 
 	} else {
 		my $handler = $fileinfo->get_mimetype_handler;
 
 		if ($handler) {
-			Filer::Tools->exec(command => "$handler '$filepath'", wait => 0);
+			Filer::Tools->exec("$handler '$filepath'");
 		} else {
 			$self->open_file_with($fileinfo);
 		}
@@ -364,11 +340,9 @@ sub open_file_with {
 sub open_path {
 	my ($self,$filepath) = @_;
 
-	print "open_path: $filepath\n";
 	$self->DirRead($filepath);
 
 	if (defined $self->{navigation_buttons}->{$filepath}) {
-		print "$self->{navigation_buttons}->{$filepath}: set active\n";		
 		$self->{navigation_buttons}->{$filepath}->set(active => 1);
 	} else {
 		$self->update_navigation_buttons;
@@ -378,25 +352,12 @@ sub open_path {
 sub DirRead {
 	my ($self,$filepath) = @_;
 
-	print "DirRead: $filepath\n";
+	$self->{filepath}  = $filepath;
+	$self->{directory} = Filer::Directory->new($filepath);
 
-# 	my ($t0,$t1,$elapsed);
-#  	use Time::HiRes qw(gettimeofday tv_interval);
-#  	$t0 = [gettimeofday];
+ 	$self->{treemodel}->clear;
 
-# 	if (defined $self->{overrides}->{$filepath}) {
-# 		$filepath = $self->{overrides}->{$filepath};
-# 		delete $self->{overrides}->{$filepath};
-# 	}
-
-	$self->{treemodel}->clear;
-
-	if ($self->{filepath} ne $filepath) {
-		$self->{filepath}  = $filepath;
-		$self->{directory} = Filer::Directory->new($filepath);
-	}
-
-	my $dir_contents = $self->{directory}->all;
+ 	my $dir_contents = $self->{directory}->all;
 	
 	foreach my $fi (@{$dir_contents}) {
 		if (($self->{ShowHiddenFiles} == $FALSE) && $fi->is_hidden) {
@@ -411,10 +372,6 @@ sub DirRead {
 
 	my $status = sprintf("%d directories and %d files: %s", $self->{directory}->dirs_count, $self->{directory}->files_count, $self->{directory}->total_size);
 	$self->{status}->set_text($status);
-
-# 	$t1 = [gettimeofday];
-# 	$elapsed = tv_interval($t0,$t1);
-# 	print "time to load $filepath: $elapsed\n";
 }
 
 sub refresh {
@@ -485,40 +442,5 @@ sub _select_dialog {
 
 	$dialog->destroy;
 }
-
-# sub create_tar_gz_archive {
-# 	my ($self) = @_;
-# 
-# 	my $archive = Filer::Archive->new;
-# 	$archive->create_tar_gz_archive($self->{filepath}, $self->get_item_list);
-# 
-# 	Filer::Tools->exec(command => $cmd, wait => $FALSE);
-# }
-# 
-# sub create_tar_bz2_archive {
-# 	my ($self) = @_;
-# 
-# 	my $archive = Filer::Archive->new;
-# 	$archive->create_tar_bz2_archive($self->{filepath}, $self->get_item_list);
-# }
-# 
-# sub extract_archive {
-# 	my ($self) = @_;
-# 
-# 	my $archive = Filer::Archive->new;
-# 	$archive->extract_archive($self->{filepath}, $self->get_item_list);
-# }
-# 
-# sub extract_archive_temporary {
-# 	my ($self,$file) = @_;
-# 
-# 	my $tmpdir  = File::Temp::tempdir(CLEANUP => 1);
-# 	my $archive = Filer::Archive->new;
-# 	$archive->extract_archive($tmpdir, [ $file ]);
-# 
-# 	$self->{overrides}->{$tmpdir} = $self->{filepath};
-# 
-# 	$self->open_path($tmpdir);
-# }
 
 1;

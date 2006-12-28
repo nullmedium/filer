@@ -67,11 +67,7 @@ sub set_focus {
 
 sub treeview_grab_focus_cb {
 	my ($self) = @_;
-
-	print "treeview_grab_focus_cb: $self->{side}\n";
-
 	$self->{filer}->change_active_pane($self->{side});
-
 	return 1;
 }
 
