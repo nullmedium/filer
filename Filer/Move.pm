@@ -24,7 +24,7 @@ use Fcntl;
 use Cwd qw(abs_path);
 use File::Basename qw(dirname basename);
 
-use Filer::Constants;
+use Filer::Constants qw(:filer);
 
 sub new {
 	my ($class) = @_;
@@ -50,7 +50,13 @@ sub move_by_rename {
 	my ($self,$FILES,$DEST) = @_;
 
 	foreach my $source (@{$FILES}) {
-		my $my_dest = Filer::Tools->catpath($DEST, basename($source));
+		my $my_dest;
+
+		if (dirname($DEST) eq File::Spec->curdir) {
+			$my_dest = Filer::Tools->catpath(dirname($source), $DEST);
+		} else {
+			$my_dest = Filer::Tools->catpath($DEST, basename($source));
+		}
 
 		if (! rename($source,$my_dest)) {
 			return $FALSE;

@@ -24,7 +24,7 @@ use Cwd qw(abs_path);
 use File::Basename qw(dirname basename);
 use File::DirWalk;
 
-use Filer::Constants;
+use Filer::Constants qw(:filer);
 
 sub new {
 	my ($class) = @_;
@@ -51,7 +51,12 @@ sub copy {
 
 	$dirwalk->onDirEnter(sub {
 		my $dir = $_[0];
-		$DEST   = Filer::Tools->catpath($DEST, basename($dir));
+
+		if (dirname($DEST) eq File::Spec->curdir) {
+			$DEST = Filer::Tools->catpath(dirname($dir), $DEST);
+		} else {
+			$DEST = Filer::Tools->catpath($DEST, basename($dir));
+		}
 
 		if ((-e $DEST) and (dirname($dir) eq dirname($DEST))) {
 			$DEST = Filer::Tools->suggest_filename_helper($DEST);
@@ -69,7 +74,13 @@ sub copy {
 
 	$dirwalk->onFile(sub {
 		my $file    = $_[0];
-		my $my_dest = Filer::Tools->catpath($DEST, basename($file));
+		my $my_dest;
+		
+		if (dirname($DEST) eq File::Spec->curdir) {
+			$my_dest = Filer::Tools->catpath(dirname($file), $DEST);
+		} else {
+			$my_dest = Filer::Tools->catpath($DEST, basename($file));
+		}
 
 		if (-e $my_dest) {
 			if ($self->skip_all == $TRUE) {

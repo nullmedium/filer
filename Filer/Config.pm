@@ -21,7 +21,7 @@ use warnings;
 
 use YAML::Syck qw(LoadFile DumpFile Dump);
 
-use Filer::Constants;
+use Filer::Constants qw(:filer);
 
 my $default_config = {
 	PathLeft		=> $ENV{HOME},

@@ -24,8 +24,7 @@ use Readonly;
 use Cwd qw(abs_path);
 use File::Basename;
 
-use Filer::Constants;
-use Filer::FilePaneConstants;
+use Filer::Constants qw(:filer :filepane_columns);
 use Filer::ListStore;
 
 Readonly my $SELECT   => 0;
@@ -161,11 +160,13 @@ sub show_popup_menu {
 
 	$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($TRUE);
 	$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($TRUE);
-	$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($TRUE);
+# 	$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($TRUE);
 	$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive($TRUE);
-	$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive($TRUE);
+# 	$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive($TRUE);
+# 	$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($TRUE);
+# 	$uimanager->get_widget("$ui_path/PopupItems1/Paste")->set_sensitive($TRUE);
 	$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($TRUE);
-	$uimanager->get_widget("$ui_path/PopupItems1/Paste")->set_sensitive($TRUE);
+	$uimanager->get_widget("$ui_path/PopupItems1/Move")->set_sensitive($TRUE);
 	$uimanager->get_widget("$ui_path/Properties")->set_sensitive($TRUE);
 
 	my $bookmarks = Filer::Bookmarks->new($self->{filer});
@@ -180,15 +181,17 @@ sub show_popup_menu {
 	} elsif ($self->count_items > 1) {
 		$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
-		$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($FALSE);
+#		$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/Properties")->set_sensitive($FALSE);
 	} else {
 		$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
-		$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($FALSE);
+# 		$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive($FALSE);
-		$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive($FALSE);
+# 		$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive($FALSE);
+# 		$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($FALSE);
+		$uimanager->get_widget("$ui_path/PopupItems1/Move")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/Properties")->set_sensitive($FALSE);
 	}
 
@@ -204,14 +207,13 @@ sub treeview_event_cb {
 		if ($e->keyval == $Gtk2::Gdk::Keysyms{'BackSpace'}) {
 			$self->open_path($self->get_updir);
 			return 1;
-		} elsif ($e->keyval == $Gtk2::Gdk::Keysyms{'Delete'}) {
-
-			$self->{filer}->delete_cb;
-			return 1;
-
 		} elsif ($e->keyval == $Gtk2::Gdk::Keysyms{'Return'}) {
 
 			$self->open_file($self->get_fileinfo_list->[0]);
+			return 1;
+		} elsif ($e->keyval == $Gtk2::Gdk::Keysyms{'Delete'}) {
+
+			$self->{filer}->delete_cb;
 			return 1;
 		}
 	}
@@ -259,7 +261,7 @@ sub update_navigation_buttons {
 
 	foreach my $path (sort { length($b) <=> length($a) } keys %{$self->{navigation_buttons}}) {
 		# check if the current path button $path isn't a parentdir of $filepath
-		last if ($self->{filepath} =~ /^$path/);
+		last if (($self->{filepath} =~ /^$path/) and (-e $path));
 
 		# destroy path button
 		$self->{navigation_buttons}->{$path}->destroy;
@@ -377,6 +379,7 @@ sub DirRead {
 sub refresh {
 	my ($self) = @_;
 	$self->DirRead($self->{filepath});
+	$self->update_navigation_buttons;
 }
 
 sub select_dialog {

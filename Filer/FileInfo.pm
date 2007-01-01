@@ -25,10 +25,8 @@ use File::Basename qw(basename dirname);
 use File::MimeInfo::Magic qw(mimetype describe);
 use Stat::lsMode qw(format_mode);
 
-use Filer::Stat qw(:stat);
+use Filer::Constants qw(:filer :stat);
 use Filer::Tools;
-use Filer::Constants;
-use Filer::FilePaneConstants;
 
 # $File::MimeInfo::DEBUG = 1;
 

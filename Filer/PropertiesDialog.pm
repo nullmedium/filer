@@ -20,8 +20,7 @@ use base qw(Gtk2::Dialog);
 use strict;
 use warnings;
 
-use Filer::Constants;
-use Filer::Stat qw(:mode_t);
+use Filer::Constants qw(:mode_t);
 
 sub new {
 	my ($class,$filer) = @_;

@@ -20,7 +20,7 @@ use strict;
 use warnings;
 
 use Filer;
-use Filer::Constants;
+use Filer::Constants qw(:filer);
 
 sub new {
 	my ($class,$filer) = @_;

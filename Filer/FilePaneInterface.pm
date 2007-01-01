@@ -15,18 +15,8 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::FilePaneInterface;
-use base qw(Exporter Filer::FilePaneDND);
-use Filer::FilePaneConstants;
-
-our @EXPORT = qw(
-$COL_FILEINFO
-$COL_ICON
-$COL_NAME
-$COL_SIZE
-$COL_MODE
-$COL_TYPE
-$COL_DATE
-);
+use base qw(Filer::FilePaneDND);
+use Filer::Constants qw(:filepane_columns);
 
 # API methods shared between Filer::FilePane and Filer::FileTreePane
 

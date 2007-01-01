@@ -3,10 +3,10 @@ package Filer::ListStore;
 # use strict;
 # use warnings;
 
-use Glib qw(TRUE FALSE);
+use Glib;
 use Gtk2;
 
-use Filer::FilePaneConstants;
+use Filer::Constants qw(:filer :filepane_columns);
 
 #
 #  here we register our new type and its interfaces with the type system.
@@ -20,7 +20,7 @@ use Glib::Object::Subclass
 #  	interfaces => [qw(Gtk2::TreeModel Gtk2::TreeDragDest Gtk2::TreeDragSource)],
 
 # 	properties => [
-# 		Glib::ParamSpec->boolean("show-hidden", "Show Hidden", "Show Hidden", TRUE, [qw(readable writable)]),
+# 		Glib::ParamSpec->boolean("show-hidden", "Show Hidden", "Show Hidden", $TRUE, [qw(readable writable)]),
 # 	]
 ;
 
@@ -179,7 +179,7 @@ sub ITER_NEXT {
 }
 
 #
-# iter_children: Returns TRUE or FALSE depending on whether the row
+# iter_children: Returns $TRUE or $FALSE depending on whether the row
 #                specified by 'parent' has any children.  If it has
 #                children, then 'iter' is set to point to the first
 #                child.  Special case: if 'parent' is undef, then the
@@ -202,13 +202,13 @@ sub ITER_CHILDREN {
 }
 
 #
-# iter_has_child: Returns TRUE or FALSE depending on whether
+# iter_has_child: Returns $TRUE or $FALSE depending on whether
 #                 the row specified by 'iter' has any children.
 #                 We only have a list and thus no children.
 #
 
 sub ITER_HAS_CHILD {
-	return FALSE;
+	return $FALSE;
 }
 
 #
@@ -233,8 +233,8 @@ sub ITER_N_CHILDREN {
 
 #
 # iter_nth_child: If the row specified by 'parent' has any children,
-#                 set 'iter' to the n-th child and return TRUE if it
-#                 exists, otherwise FALSE.  A special case is when
+#                 set 'iter' to the n-th child and return $TRUE if it
+#                 exists, otherwise $FALSE.  A special case is when
 #                 'parent' is NULL, in which case we need to set 'iter'
 #                 to the n-th row if it exists.
 #
@@ -258,11 +258,11 @@ sub ITER_NTH_CHILD {
 #
 # iter_parent: Point 'iter' to the parent node of 'child'.  As we have a
 #              a list and thus no children and no parents of children,
-#              we can just return FALSE.
+#              we can just return $FALSE.
 #
 
 sub ITER_PARENT {
-	return FALSE;
+	return $FALSE;
 }
 
 #
@@ -359,7 +359,7 @@ sub sort {
 
 sub GET_SORT_COLUMN_ID {
 	my ($self) = @_;
-	return (TRUE, $self->{sort_column_id}, $self->{sort_order});
+	return ($TRUE, $self->{sort_column_id}, $self->{sort_order});
 }
 
 sub SET_SORT_COLUMN_ID {
@@ -384,7 +384,7 @@ sub SET_DEFAULT_SORT_FUNC {
 
 sub HAS_DEFAULT_SORT_FUNC {
 	my ($list) = @_;
-	return FALSE;
+	return $FALSE;
 }
 
 ################################################################################

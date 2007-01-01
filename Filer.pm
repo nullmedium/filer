@@ -33,7 +33,7 @@ use Stat::lsMode;
 
 use Clipboard;
 
-use Filer::Constants;
+use Filer::Constants qw(:filer);
 
 require Filer::Config;
 require Filer::Bookmarks;
@@ -138,30 +138,44 @@ sub init_main_window {
 	},{
 		name => "EditMenuAction",
 		label => "_Edit",
-	},{
-		name => "cut-action",
-		stock_id => "gtk-cut",
-		tooltip => "Cut Selection",
-		accelerator => "<control>X",
-		callback => sub { $self->cut_cb },
+# 	},{
+# 		name => "cut-action",
+# 		stock_id => "gtk-cut",
+# 		tooltip => "Cut Selection",
+# 		accelerator => "<control>X",
+# 		callback => sub { $self->cut_cb },
+# 	},{
+# 		name => "copy-action",
+# 		stock_id => "gtk-copy",
+# 		tooltip => "Copy Selection",
+# 		accelerator => "<control>C",
+# 		callback => sub { $self->copy_cb },
+# 	},{
+# 		name => "paste-action",
+# 		stock_id => "gtk-paste",
+# 		tooltip => "Paste Clipboard",
+# 		accelerator => "<control>V",
+# 		callback => sub { $self->paste_cb },
+
 	},{
 		name => "copy-action",
-		stock_id => "gtk-copy",
-		tooltip => "Copy Selection",
-		accelerator => "<control>C",
+		label => "Copy",
+		tooltip => "Copy selected files",
+		accelerator => "F5",
 		callback => sub { $self->copy_cb },
 	},{
-		name => "paste-action",
-		stock_id => "gtk-paste",
-		tooltip => "Paste Clipboard",
-		accelerator => "<control>V",
-		callback => sub { $self->paste_cb },
-	},{
-		name => "rename-action",
-		label => "Rename",
-		tooltip => "Rename",
+		name => "move-action",
+		label => "Move",
+		tooltip => "Move selected files",
 		accelerator => "F6",
-		callback => sub { $self->rename_cb },
+		callback => sub { $self->move_cb },
+
+# 	},{
+# 		name => "rename-action",
+# 		label => "Rename",
+# 		tooltip => "Rename",
+# 		accelerator => "F6",
+# 		callback => sub { $self->rename_cb },
 	},{
 		name => "mkdir-action",
 		label => "New folder",
@@ -288,7 +302,7 @@ sub init_main_window {
  	$self->{main_window_vbox}->pack_start($self->{menubar}, 0, 0, 0);
 
 	$self->{toolbar} = $self->{uimanager}->get_widget("/ui/toolbar");
-	$self->{toolbar}->set_style('GTK_TOOLBAR_ICONS');
+	$self->{toolbar}->set_style('GTK_TOOLBAR_TEXT');
 	$self->{sync_button} = $self->{uimanager}->get_widget("/ui/toolbar/Synchronize");
 	$self->{main_window_vbox}->pack_start($self->{toolbar}, 0, 0, 0);
 
@@ -554,95 +568,189 @@ sub search_cb {
 	Filer::Search->new($self);
 }
 
-sub paste_cb {
+# sub paste_cb {
+# 	my ($self) = @_;
+# 	my @files  = split /\n\r/, $self->get_clipboard_contents;
+# 
+# 	return if (scalar @files == 0);
+# 
+# 	my $action = pop @files;
+# 	my $dest   = $self->{active_pane}->get_pwd;
+# 	my $do;
+# 
+# 	if ($action eq "copy") {
+# 
+# 		$do = Filer::Copy->new;
+# 		$do->action(\@files, $dest);
+# 
+# 	} elsif ($action eq "cut") {
+# 		$do = Filer::Move->new;
+# 		$do->action(\@files, $dest);
+# 
+# 		$self->set_clipboard_contents("");
+# 	}
+# 
+# 	$self->refresh_cb;
+# }
+# 
+# sub cut_cb {
+# 	my ($self) = @_;
+# 	my $pane = $self->{active_pane};
+# 
+# 	return if ($pane->count_items == 0);
+# 
+# 	my $str = join "\n\r", (@{$pane->get_item_list}, "cut");
+# 	$self->set_clipboard_contents($str);
+# }
+# 
+# sub copy_cb {
+# 	my ($self) = @_;
+# 	my $pane = $self->{active_pane};
+# 
+# 	return if ($pane->count_items == 0);
+# 
+# 	my $str = join "\n\r", (@{$pane->get_item_list}, "copy");
+# 	$self->set_clipboard_contents($str);
+# }
+
+sub copy_cb {
 	my ($self) = @_;
-	my @files  = split /\n\r/, $self->get_clipboard_contents;
 
-	return if (scalar @files == 0);
+	my $items_count = $self->{active_pane}->count_items;
+	return if ($items_count == 0);
 
-	my $action = pop @files;
-	my $dest   = $self->{active_pane}->get_pwd;
-	my $do;
+ 	my $files = $self->{active_pane}->get_item_list;
+	my $dest  = $self->{inactive_pane}->get_pwd;
 
-	if ($action eq "copy") {
+	if ($items_count == 1) {
+		my $dialog = Filer::SourceTargetDialog->new("Copy");
 
-		$do = Filer::Copy->new;
-		$do->action(\@files, $dest);
+		my $label = $dialog->get_source_label;
+		$label->set_markup("<b>Copy: </b>");
 
-	} elsif ($action eq "cut") {
-		$do = Filer::Move->new;
-		$do->action(\@files, $dest);
+		my $source_entry = $dialog->get_source_entry;
+		$source_entry->set_text($files->[0]);
+		$source_entry->set_activates_default($TRUE);
 
-		$self->set_clipboard_contents("");
+		my $target_label = $dialog->get_target_label;
+		$target_label->set_markup("<b>to: </b>");
+
+		my $target_entry  = $dialog->get_target_entry;
+		$target_entry->set_text($dest);
+		$target_entry->set_activates_default($TRUE);
+
+		if ($dialog->run eq 'ok') {
+			my $target = $target_entry->get_text;
+			$dest      = $target;
+
+			$dialog->destroy;
+		} else {
+			$dialog->destroy;
+			return;
+		}
+	} else {
+		if ($self->{config}->get_option("ConfirmCopy") == $TRUE) {
+			return if (Filer::Dialog->yesno_dialog("Copy $items_count files to $dest?") eq 'no');
+		}
 	}
+
+	my $copy = Filer::Copy->new;
+	$copy->action($files, $dest);
 
 	$self->refresh_cb;
 }
 
-sub cut_cb {
+sub move_cb {
 	my ($self) = @_;
-	my $pane = $self->{active_pane};
 
-	return if ($pane->count_items == 0);
+	my $items_count = $self->{active_pane}->count_items;
+	return if ($items_count == 0);
 
-	my $str = join "\n\r", (@{$pane->get_item_list}, "cut");
-	$self->set_clipboard_contents($str);
-}
+ 	my $files = $self->{active_pane}->get_item_list;
+	my $dest  = $self->{inactive_pane}->get_pwd;
+	
+	if ($items_count == 1) {
+		my $dialog = Filer::SourceTargetDialog->new("Move/Rename");
 
-sub copy_cb {
-	my ($self) = @_;
-	my $pane = $self->{active_pane};
+		my $label = $dialog->get_source_label;
+		$label->set_markup("<b>Move/Rename: </b>");
 
-	return if ($pane->count_items == 0);
+		my $source_entry = $dialog->get_source_entry;
+		$source_entry->set_text($files->[0]);
+		$source_entry->set_activates_default($TRUE);
 
-	my $str = join "\n\r", (@{$pane->get_item_list}, "copy");
-	$self->set_clipboard_contents($str);
-}
+		my $target_label = $dialog->get_target_label;
+		$target_label->set_markup("<b>to: </b>");
 
-sub rename_cb {
-	my ($self) = @_;
-	my ($dialog,$hbox,$label,$entry);
+		my $target_entry  = $dialog->get_target_entry;
+		$target_entry->set_text($dest);
+		$target_entry->set_activates_default($TRUE);
 
-	my $pane = $self->{active_pane};
+		if ($dialog->run eq 'ok') {
+			my $target = $target_entry->get_text;
+			$dest      = $target;
 
-	return if ($pane->count_items == 0);
-
-	my $fileinfo = $pane->get_fileinfo_list->[0];
-
-	$dialog = Filer::DefaultDialog->new("Rename");
-
-	$hbox = Gtk2::HBox->new(0,0);
-	$dialog->vbox->pack_start($hbox,0,0,5);
-
-	$label = Gtk2::Label->new;
-	$label->set_text("Rename: ");
-	$hbox->pack_start($label, 0,0,2);
-
-	$entry = Gtk2::Entry->new;
-	$entry->set_text($fileinfo->get_basename);
-	$entry->set_activates_default($TRUE);
-	$hbox->pack_start($entry, 1,1,0);
-
-	$dialog->show_all;
-
-	if ($dialog->run eq 'ok') {
-		my $old_pwd = $pane->get_pwd;
-		my $old     = $fileinfo->get_path;
-		my $new;
-
-		if ($self->{active_pane}->get_type eq "TREE") {
-			$new = Filer::Tools->catpath(dirname($old_pwd), $entry->get_text);
+			$dialog->destroy;
 		} else {
-			$new = Filer::Tools->catpath($old_pwd, $entry->get_text);
+			$dialog->destroy;
+			return;
 		}
-
-		if (!rename($old,$new)) {
-			Filer::Dialog->msgbox_error("Rename failed: $!");
+	} else {
+		if ($self->{config}->get_option("ConfirmMove") == $TRUE) {
+			return if (Filer::Dialog->yesno_dialog("Move $items_count files to $dest?") eq 'no');
 		}
 	}
 
-	$dialog->destroy;
+	my $copy = Filer::Move->new;
+	$copy->action($files, $dest);
+
+	$self->refresh_cb;
 }
+
+# sub rename_cb {
+# 	my ($self) = @_;
+# 	my ($dialog,$hbox,$label,$entry);
+# 
+# 	my $pane = $self->{active_pane};
+# 
+# 	return if ($pane->count_items == 0);
+# 
+# 	my $fileinfo = $pane->get_fileinfo_list->[0];
+# 
+# 	$dialog = Filer::DefaultDialog->new("Rename");
+# 
+# 	$hbox = Gtk2::HBox->new(0,0);
+# 	$dialog->vbox->pack_start($hbox,0,0,5);
+# 
+# 	$label = Gtk2::Label->new;
+# 	$label->set_text("Rename: ");
+# 	$hbox->pack_start($label, 0,0,2);
+# 
+# 	$entry = Gtk2::Entry->new;
+# 	$entry->set_text($fileinfo->get_basename);
+# 	$entry->set_activates_default($TRUE);
+# 	$hbox->pack_start($entry, 1,1,0);
+# 
+# 	$dialog->show_all;
+# 
+# 	if ($dialog->run eq 'ok') {
+# 		my $old_pwd = $pane->get_pwd;
+# 		my $old     = $fileinfo->get_path;
+# 		my $new;
+# 
+# 		if ($self->{active_pane}->get_type eq "TREE") {
+# 			$new = Filer::Tools->catpath(dirname($old_pwd), $entry->get_text);
+# 		} else {
+# 			$new = Filer::Tools->catpath($old_pwd, $entry->get_text);
+# 		}
+# 
+# 		if (!rename($old,$new)) {
+# 			Filer::Dialog->msgbox_error("Rename failed: $!");
+# 		}
+# 	}
+# 
+# 	$dialog->destroy;
+# }
 
 sub delete_cb {
 	my ($self) = @_;
@@ -744,16 +852,16 @@ sub symlink_cb {
 	$self->refresh_cb;
 }
 
-sub get_clipboard_contents {
-	my ($self) = @_;
-	my $c = Clipboard->paste;
-	return $c;
-}
-
-sub set_clipboard_contents {
-	my ($self,$contents) = @_;
-	Clipboard->copy($contents);
-}
+# sub get_clipboard_contents {
+# 	my ($self) = @_;
+# 	my $c = Clipboard->paste;
+# 	return $c;
+# }
+# 
+# sub set_clipboard_contents {
+# 	my ($self,$contents) = @_;
+# 	Clipboard->copy($contents);
+# }
 
 1;
 

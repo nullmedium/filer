@@ -142,8 +142,11 @@ sub open_with_dialog {
 	$dialog->show_all;
 
 	if ($dialog->run eq 'ok') {
-		my $command = $command_entry->get_text;
+		my $command  = $command_entry->get_text;
+		my $filepath = $fileinfo->get_path;
+		
 		$fileinfo->set_mimetype_handler($command);
+		Filer::Tools->exec("$command '$filepath'");
 	}
 
 	$dialog->destroy;

@@ -1,6 +1,6 @@
 package Filer::MimeTypeHandler;
 
-use Filer::Constants;
+use Filer::Constants qw(:filer);
 
 use YAML::Syck qw(LoadFile DumpFile);
 

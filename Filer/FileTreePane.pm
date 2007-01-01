@@ -23,8 +23,7 @@ use warnings;
 use Cwd qw(abs_path);
 use File::Basename;
 
-use Filer::Constants;
-use Filer::FilePaneConstants;
+use Filer::Constants qw(:filer :filepane_columns);
 
 sub new {
 	my ($class,$filer,$side) = @_;
@@ -99,11 +98,13 @@ sub show_popup_menu {
 
 		my $popup_menu = $uimanager->get_widget($ui_path);
 
-		$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($TRUE);
+# 		$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($TRUE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive($TRUE);
-		$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive($TRUE);
+# 		$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive($TRUE);
+# 		$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($TRUE);
+# 		$uimanager->get_widget("$ui_path/PopupItems1/Paste")->set_sensitive($TRUE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($TRUE);
-		$uimanager->get_widget("$ui_path/PopupItems1/Paste")->set_sensitive($TRUE);
+		$uimanager->get_widget("$ui_path/PopupItems1/Move")->set_sensitive($TRUE);
 		$uimanager->get_widget("$ui_path/Properties")->set_sensitive($TRUE);
 
 		$uimanager->get_widget("$ui_path/PopupItems1/Open")->hide;
@@ -143,11 +144,11 @@ sub treeview_event_cb {
 			if (defined $p) {
  				$self->{treeselection}->select_path($p);
 
-				my $pane = $self->{filer}->get_right_pane;
-				my $iter = $self->{treemodel}->get_iter($p);
-				my $fi   = $self->get_fileinfo($iter);
-
-				$pane->open_path($fi->get_path);
+# 				my $pane = $self->{filer}->get_right_pane;
+# 				my $iter = $self->{treemodel}->get_iter($p);
+# 				my $fi   = $self->get_fileinfo($iter);
+# 
+# 				$pane->open_path($fi->get_path);
 			}
 
 		} elsif ($e->button == 3) {

@@ -21,7 +21,7 @@ use warnings;
 
 use Readonly; 
 
-use Filer::Constants;
+use Filer::Constants qw(:filepane_columns);
 
 Readonly my $TARGET_URI_LIST => 0;
 
@@ -63,8 +63,6 @@ sub drag_data_received {
 			$_ = Glib->filename_from_uri($_,"localhost");
 		} split(/\r\n/, $data->data);
 
-
-		print "@items\n";
 		my $items_count = scalar @items;
 
 		if (defined $p) {

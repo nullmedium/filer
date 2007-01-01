@@ -4,7 +4,7 @@ use base qw(Gtk2::Dialog);
 use strict;
 use warnings;
 
-use Filer::Constants;
+use Filer::Constants qw(:bool);
 
 sub new {
 	my ($class,$title,$label_text) = @_;
