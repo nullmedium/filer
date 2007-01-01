@@ -31,7 +31,7 @@ use File::Temp;
 use File::DirWalk;
 use Stat::lsMode;
 
-use Clipboard;
+# use Clipboard;
 
 use Filer::Constants qw(:filer);
 
@@ -178,7 +178,7 @@ sub init_main_window {
 # 		callback => sub { $self->rename_cb },
 	},{
 		name => "mkdir-action",
-		label => "New folder",
+		label => "Make Directory",
 		tooltip => "Make Directory",
 		accelerator => "F7",
 		callback => sub { $self->mkdir_cb },

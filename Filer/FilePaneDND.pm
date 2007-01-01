@@ -21,7 +21,7 @@ use warnings;
 
 use Readonly; 
 
-use Filer::Constants qw(:filepane_columns);
+use Filer::Constants qw(:bool :filepane_columns);
 
 Readonly my $TARGET_URI_LIST => 0;
 

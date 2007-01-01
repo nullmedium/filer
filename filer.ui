@@ -74,6 +74,7 @@
       <toolitem name="Rename" action="rename-action"/>
 -->
       <toolitem name="MkDir" action="mkdir-action"/>
+      <separator/>
       <toolitem name="Delete" action="delete-action"/>
       <separator/>
       <toolitem name="Quit" action="quit-action"/>
