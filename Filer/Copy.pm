@@ -27,13 +27,56 @@ use File::DirWalk;
 use Filer::Constants qw(:filer);
 
 sub new {
-	my ($class) = @_;
+	my ($class,$filer) = @_;
 	my $self = $class->SUPER::new();
+
+	$self->{filer} = $filer;
 	
 	return $self;
 }
 
 sub copy {
+	my ($self,$FILES,$DEST) = @_;
+	my $items_count = scalar @{$FILES};
+
+	if ($items_count == 1) {
+		my $dialog = Filer::SourceTargetDialog->new("Copy");
+
+		my $label = $dialog->get_source_label;
+		$label->set_markup("<b>Copy: </b>");
+
+		my $source_entry = $dialog->get_source_entry;
+		$source_entry->set_text($FILES->[0]);
+		$source_entry->set_activates_default($TRUE);
+
+		my $target_label = $dialog->get_target_label;
+		$target_label->set_markup("<b>to: </b>");
+
+		my $target_entry  = $dialog->get_target_entry;
+		$target_entry->set_text($DEST);
+		$target_entry->set_activates_default($TRUE);
+
+		if ($dialog->run eq 'ok') {
+			my $target = $target_entry->get_text;
+			$DEST      = $target;
+
+			$dialog->destroy;
+		} else {
+			$dialog->destroy;
+			return;
+		}
+
+	} else {
+		if ($self->{filer}->get_config->get_option("ConfirmCopy") == $TRUE) {
+			return if (Filer::Dialog->yesno_dialog("Copy $items_count files to $DEST?") eq 'no');
+		}
+	}
+
+	$self->_copy($FILES,$DEST);
+	$self->{filer}->refresh_cb;
+}
+
+sub _copy {
 	my ($self,$FILES,$DEST) = @_;
 
 	my $dirwalk  = new File::DirWalk;
@@ -58,11 +101,29 @@ sub copy {
 			$DEST = Filer::Tools->catpath($DEST, basename($dir));
 		}
 
-		if ((-e $DEST) and (dirname($dir) eq dirname($DEST))) {
-			$DEST = Filer::Tools->suggest_filename_helper($DEST);
+		if (-e $DEST and $self->overwrite_all == $FALSE) {
+		
+			if ($self->skip_all == $TRUE) {
+				return File::DirWalk::SUCCESS;
+			}
+
+			if (dirname($dir) eq dirname($DEST)) {
+				$DEST = Filer::Tools->suggest_filename_helper($DEST);
+
+			} else {
+				my ($response,$new_my_dest) = $self->show_file_exists_dialog($dir, $DEST);
+
+				if ($response != File::DirWalk::SUCCESS) {
+					return $response;				
+				} else {
+					$DEST = $new_my_dest;
+				}
+			}
 		}
 
-		mkdir($DEST) || return File::DirWalk::FAILED;
+		if (! -e $DEST) {
+			mkdir($DEST) || return File::DirWalk::FAILED;
+		}
 
 		return File::DirWalk::SUCCESS;
 	});
@@ -82,7 +143,12 @@ sub copy {
 			$my_dest = Filer::Tools->catpath($DEST, basename($file));
 		}
 
-		if (-e $my_dest) {
+		if (! -d dirname($my_dest)) {
+			$my_dest = $DEST;
+		}
+
+		if (-e $my_dest and $self->overwrite_all == $FALSE) {
+
 			if ($self->skip_all == $TRUE) {
 				return File::DirWalk::SUCCESS;
 			}
@@ -92,36 +158,13 @@ sub copy {
 				$my_dest = Filer::Tools->suggest_filename_helper($my_dest);
 
 			} else {
-				my $dialog = Filer::FileExistsDialog->new($file, $my_dest);
-				my $r = $dialog->run;
-				
-				if ($r == $Filer::FileExistsDialog::RENAME) {
+				my ($response,$new_my_dest) = $self->show_file_exists_dialog($file, $my_dest);
 
-					$my_dest = $dialog->get_suggested_filename;
-					
-				} elsif ($r == $Filer::FileExistsDialog::OVERWRITE) {
-
-					# do nothing. 
-				
-				} elsif ($r == $Filer::FileExistsDialog::SKIP) {
-
-					$dialog->destroy;
-					return File::DirWalk::SUCCESS;
-
-				} elsif ($r == $Filer::FileExistsDialog::SKIP_ALL) {
-
-					# next time we encounter en existing file, return SUCCESS. 
-					$self->set_skip_all($TRUE);
-					$dialog->destroy;
-					return File::DirWalk::SUCCESS;
-
-				} elsif ($r eq 'cancel') {
-
-					$dialog->destroy;
-					return File::DirWalk::ABORTED;
+				if ($response != File::DirWalk::SUCCESS) {
+					return $response;				
+				} else {
+					$my_dest = $new_my_dest;
 				}
-				
-				$dialog->destroy;
 			}
 		}
 
@@ -147,7 +190,5 @@ sub copy {
 
 	$self->destroy_job_dialog;
 }
-
-*action = \&copy;
 
 1;

@@ -31,7 +31,7 @@ sub new {
 	$self = bless $self, $class;
 
 	my $hbox = Gtk2::HBox->new(0,0);
-	$self->{vbox}->pack_start($hbox, 0, 1, 0);
+	$self->{vbox}->pack_start($hbox, $FALSE, $TRUE, 0);
 
 	$self->{treemodel} = Gtk2::TreeStore->new(qw(Glib::Scalar Glib::Object Glib::String));
 	$self->{treeview}  = Gtk2::TreeView->new($self->{treemodel});
@@ -57,7 +57,7 @@ sub new {
 	$scrolled_window->set_policy('automatic','automatic');
 	$scrolled_window->set_shadow_type('etched-in');
 	$scrolled_window->add($self->{treeview});
-	$self->{vbox}->pack_start($scrolled_window, 1, 1, 0);
+	$self->{vbox}->pack_start($scrolled_window, $TRUE, $TRUE, 0);
 
 	# a column with a pixbuf renderer and a text renderer
 	my $col = Gtk2::TreeViewColumn->new;
@@ -164,6 +164,13 @@ sub treeview_event_cb {
 		
 		if (defined $p) {
 			$self->row_action($p);
+
+			my $pane = $self->{filer}->get_right_pane;
+			my $iter = $self->{treemodel}->get_iter($p);
+			my $fi   = $self->get_fileinfo($iter);
+
+			$pane->open_path($fi->get_path);
+
 			return 1;
 		}
 	}
@@ -231,11 +238,17 @@ sub refresh {
 sub CreateRootNodes {
 	my ($self) = @_;
 
+# 	print "$COL_FILEINFO\n";
+# 	print "$COL_ICON\n";
+# 	print "$COL_NAME\n";
+
+	if ($COL_FILEINFO) {};
+
 	foreach (Filer::FileInfo->get_rootdir, Filer::FileInfo->get_homedir) {
 		my $iter = $self->{treemodel}->insert_with_values(undef, -1,
 			$COL_FILEINFO, $_,
 			$COL_ICON,     $_->get_mimetype_icon,
-			$COL_NAME,     $_->get_basename, # eq $ROOTDIR) ? "Filesystem" : "Home",
+			$COL_NAME,     $_->get_basename,
 		);
 
 		$self->{treemodel}->insert($iter, -1);

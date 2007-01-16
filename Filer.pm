@@ -70,14 +70,7 @@ sub new {
 	my ($class) = @_;
 	my $self = bless {}, $class;
 
-	$self->{VERSION} = "0.0.15-svn";
-
 	return $self;
-}
-
-sub get_version {
-	my ($self) = @_;
-	return $self->{VERSION};
 }
 
 sub init_config {
@@ -98,7 +91,7 @@ sub init_main_window {
 	my ($self) = @_;
 
 	$self->{main_window} = Gtk2::Window->new('toplevel');
-	$self->{main_window}->set_title("Filer $self->{VERSION}");
+	$self->{main_window}->set_title("Filer $VERSION");
 
 	$self->{main_window}->resize(split ":", $self->{config}->get_option("WindowSize"));
 #	$self->{main_window}->resize(784,606);
@@ -299,12 +292,12 @@ sub init_main_window {
 	$self->{main_window}->add_accel_group($accels);
 
 	$self->{menubar} = $self->{uimanager}->get_widget("/ui/menubar");
- 	$self->{main_window_vbox}->pack_start($self->{menubar}, 0, 0, 0);
+ 	$self->{main_window_vbox}->pack_start($self->{menubar}, $FALSE, $FALSE, 0);
 
 	$self->{toolbar} = $self->{uimanager}->get_widget("/ui/toolbar");
 	$self->{toolbar}->set_style('GTK_TOOLBAR_TEXT');
 	$self->{sync_button} = $self->{uimanager}->get_widget("/ui/toolbar/Synchronize");
-	$self->{main_window_vbox}->pack_start($self->{toolbar}, 0, 0, 0);
+	$self->{main_window_vbox}->pack_start($self->{toolbar}, $FALSE, $FALSE, 0);
 
 	my $hpaned = Gtk2::HPaned->new();
 	my $hbox   = Gtk2::HBox->new(0,0);
@@ -315,9 +308,9 @@ sub init_main_window {
 
 	$hpaned->add1($self->{treepane}->get_vbox);
 	$hpaned->add2($hbox);
-	$hbox->pack_start($self->{filepane1}->get_vbox,1,1,0);
-	$hbox->pack_start($self->{filepane2}->get_vbox,1,1,0);
-	$self->{main_window_vbox}->pack_start($hpaned,1,1,0);
+	$hbox->pack_start($self->{filepane1}->get_vbox, $TRUE, $TRUE, 0);
+	$hbox->pack_start($self->{filepane2}->get_vbox, $TRUE, $TRUE, 0);
+	$self->{main_window_vbox}->pack_start($hpaned, $TRUE, $TRUE, 0);
 
   	my $bookmarks      = Filer::Bookmarks->new($self);
 	my $bookmarks_menu = $self->{uimanager}->get_widget("/ui/menubar/bookmarks-menu");
@@ -411,11 +404,11 @@ sub about_cb {
 	my ($self) = @_;
 
 	my $license = join "", <DATA>;
-	$license =~ s/__VERSION__/$self->{VERSION}/g;
+	$license =~ s/__VERSION__/$VERSION/g;
 
 	my $dialog = Gtk2::AboutDialog->new;
 	$dialog->set_name("Filer");
-	$dialog->set_version($self->{VERSION});
+	$dialog->set_version($VERSION);
 	$dialog->set_copyright("Copyright (c) 2004-2006 Jens Luedicke");
 	$dialog->set_license($license);
 	$dialog->set_website("http://perldude.de/");
@@ -622,42 +615,42 @@ sub copy_cb {
  	my $files = $self->{active_pane}->get_item_list;
 	my $dest  = $self->{inactive_pane}->get_pwd;
 
-	if ($items_count == 1) {
-		my $dialog = Filer::SourceTargetDialog->new("Copy");
+# 	if ($items_count == 1) {
+# 		my $dialog = Filer::SourceTargetDialog->new("Copy");
+# 
+# 		my $label = $dialog->get_source_label;
+# 		$label->set_markup("<b>Copy: </b>");
+# 
+# 		my $source_entry = $dialog->get_source_entry;
+# 		$source_entry->set_text($files->[0]);
+# 		$source_entry->set_activates_default($TRUE);
+# 
+# 		my $target_label = $dialog->get_target_label;
+# 		$target_label->set_markup("<b>to: </b>");
+# 
+# 		my $target_entry  = $dialog->get_target_entry;
+# 		$target_entry->set_text($dest);
+# 		$target_entry->set_activates_default($TRUE);
+# 
+# 		if ($dialog->run eq 'ok') {
+# 			my $target = $target_entry->get_text;
+# 			$dest      = $target;
+# 
+# 			$dialog->destroy;
+# 		} else {
+# 			$dialog->destroy;
+# 			return;
+# 		}
+# 	} else {
+# 		if ($self->{config}->get_option("ConfirmCopy") == $TRUE) {
+# 			return if (Filer::Dialog->yesno_dialog("Copy $items_count files to $dest?") eq 'no');
+# 		}
+# 	}
 
-		my $label = $dialog->get_source_label;
-		$label->set_markup("<b>Copy: </b>");
+	my $copy = Filer::Copy->new($self);
+	$copy->copy($files, $dest);
 
-		my $source_entry = $dialog->get_source_entry;
-		$source_entry->set_text($files->[0]);
-		$source_entry->set_activates_default($TRUE);
-
-		my $target_label = $dialog->get_target_label;
-		$target_label->set_markup("<b>to: </b>");
-
-		my $target_entry  = $dialog->get_target_entry;
-		$target_entry->set_text($dest);
-		$target_entry->set_activates_default($TRUE);
-
-		if ($dialog->run eq 'ok') {
-			my $target = $target_entry->get_text;
-			$dest      = $target;
-
-			$dialog->destroy;
-		} else {
-			$dialog->destroy;
-			return;
-		}
-	} else {
-		if ($self->{config}->get_option("ConfirmCopy") == $TRUE) {
-			return if (Filer::Dialog->yesno_dialog("Copy $items_count files to $dest?") eq 'no');
-		}
-	}
-
-	my $copy = Filer::Copy->new;
-	$copy->action($files, $dest);
-
-	$self->refresh_cb;
+# 	$self->refresh_cb;
 }
 
 sub move_cb {
@@ -669,42 +662,42 @@ sub move_cb {
  	my $files = $self->{active_pane}->get_item_list;
 	my $dest  = $self->{inactive_pane}->get_pwd;
 	
-	if ($items_count == 1) {
-		my $dialog = Filer::SourceTargetDialog->new("Move/Rename");
+# 	if ($items_count == 1) {
+# 		my $dialog = Filer::SourceTargetDialog->new("Move/Rename");
+# 
+# 		my $label = $dialog->get_source_label;
+# 		$label->set_markup("<b>Move/Rename: </b>");
+# 
+# 		my $source_entry = $dialog->get_source_entry;
+# 		$source_entry->set_text($files->[0]);
+# 		$source_entry->set_activates_default($TRUE);
+# 
+# 		my $target_label = $dialog->get_target_label;
+# 		$target_label->set_markup("<b>to: </b>");
+# 
+# 		my $target_entry  = $dialog->get_target_entry;
+# 		$target_entry->set_text($dest);
+# 		$target_entry->set_activates_default($TRUE);
+# 
+# 		if ($dialog->run eq 'ok') {
+# 			my $target = $target_entry->get_text;
+# 			$dest      = $target;
+# 
+# 			$dialog->destroy;
+# 		} else {
+# 			$dialog->destroy;
+# 			return;
+# 		}
+# 	} else {
+# 		if ($self->{config}->get_option("ConfirmMove") == $TRUE) {
+# 			return if (Filer::Dialog->yesno_dialog("Move $items_count files to $dest?") eq 'no');
+# 		}
+# 	}
 
-		my $label = $dialog->get_source_label;
-		$label->set_markup("<b>Move/Rename: </b>");
+	my $copy = Filer::Move->new($self);
+	$copy->move($files, $dest);
 
-		my $source_entry = $dialog->get_source_entry;
-		$source_entry->set_text($files->[0]);
-		$source_entry->set_activates_default($TRUE);
-
-		my $target_label = $dialog->get_target_label;
-		$target_label->set_markup("<b>to: </b>");
-
-		my $target_entry  = $dialog->get_target_entry;
-		$target_entry->set_text($dest);
-		$target_entry->set_activates_default($TRUE);
-
-		if ($dialog->run eq 'ok') {
-			my $target = $target_entry->get_text;
-			$dest      = $target;
-
-			$dialog->destroy;
-		} else {
-			$dialog->destroy;
-			return;
-		}
-	} else {
-		if ($self->{config}->get_option("ConfirmMove") == $TRUE) {
-			return if (Filer::Dialog->yesno_dialog("Move $items_count files to $dest?") eq 'no');
-		}
-	}
-
-	my $copy = Filer::Move->new;
-	$copy->action($files, $dest);
-
-	$self->refresh_cb;
+# 	$self->refresh_cb;
 }
 
 # sub rename_cb {
@@ -720,16 +713,16 @@ sub move_cb {
 # 	$dialog = Filer::DefaultDialog->new("Rename");
 # 
 # 	$hbox = Gtk2::HBox->new(0,0);
-# 	$dialog->vbox->pack_start($hbox,0,0,5);
+# 	$dialog->vbox->pack_start($hbox, $FALSE, $FALSE, 5);
 # 
 # 	$label = Gtk2::Label->new;
 # 	$label->set_text("Rename: ");
-# 	$hbox->pack_start($label, 0,0,2);
+# 	$hbox->pack_start($label, $FALSE, $FALSE, 2);
 # 
 # 	$entry = Gtk2::Entry->new;
 # 	$entry->set_text($fileinfo->get_basename);
 # 	$entry->set_activates_default($TRUE);
-# 	$hbox->pack_start($entry, 1,1,0);
+# 	$hbox->pack_start($entry, $TRUE, $TRUE, 0);
 # 
 # 	$dialog->show_all;
 # 
@@ -759,17 +752,7 @@ sub delete_cb {
 
 	return if ($items_count == 0);
 
-	if ($self->{config}->get_option("ConfirmDelete") == 1) {
-
-		my $message =
-		 ($items_count == 1)
-		 ? "Delete \"$items->[0]\"?"
-		 : "Delete $items_count selected files?";
-
-		return if (Filer::Dialog->yesno_dialog($message) eq 'no');
-	}
-
-	my $delete = Filer::Delete->new;
+	my $delete = Filer::Delete->new($self);
 	$delete->delete($items);
 
 	$self->refresh_cb;
@@ -784,12 +767,12 @@ sub mkdir_cb {
 	$label = Gtk2::Label->new;
 	$label->set_text("Enter Folder Name:");
 	$label->set_alignment(0.0,0.0);
-	$dialog->vbox->pack_start($label, 0,0,2);
+	$dialog->vbox->pack_start($label, $FALSE, $FALSE, 2);
 
 	$entry = Gtk2::Entry->new;
 	$entry->set_text("New_Folder");
 	$entry->set_activates_default($TRUE);
-	$dialog->vbox->pack_start($entry, 1,1,0);
+	$dialog->vbox->pack_start($entry, $TRUE, $TRUE, 0);
 
 	$dialog->show_all;
 

@@ -36,25 +36,25 @@ sub new {
 	$self = bless $self, $class;
 
 	$self->{location_bar} = Gtk2::HBox->new(0,0);
-	$self->{vbox}->pack_start($self->{location_bar}, 0, 1, 0);
+	$self->{vbox}->pack_start($self->{location_bar}, $FALSE, $TRUE, 0);
 
 	my $button1 = Gtk2::Button->new("Up");
 	$button1->signal_connect("clicked", sub {
 		$self->open_path($self->get_updir);
 	});
-	$self->{location_bar}->pack_start($button1, 0, 1, 0);
+	$self->{location_bar}->pack_start($button1, $FALSE, $TRUE, 0);
 
 	$self->{path_combo} = Gtk2::ComboBoxEntry->new_text;
-	$self->{location_bar}->pack_start($self->{path_combo}, 1, 1, 0);
+	$self->{location_bar}->pack_start($self->{path_combo}, $TRUE, $TRUE, 0);
 
 	my $button2 = Gtk2::Button->new("Go");
 	$button2->signal_connect("clicked", sub {
 		$self->open_file(Filer::FileInfo->new($self->{path_combo}->get_active_text));
 	});
-	$self->{location_bar}->pack_start($button2, 0, 1, 0);
+	$self->{location_bar}->pack_start($button2, $FALSE, $TRUE, 0);
 
 	$self->{navigation_box} = Gtk2::HBox->new(0,0);
-	$self->{vbox}->pack_start($self->{navigation_box}, 0, 1, 0);
+	$self->{vbox}->pack_start($self->{navigation_box}, $FALSE, $TRUE, 0);
 
 	$self->{treemodel} = Filer::ListStore->new;
 	$self->{treeview}  = Gtk2::TreeView->new($self->{treemodel});
@@ -78,7 +78,7 @@ sub new {
 	$scrolled_window->set_policy('automatic','automatic');
 	$scrolled_window->set_shadow_type('etched-in');
 	$scrolled_window->add($self->{treeview});
-	$self->{vbox}->pack_start($scrolled_window, 1, 1, 0);
+	$self->{vbox}->pack_start($scrolled_window, $TRUE, $TRUE, 0);
 
 	# a column with a pixbuf renderer and a text renderer
 	my $col = Gtk2::TreeViewColumn->new;
@@ -129,7 +129,7 @@ sub new {
 
 	$self->{status} = Gtk2::Label->new;
 	$self->{status}->set_alignment(0.0,0.5);
-	$self->{vbox}->pack_start($self->{status}, 0, 1, 2);
+	$self->{vbox}->pack_start($self->{status}, $FALSE, $TRUE, 2);
 
 	return $self;
 }
@@ -294,7 +294,7 @@ sub update_navigation_buttons {
 				$label->modify_font($fd);
 			}, $path);
 
-			$self->{navigation_box}->pack_start($button,0,0,0);
+			$self->{navigation_box}->pack_start($button, $FALSE, $FALSE, 0);
 			$self->{navigation_buttons}->{$path} = $button;
 			$self->{navigation_buttons}->{$path}->show;
 		}
@@ -398,15 +398,15 @@ sub _select_dialog {
 	my $dialog = Filer::DefaultDialog->new;
 
 	my $hbox = Gtk2::HBox->new(0,0);
-	$dialog->vbox->pack_start($hbox,0,1,5);
+	$dialog->vbox->pack_start($hbox, $FALSE, $TRUE, 5);
 
 	my $label = Gtk2::Label->new;
-	$hbox->pack_start($label,0,0,0);
+	$hbox->pack_start($label, $FALSE, $FALSE, 0);
 
 	my $entry = Gtk2::Entry->new;
 	$entry->set_activates_default($TRUE);
 	$entry->set_text("*");
-	$hbox->pack_start($entry,1,1,0);
+	$hbox->pack_start($entry, $TRUE, $TRUE, 0);
 
 	if ($type == $SELECT) {
 		$dialog->set_title("Select Files");

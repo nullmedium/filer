@@ -3,7 +3,7 @@ use base qw(Exporter);
 
 use Readonly;
 
-my @filer = qw($LEFT $RIGHT $NORTON_COMMANDER_MODE $EXPLORER_MODE $TRUE $FALSE $UPDIR $TMPDIR $ROOTDIR $HOMEDIR $XDG_CONFIG_HOME);
+my @filer = qw($VERSION $LEFT $RIGHT $NORTON_COMMANDER_MODE $EXPLORER_MODE $TRUE $FALSE $UPDIR $TMPDIR $ROOTDIR $HOMEDIR $XDG_CONFIG_HOME);
 
 my @filepane_columns = qw($COL_FILEINFO $COL_ICON $COL_NAME $COL_SIZE $COL_MODE $COL_TYPE $COL_DATE);
 
@@ -34,6 +34,8 @@ our %EXPORT_TAGS = (
 );
 
 # filer constants:
+
+Readonly $VERSION => "0.0.15-svn";
 
 Readonly $LEFT  => 0;
 Readonly $RIGHT => 1;

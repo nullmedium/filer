@@ -4,6 +4,8 @@ use base qw(Filer::DefaultDialog);
 use warnings;
 use strict;
 
+use Filer::Constants qw(:bool);
+
 sub new {
 	my ($class,$title) = @_;
 
@@ -23,7 +25,7 @@ sub new {
 	$table->set_homogeneous(0);
 	$table->set_col_spacings(5);
 	$table->set_row_spacings(1);
-	$self->vbox->pack_start($table,0,0,5);
+	$self->vbox->pack_start($table, $FALSE, $FALSE, 5);
 
 	$self->{source_label} = new Gtk2::Label;
 	$self->{source_label}->set_justify('left');

@@ -20,7 +20,7 @@ use base qw(Gtk2::Dialog);
 use strict;
 use warnings;
 
-use Filer::Constants qw(:mode_t);
+use Filer::Constants qw(:bool :mode_t);
 
 sub new {
 	my ($class,$filer) = @_;
@@ -48,7 +48,7 @@ sub new {
 	$table->set_homogeneous(0);
 	$table->set_col_spacings(5);
 	$table->set_row_spacings(5);
-	$self->vbox->pack_start($table,1,1,5);
+	$self->vbox->pack_start($table, $TRUE, $TRUE, 5);
 
 	$label = new Gtk2::Label("<b>Filename</b>");
 	$label->set_use_markup(1);
@@ -100,7 +100,7 @@ sub new {
 	$frame->get_label_widget->set_use_markup(1);
 	$frame->set_label_align(0.0,0.0);
 	$frame->set_shadow_type('none');
-	$self->vbox->pack_start($frame,0,0,0);
+	$self->vbox->pack_start($frame, $FALSE, $FALSE, 0);
 
 	$table = new Gtk2::Table(4,4);
 	$table->set_homogeneous(0);
@@ -219,16 +219,16 @@ sub new {
 	$frame->get_label_widget->set_use_markup(1);
 	$frame->set_label_align(0.0,0.0);
 	$frame->set_shadow_type('none');
-	$self->vbox->pack_start($frame,0,0,0);
+	$self->vbox->pack_start($frame, $FALSE, $FALSE, 0);
 
 	$vbox = new Gtk2::VBox(0,0);
 	$frame->add($vbox);
 
 	$self->{owner_combo} = Gtk2::ComboBox->new_text;
-	$vbox->pack_start($self->{owner_combo}, 1, 1, 0);
+	$vbox->pack_start($self->{owner_combo}, $TRUE, $TRUE, 0);
 
 	$self->{group_combo} = Gtk2::ComboBox->new_text;
-	$vbox->pack_start($self->{group_combo}, 1, 1, 0);
+	$vbox->pack_start($self->{group_combo}, $TRUE, $TRUE, 0);
 
 	$self->show_all;
 	$self->init;

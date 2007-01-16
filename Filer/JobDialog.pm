@@ -18,21 +18,21 @@ sub new {
 	$self->set_modal(1);
 
 	my $hbox = Gtk2::HBox->new(0,0);
-	$self->vbox->pack_start($hbox,0,0,5);
+	$self->vbox->pack_start($hbox, $FALSE, $FALSE, 5);
 
 	my $label = Gtk2::Label->new($label_text);
 	$label->set_justify('left');
 	$label->set_use_markup(1);
 	$label->set_alignment(0.0,0.0);
-	$hbox->pack_start($label,0,0,0);
+	$hbox->pack_start($label, $FALSE, $FALSE, 0);
 
 	$self->{progress_label} = Gtk2::Label->new();
 	$self->{progress_label}->set_alignment(0.0,0.0);
 	$self->{progress_label}->set_ellipsize('PANGO_ELLIPSIZE_MIDDLE');
-	$hbox->pack_start($self->{progress_label},1,1,0);
+	$hbox->pack_start($self->{progress_label}, $TRUE, $TRUE, 0);
 
 	$self->{progressbar} = new Gtk2::ProgressBar;
-	$self->vbox->pack_start($self->{progressbar},0,1,0);
+	$self->vbox->pack_start($self->{progressbar}, $FALSE, $TRUE, 0);
 
 	my $button = $self->add_button('gtk-cancel' => 'cancel');
 	$button->signal_connect("clicked", sub {

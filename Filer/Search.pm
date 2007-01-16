@@ -19,6 +19,8 @@ package Filer::Search;
 use strict;
 use warnings;
 
+use Filer::Constants qw(:bool);
+
 sub new {
 	my ($class,$filer) = @_;
 	my $self = bless {}, $class;
@@ -34,7 +36,7 @@ sub new {
 	$table->set_homogeneous(0);
 	$table->set_col_spacings(5);
 	$table->set_row_spacings(1);
-	$dialog->vbox->pack_start($table,0,0,5);
+	$dialog->vbox->pack_start($table, $FALSE, $FALSE, 5);
 
 	$label = Gtk2::Label->new("Search in: ");
 	$label->set_alignment(0.0,0.0);
@@ -95,12 +97,12 @@ sub new {
 	$self->{searching_label} = Gtk2::Label->new;
 	$self->{searching_label}->set_use_markup(1);
 	$self->{searching_label}->set_alignment(0.0,0.0);
-	$dialog->vbox->pack_start($self->{searching_label},0,0,5);
+	$dialog->vbox->pack_start($self->{searching_label}, $FALSE, $FALSE, 5);
 
 	$sw = Gtk2::ScrolledWindow->new;
 	$sw->set_policy('automatic','automatic');
 	$sw->set_shadow_type('etched-in');
-	$dialog->vbox->pack_start($sw,1,1,0);
+	$dialog->vbox->pack_start($sw, $TRUE, $TRUE, 0);
 
 	$self->{treestore} = Gtk2::TreeStore->new('Glib::String');
 	$self->{treeview}  = Gtk2::TreeView->new_with_model($self->{treestore});

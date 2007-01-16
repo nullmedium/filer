@@ -19,6 +19,8 @@ package Filer::Dialog;
 use strict;
 use warnings;
 
+use Filer::Constants qw(:bool);
+
 sub msgbox_info {
 	my ($message) = pop;
 	&msgbox('info', $message);
@@ -67,7 +69,7 @@ sub yesno_dialog {
 	$label->set_use_markup(1);
 	$label->set_markup($question);
 	$label->set_alignment(0.0,0.0);
-	$dialog->vbox->pack_start($label, 1,1,5);
+	$dialog->vbox->pack_start($label, $TRUE, $TRUE, 5);
 
 	$dialog->show_all;
 	my $r = $dialog->run;
@@ -94,7 +96,7 @@ sub open_with_dialog {
 	$table->set_homogeneous(0);
 	$table->set_col_spacings(5);
 	$table->set_row_spacings(1);
-	$dialog->vbox->pack_start($table,0,0,5);
+	$dialog->vbox->pack_start($table, $FALSE, $FALSE, 5);
 
 	my $label1 = Gtk2::Label->new;
 	$label1->set_justify('left');

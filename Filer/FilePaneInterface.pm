@@ -15,8 +15,18 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::FilePaneInterface;
-use base qw(Filer::FilePaneDND);
-use Filer::Constants qw(:filepane_columns);
+
+use warnings;
+use strict;
+use Readonly;
+
+use Filer::Constants qw(:bool :filepane_columns);
+
+Readonly my $TARGET_URI_LIST => 0;
+
+sub target_table {
+	{'target' => "text/uri-list", 'flags' => [], 'info' => $TARGET_URI_LIST};
+}
 
 # API methods shared between Filer::FilePane and Filer::FileTreePane
 
@@ -135,17 +145,99 @@ sub set_show_hidden {
 	$self->refresh;
 }
 
+# sub drag_begin {
+# 	my $self = shift;
+# 	my ($widget,$context) = @_;
+# 
+# 	$context->status('move',);
+# }
+
+sub drag_data_get {
+	my $self = shift;
+	my ($widget,$context,$data,$info,$time) = @_;
+
+	if ($info == $TARGET_URI_LIST) {
+		if ($self->count_items > 0) {
+			my $d = join "\r\n", @{$self->get_uri_list};
+			$data->set($data->target, 8, $d);
+		}
+	}
+
+	return 1;
+}
+
+sub drag_data_received {
+	my $self = shift;
+	my ($widget,$context,$x,$y,$data,$info,$time) = @_;
+
+	if (($data->length >= 0) && ($data->format == 8)) {
+		my $action      = $context->action;
+		my ($p)         = $widget->get_dest_row_at_pos($x,$y);
+		my $path;
+
+		my @items       = map {	
+			$_ = Glib->filename_from_uri($_,"localhost");
+		} split(/\r\n/, $data->data);
+
+		my $items_count = scalar @items;
+
+		if (defined $p) {
+			$path = $self->get_path_by_treepath($p);
+		}
+		
+		if (! $path) {
+			$path = $self->get_pwd;
+		}
+
+		if ($action eq "copy") {
+			my $copy = Filer::Copy->new($self->{filer});
+			$copy->copy(\@items,$path);
+
+		} elsif ($action eq "move") {
+			my $move = Filer::Move->new($self->{filer});
+			$move->move(\@items,$path);
+		}
+	}
+
+	$context->finish (0, 0, $time);
+
+	$self->refresh;
+}
+
+# sub drag_motion {
+# 	my $self = shift;
+# 	my ($widget,$context,$x,$y,$time,$data) = @_;
+# 	my $action = $context->action;
+# 
+# 	my ($p) = $widget->get_dest_row_at_pos($x,$y);
+# 	my $path;
+# 
+# 	if (defined $p) {
+# 		$path = $self->get_path_by_treepath($p);
+# 
+# 		if (-d $path) {
+# 			$context->status('move',$time);
+# 			return $TRUE;
+# 		} else {
+# 			$context->status([],$time);
+# 			return $FALSE;
+# 		}
+# 	}
+# 
+# 	return $FALSE;
+# }
+
 ################################################################################
 
-package Gtk2::TreeStore;
-
-sub insert_with_values {
-	my ($self,$parent_iter,$pos,%cols) = @_;
-
-	my $iter = $self->insert($parent_iter, $pos);
-	$self->set($iter, %cols);
-
-	return $iter;
-}
+# package Gtk2::TreeStore;
+# 
+# sub insert_with_values {
+# 	my ($self,$parent_iter,$pos,%cols) = @_;
+# 
+# 	my $iter = $self->insert($parent_iter, $pos);
+# 	$self->set($iter, %cols);
+# 
+# 	return $iter;
+# }
 
 1;

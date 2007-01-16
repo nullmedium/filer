@@ -22,14 +22,35 @@ use warnings;
 
 use File::Basename;
 
+use Filer::Constants qw(:bool);
+
 sub new {
-	my ($class) = @_;
+	my ($class,$filer) = @_;
 	my $self = $class->SUPER::new();
+
+	$self->{filer} = $filer;
 
 	return $self;
 }
 
 sub delete {
+	my ($self,$FILES) = @_;
+
+	my $items_count = scalar @{$FILES};
+
+	if ($self->{filer}->get_config->get_option("ConfirmDelete") == $TRUE) {
+		my $message =
+		 ($items_count == 1)
+		 ? "Delete \"$FILES->[0]\"?"
+		 : "Delete $items_count selected files?";
+
+		return if (Filer::Dialog->yesno_dialog($message) eq 'no');
+	}
+
+	$self->_delete($FILES);
+}
+
+sub _delete {
 	my ($self,$FILES) = @_;
 
 	my $dirwalk = new File::DirWalk;
