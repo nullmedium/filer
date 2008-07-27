@@ -305,9 +305,7 @@ sub init {
 	$self->{mimetype_label}->set_text($self->{fileinfo}->get_mimetype);
 
 	if ($self->{fileinfo}->is_dir) {
-		my $thread = threads->create(sub {
-			$self->deep_count;
-		});
+		$self->deep_count;
 
 		$self->{openw_label}->hide;
 		$self->{openw_button}->hide;
@@ -346,8 +344,8 @@ sub deep_count {
 	my ($self) = @_;
 
 	my $dirwalk = new File::DirWalk;
-	my $count_files : shared;
-	my $count_size  : shared;
+	my $count_files;
+	my $count_size;
 
 	$dirwalk->onFile(sub {
 		my ($file) = @_;
@@ -355,9 +353,7 @@ sub deep_count {
 		++$count_files;
 		$count_size += -s $file;
 
-		Gtk2::Gdk::Threads->enter;
 		$self->{size_label}->set_text("$count_files files (" . Filer::Tools->humanize_size($count_size) . ")");
-		Gtk2::Gdk::Threads->leave;
 
 		return 1;
 	});

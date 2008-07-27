@@ -32,9 +32,6 @@ BEGIN {
 # use strict;
 use warnings;
 
-use threads;
-use threads::shared;
-
 use lib "$libpath";
 use Filer;
 

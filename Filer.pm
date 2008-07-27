@@ -19,7 +19,7 @@ package Filer;
 use strict;
 use warnings;
 
-use Gtk2 qw(-init -threads-init);
+use Gtk2 qw(-init);
 use Gtk2::Gdk::Keysyms;
 
 use Fcntl;
