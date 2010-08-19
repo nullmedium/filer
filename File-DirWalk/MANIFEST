@@ -1,7 +1,0 @@
-DirWalk.pm
-MANIFEST
-META.yml
-Makefile.PL
-README
-configure
-t/1.t
