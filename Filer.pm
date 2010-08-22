@@ -31,7 +31,7 @@ use File::Temp;
 use File::DirWalk;
 use Stat::lsMode;
 
-# use Clipboard;
+use Class::Bind;
 
 use Filer::Constants qw(:filer);
 
@@ -97,7 +97,7 @@ sub init_main_window {
 #	$self->{main_window}->resize(784,606);
 
 	$self->{main_window}->signal_connect("event", sub { $self->window_event_cb(@_) });
-	$self->{main_window}->signal_connect("delete-event", sub { $self->quit_cb });
+	$self->{main_window}->signal_connect("delete-event", Class::bind(\*Filer::quit_cb, $self));
 	$self->{main_window}->set_icon(Filer::MimeTypeIcon->new("inode/directory")->get_pixbuf);
 
 	$self->{main_window_vbox} = Gtk2::VBox->new(0,0);
@@ -113,99 +113,73 @@ sub init_main_window {
 		name => "open-terminal-action",
 		label => "Open Terminal",
 		accelerator => "F2",
-		callback => sub { $self->open_terminal_cb },
+		callback => Class::bind(\*Filer::open_terminal_cb, $self),
 	},{
 		name => "open-action",
 		stock_id => "gtk-open",
-		callback => sub { $self->open_cb },
+		callback => Class::bind(\*Filer::open_cb, $self),
 		accelerator => "F3",
 	},{
 		name => "open-with-action",
 		label => "Open With",
-		callback => sub { $self->open_with_cb },
+		callback => Class::bind(\*Filer::open_with_cb, $self),
 	},{
 		name => "quit-action",
 		stock_id => "gtk-quit",
 		accelerator => "<control>Q",
-		callback => sub { $self->quit_cb },
+		callback => Class::bind(\*Filer::quit_cb, $self),
 	},{
 		name => "EditMenuAction",
 		label => "_Edit",
-# 	},{
-# 		name => "cut-action",
-# 		stock_id => "gtk-cut",
-# 		tooltip => "Cut Selection",
-# 		accelerator => "<control>X",
-# 		callback => sub { $self->cut_cb },
-# 	},{
-# 		name => "copy-action",
-# 		stock_id => "gtk-copy",
-# 		tooltip => "Copy Selection",
-# 		accelerator => "<control>C",
-# 		callback => sub { $self->copy_cb },
-# 	},{
-# 		name => "paste-action",
-# 		stock_id => "gtk-paste",
-# 		tooltip => "Paste Clipboard",
-# 		accelerator => "<control>V",
-# 		callback => sub { $self->paste_cb },
-
 	},{
 		name => "copy-action",
 		label => "Copy",
 		tooltip => "Copy selected files",
 		accelerator => "F5",
-		callback => sub { $self->copy_cb },
+		callback => Class::bind(\*Filer::copy_cb, $self),
 	},{
 		name => "move-action",
 		label => "Move",
 		tooltip => "Move selected files",
 		accelerator => "F6",
-		callback => sub { $self->move_cb },
-
-# 	},{
-# 		name => "rename-action",
-# 		label => "Rename",
-# 		tooltip => "Rename",
-# 		accelerator => "F6",
-# 		callback => sub { $self->rename_cb },
+		callback => Class::bind(\*Filer::move_cb, $self),
 	},{
 		name => "mkdir-action",
 		label => "Make Directory",
 		tooltip => "Make Directory",
 		accelerator => "F7",
-		callback => sub { $self->mkdir_cb },
+		callback => Class::bind(\*Filer::mkdir_cb, $self),
 	},{
 		name => "delete-action",
 		stock_id => "gtk-delete",
 		tooltip => "Delete files",
 		accelerator => "F8",
-		callback => sub { $self->delete_cb },
+		callback => Class::bind(\*Filer::delete_cb, $self),
 	},{
 		name => "symlink-action",
 		label => "Symlink",
-		callback => sub { $self->symlink_cb },
+		callback => Class::bind(\*Filer::symlink_cb, $self),
 	},{
 		name => "refresh-action",
 		stock_id => "gtk-refresh",
 		tooltip => "Refresh",
 		accelerator => "<control>R",
-		callback => sub { $self->refresh_cb },
+		callback => Class::bind(\*Filer::refresh_cb, $self),
 	},{
 		name => "search-action",
 		stock_id => "gtk-find",
 		label => "Search",
-		callback => sub { $self->search_cb },
+		callback => Class::bind(\*Filer::show_search_dialog, $self),
 	},{
 		name => "select-action",
 		label => "Select",
 		accelerator => "KP_Add",
-		callback => sub { $self->select_cb },
+		callback => Class::bind(\*Filer::select_cb, $self),
 	},{
 		name => "unselect-action",
 		label => "Unselect",
 		accelerator => "KP_Subtract",
-		callback => sub { $self->unselect_cb },
+		callback => Class::bind(\*Filer::unselect_cb, $self),
 	},{
 		name => "BookmarksMenuAction",
 		label => "_Bookmarks",
@@ -224,21 +198,21 @@ sub init_main_window {
 	},{
 		name => "about-action",
 		stock_id => "gtk-about",
-		callback => sub { $self->about_cb },
+		callback => Class::bind(\*Filer::show_about_dialog, $self),
 	},{
 		name => "home-action",
 		stock_id => "gtk-home",
 		tooltip => "Go Home",
-		callback => sub { $self->go_home_cb },
+		callback => Class::bind(\*Filer::go_home_cb, $self),
 	},{
 		name => "synchronize-action",
 		label => "Synchronize",
 		tooltip => "Synchronize Folders",
-		callback => sub { $self->synchronize_cb },
+		callback => Class::bind(\*Filer::synchronize_cb, $self),
 	},{
 		name => "properties-action",
 		stock_id => "gtk-properties",
-		callback => sub { $self->set_properties; }
+		callback => Class::bind(\*Filer::set_properties, $self),
 	}];
 
 	my $a_radio_entries = [
@@ -271,7 +245,7 @@ sub init_main_window {
 	},{
 		name => "show-hidden-action",
 		label => "Show Hidden Files",
-		callback => sub { $self->hidden_cb($_[0]) },
+		callback => sub { $self->show_hidden_files($_[0]) },
 		accelerator => "<control>H",
 		is_active => $self->{config}->get_option("ShowHiddenFiles"),
 	}];
@@ -400,7 +374,7 @@ sub quit_cb {
  	Gtk2->main_quit;
 }
 
-sub about_cb {
+sub show_about_dialog {
 	my ($self) = @_;
 
 	my $license = join "", <DATA>;
@@ -409,7 +383,7 @@ sub about_cb {
 	my $dialog = Gtk2::AboutDialog->new;
 	$dialog->set_name("Filer");
 	$dialog->set_version($VERSION);
-	$dialog->set_copyright("Copyright (c) 2004-2006 Jens Luedicke");
+	$dialog->set_copyright("Copyright (c) 2004-2010 Jens Luedicke");
 	$dialog->set_license($license);
 	$dialog->set_website("http://perldude.de/");
 	$dialog->set_website_label("http://perldude.de/");
@@ -479,7 +453,7 @@ sub switch_mode {
 	}
 }
 
-sub hidden_cb {
+sub show_hidden_files {
 	my ($self,$action) = @_;
 
 	my $opt = ($action->get_active) ? 1 : 0;
@@ -556,55 +530,10 @@ sub unselect_cb {
 	$pane->unselect_dialog;
 }
 
-sub search_cb {
+sub show_search_dialog {
 	my ($self) = @_;
 	Filer::Search->new($self);
 }
-
-# sub paste_cb {
-# 	my ($self) = @_;
-# 	my @files  = split /\n\r/, $self->get_clipboard_contents;
-# 
-# 	return if (scalar @files == 0);
-# 
-# 	my $action = pop @files;
-# 	my $dest   = $self->{active_pane}->get_pwd;
-# 	my $do;
-# 
-# 	if ($action eq "copy") {
-# 
-# 		$do = Filer::Copy->new;
-# 		$do->action(\@files, $dest);
-# 
-# 	} elsif ($action eq "cut") {
-# 		$do = Filer::Move->new;
-# 		$do->action(\@files, $dest);
-# 
-# 		$self->set_clipboard_contents("");
-# 	}
-# 
-# 	$self->refresh_cb;
-# }
-# 
-# sub cut_cb {
-# 	my ($self) = @_;
-# 	my $pane = $self->{active_pane};
-# 
-# 	return if ($pane->count_items == 0);
-# 
-# 	my $str = join "\n\r", (@{$pane->get_item_list}, "cut");
-# 	$self->set_clipboard_contents($str);
-# }
-# 
-# sub copy_cb {
-# 	my ($self) = @_;
-# 	my $pane = $self->{active_pane};
-# 
-# 	return if ($pane->count_items == 0);
-# 
-# 	my $str = join "\n\r", (@{$pane->get_item_list}, "copy");
-# 	$self->set_clipboard_contents($str);
-# }
 
 sub copy_cb {
 	my ($self) = @_;
