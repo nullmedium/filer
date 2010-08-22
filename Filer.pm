@@ -1,4 +1,4 @@
-#     Copyright (C) 2004-2005 Jens Luedicke <jens.luedicke@gmail.com>
+#     Copyright (C) 2004-2010 Jens Luedicke <jens.luedicke@gmail.com>
 #
 #     This program is free software; you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -769,7 +769,7 @@ sub symlink_cb {
 __DATA__
 
 Filer __VERSION__
-Copyright (C) 2004-2006 Jens Luedicke <jens.luedicke@gmail.com>
+Copyright (C) 2004-2010 Jens Luedicke <jens.luedicke@gmail.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

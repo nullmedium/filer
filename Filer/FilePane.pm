@@ -1,4 +1,4 @@
-#     Copyright (C) 2004-2005-2005 Jens Luedicke <jens.luedicke@gmail.com>
+#     Copyright (C) 2004-2010 Jens Luedicke <jens.luedicke@gmail.com>
 #
 #     This program is free software; you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
