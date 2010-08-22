@@ -38,7 +38,9 @@ sub new {
 		my $fi   = Filer::FileInfo->new($path);
  		push @{$self->{list}}, $fi;
 
-		$self->{total_size} += -s $path;
+        if (-R $path) {
+    		$self->{total_size} += -s $path;
+        }
 	}
 
 	closedir $dirh;
