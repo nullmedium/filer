@@ -764,17 +764,6 @@ sub symlink_cb {
 	$self->refresh_cb;
 }
 
-# sub get_clipboard_contents {
-# 	my ($self) = @_;
-# 	my $c = Clipboard->paste;
-# 	return $c;
-# }
-# 
-# sub set_clipboard_contents {
-# 	my ($self,$contents) = @_;
-# 	Clipboard->copy($contents);
-# }
-
 1;
 
 __DATA__
