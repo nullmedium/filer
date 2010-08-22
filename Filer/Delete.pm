@@ -44,7 +44,7 @@ sub delete {
 		 ? "Delete \"$FILES->[0]\"?"
 		 : "Delete $items_count selected files?";
 
-		return if (Filer::Dialog->yesno_dialog($message) eq 'no');
+		return if (Filer::Dialog->show_yesno_dialog($message) eq 'no');
 	}
 
 	$self->_delete($FILES);
@@ -85,10 +85,10 @@ sub _delete {
 		my $r = $dirwalk->walk($source);
 
 		if ($r == File::DirWalk::FAILED) {
-			Filer::Dialog->msgbox_info("Deleting of $source failed: $!");
+			Filer::Dialog->show_information("Deleting of $source failed: $!");
 			last;
 		} elsif ($r == File::DirWalk::ABORTED) {
-			Filer::Dialog->msgbox_info("Deleting of $source aborted!");
+			Filer::Dialog->show_information("Deleting of $source aborted!");
 			last;
 		}
 	}

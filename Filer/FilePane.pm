@@ -336,7 +336,7 @@ sub open_file_with {
 
 	return 0 if (not defined $fileinfo);
 
-	Filer::Dialog->open_with_dialog($fileinfo);		
+	Filer::Dialog->show_open_with_dialog($fileinfo);		
 }
 
 sub open_path {
@@ -382,17 +382,17 @@ sub refresh {
 	$self->update_navigation_buttons;
 }
 
-sub select_dialog {
+sub show_file_selection_dialog {
 	my ($self) = @_;
-	$self->_select_dialog($SELECT);
+	$self->_show_file_selection_dialog($SELECT);
 }
 
-sub unselect_dialog {
+sub show_file_unselection_dialog {
 	my ($self) = @_;
-	$self->_select_dialog($UNSELECT);
+	$self->_show_file_selection_dialog($UNSELECT);
 }
 
-sub _select_dialog {
+sub _show_file_selection_dialog {
 	my ($self,$type) = @_;
 
 	my $dialog = Filer::DefaultDialog->new;

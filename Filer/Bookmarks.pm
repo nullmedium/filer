@@ -139,7 +139,7 @@ sub generate_bookmarks_menu {
 
 				$pane->open_path($path);
 			} else {
-				Filer::Dialog->msgbox_error("Path '$path' doesn't exist!");
+				Filer::Dialog->show_error_message("Path '$path' doesn't exist!");
 			}
 		},$_);
 

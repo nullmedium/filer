@@ -68,7 +68,7 @@ sub move {
 
 	} else {
 		if ($self->{filer}->get_config->get_option("ConfirmMove") == $TRUE) {
-			return if (Filer::Dialog->yesno_dialog("Move $items_count files to $DEST?") eq 'no');
+			return if (Filer::Dialog->show_yesno_dialog("Move $items_count files to $DEST?") eq 'no');
 		}
 	}
 
@@ -202,10 +202,10 @@ sub move_by_copy_delete {
 		my $r = $dirwalk->walk($source);
 
 		if ($r == File::DirWalk::FAILED) {
-			Filer::Dialog->msgbox_error("Moving of $source to " . $DEST . " failed: $!");
+			Filer::Dialog->show_error_message("Moving of $source to " . $DEST . " failed: $!");
 			last;
 		} elsif ($r == File::DirWalk::ABORTED) {
-			Filer::Dialog->msgbox_info("Moving of $source to " . $DEST . " aborted!");
+			Filer::Dialog->show_information("Moving of $source to " . $DEST . " aborted!");
 			last;
 		}
 	}

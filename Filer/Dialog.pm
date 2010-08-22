@@ -21,19 +21,19 @@ use warnings;
 
 use Filer::Constants qw(:bool);
 
-sub msgbox_info {
+sub show_information {
 	my ($message) = pop;
-	&msgbox('info', $message);
+	&show_message_dialog('info', $message);
 	return;
 }
 
-sub msgbox_error {
+sub show_error_message {
 	my ($message) = pop;
-	&msgbox('error', $message);
+	&show_message_dialog('error', $message);
 	return;
 }
 
-sub msgbox {
+sub show_message_dialog {
 	my ($type,$message) = @_;
 
 	my $dialog = Gtk2::MessageDialog->new(
@@ -51,7 +51,7 @@ sub msgbox {
 	}
 }
 
-sub yesno_dialog {
+sub show_yesno_dialog {
 	my ($question) = pop;
 	my ($dialog,$label);
 
@@ -78,7 +78,7 @@ sub yesno_dialog {
 	return $r;
 }
 
-sub open_with_dialog {
+sub show_open_with_dialog {
 	my ($class,$fileinfo) = @_;
 
 	my $dialog = Gtk2::Dialog->new(

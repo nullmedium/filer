@@ -89,7 +89,7 @@ sub new {
 
 	$self->{openw_button} = new Gtk2::Button("Change");
 	$self->{openw_button}->signal_connect(clicked => sub {
-		Filer::Dialog->open_with_dialog($self->{fileinfo});
+		Filer::Dialog->show_open_with_dialog($self->{fileinfo});
 		$self->init;
 	});
 	$table->attach($self->{openw_button}, 2, 3, 3, 4, [ "fill" ], [ ], 0, 0);
@@ -331,7 +331,7 @@ sub ok {
 	};
 
 	if ($@) {
-		Filer::Dialog->msgbox_error("Error: $@: $!");
+		Filer::Dialog->show_error_message("Error: $@: $!");
 	}
 }
 

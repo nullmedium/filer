@@ -174,12 +174,12 @@ sub init_main_window {
 		name => "select-action",
 		label => "Select",
 		accelerator => "KP_Add",
-		callback => Class::bind(\*Filer::select_cb, $self),
+		callback => Class::bind(\*Filer::show_file_selection_dialog, $self),
 	},{
 		name => "unselect-action",
 		label => "Unselect",
 		accelerator => "KP_Subtract",
-		callback => Class::bind(\*Filer::unselect_cb, $self),
+		callback => Class::bind(\*Filer::show_file_unselection_dialog, $self),
 	},{
 		name => "BookmarksMenuAction",
 		label => "_Bookmarks",
@@ -510,24 +510,24 @@ sub synchronize_cb {
 	$self->{inactive_pane}->open_path($self->{active_pane}->get_pwd);
 }
 
-sub select_cb {
+sub show_file_selection_dialog {
 	my ($self) = @_;
 	my $pane =
 		($self->{active_pane}->get_type eq "TREE")
 		? $self->{pane}->[$RIGHT]
 		: $self->{active_pane};
 
-	$pane->select_dialog;
+	$pane->show_file_selection_dialog;
 }
 
-sub unselect_cb {
+sub show_file_unselection_dialog {
 	my ($self) = @_;
 	my $pane =
 		($self->{active_pane}->get_type eq "TREE")
 		? $self->{pane}->[$RIGHT]
 		: $self->{active_pane};
 
-	$pane->unselect_dialog;
+	$pane->show_file_unselection_dialog;
 }
 
 sub show_search_dialog {
@@ -572,7 +572,7 @@ sub copy_cb {
 # 		}
 # 	} else {
 # 		if ($self->{config}->get_option("ConfirmCopy") == $TRUE) {
-# 			return if (Filer::Dialog->yesno_dialog("Copy $items_count files to $dest?") eq 'no');
+# 			return if (Filer::Dialog->show_yesno_dialog("Copy $items_count files to $dest?") eq 'no');
 # 		}
 # 	}
 
@@ -619,7 +619,7 @@ sub move_cb {
 # 		}
 # 	} else {
 # 		if ($self->{config}->get_option("ConfirmMove") == $TRUE) {
-# 			return if (Filer::Dialog->yesno_dialog("Move $items_count files to $dest?") eq 'no');
+# 			return if (Filer::Dialog->show_yesno_dialog("Move $items_count files to $dest?") eq 'no');
 # 		}
 # 	}
 
@@ -667,7 +667,7 @@ sub move_cb {
 # 		}
 # 
 # 		if (!rename($old,$new)) {
-# 			Filer::Dialog->msgbox_error("Rename failed: $!");
+# 			Filer::Dialog->show_error_message("Rename failed: $!");
 # 		}
 # 	}
 # 
@@ -709,7 +709,7 @@ sub mkdir_cb {
 		my $dir  = Filer::Tools->catpath($self->{active_pane}->get_pwd, $entry->get_text);
 
 		if (!mkdir($dir)) {
-			Filer::Dialog->msgbox_error("Make directory $dir failed: $!");
+			Filer::Dialog->show_error_message("Make directory $dir failed: $!");
 		}
 	}
 
@@ -755,7 +755,7 @@ sub symlink_cb {
 		}
 
 		if (!symlink($target, $symlink)) {
-			Filer::Dialog->msgbox_error("Couldn't create symlink! $!");
+			Filer::Dialog->show_error_message("Couldn't create symlink! $!");
 		}
 	}
 

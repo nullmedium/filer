@@ -36,7 +36,7 @@ use lib "$libpath";
 use Filer;
 
 Glib->install_exception_handler(sub {
-	Filer::Dialog->msgbox_error($_[0]);
+	Filer::Dialog->show_error_message($_[0]);
 	return 1;
 });
 

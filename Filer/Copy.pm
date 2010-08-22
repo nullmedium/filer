@@ -15,7 +15,6 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::Copy;
-use base qw(Filer::CopyJobDialog);
 
 use strict;
 use warnings;
@@ -68,7 +67,7 @@ sub copy {
 
 	} else {
 		if ($self->{filer}->get_config->get_option("ConfirmCopy") == $TRUE) {
-			return if (Filer::Dialog->yesno_dialog("Copy $items_count files to $DEST?") eq 'no');
+			return if (Filer::Dialog->show_yesno_dialog("Copy $items_count files to $DEST?") eq 'no');
 		}
 	}
 
@@ -180,10 +179,10 @@ sub _copy {
 		my $r = $dirwalk->walk($source);
 
 		if ($r == File::DirWalk::FAILED) {
-			Filer::Dialog->msgbox_error("Copying of $source to $DEST failed: $!");
+			Filer::Dialog->show_error_message("Copying of $source to $DEST failed: $!");
 			last;
 		} elsif ($r == File::DirWalk::ABORTED) {
-			Filer::Dialog->msgbox_info("Copying of $source to $DEST aborted!");
+			Filer::Dialog->show_information("Copying of $source to $DEST aborted!");
 			last;
 		}
 	}
