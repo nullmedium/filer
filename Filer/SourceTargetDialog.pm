@@ -1,5 +1,5 @@
 package Filer::SourceTargetDialog;
-use base qw(Filer::DefaultDialog);
+use base qw(Gtk2::Dialog);
 
 use warnings;
 use strict;
@@ -20,6 +20,7 @@ sub new {
 
 	$self->set_size_request(450,150);
 	$self->set_position('center');
+	$self->set_default_response('ok');
 
 	my $table = new Gtk2::Table(2,2);
 	$table->set_homogeneous(0);

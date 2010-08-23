@@ -44,7 +44,6 @@ require Filer::MimeTypeHandler;
 require Filer::Tools;
 
 require Filer::Dialog;
-require Filer::DefaultDialog;
 require Filer::PropertiesDialog;
 require Filer::FileExistsDialog;
 require Filer::SourceTargetDialog;
