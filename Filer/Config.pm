@@ -43,7 +43,6 @@ my $default_config = {
 
 sub instance {
     unless (defined $oneTrueSelf) {
-        print "@_";
         my $type = shift;
         my $this = {};
 
@@ -60,7 +59,7 @@ sub instance {
     		$this->{config} = LoadFile($this->{config_file});
     	}
 
-        $oneTrueSelf = bless $this, "Filer::Config";
+        $oneTrueSelf = bless $this, $type;
     }
 
 	return $oneTrueSelf;

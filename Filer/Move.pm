@@ -65,13 +65,13 @@ sub move {
 		}
 
 	} else {
-		if (Filer::Config::instance()->get_option("ConfirmMove") == $TRUE) {
+		if (Filer::Config->instance()->get_option("ConfirmMove") == $TRUE) {
 			return if (Filer::Dialog->show_yesno_dialog("Move $items_count files to $DEST?") eq 'no');
 		}
 	}
 
 	$self->_move($FILES,$DEST);
-	Filer::instance()->refresh_cb;
+	Filer->instance()->refresh_cb;
 }
 
 sub _move {

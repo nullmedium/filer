@@ -36,7 +36,7 @@ sub delete {
 
 	my $items_count = scalar @{$FILES};
 
-	if (Filer::Config::instance()->get_option("ConfirmDelete") == $TRUE) {
+	if (Filer::Config->instance()->get_option("ConfirmDelete") == $TRUE) {
 		my $message =
 		 ($items_count == 1)
 		 ? "Delete \"$FILES->[0]\"?"

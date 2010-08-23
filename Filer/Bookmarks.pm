@@ -26,9 +26,9 @@ sub new {
 	my ($class,$filer) = @_;
 	my $self = bless {}, $class;
 
-	$self->{bookmarks} = Filer::Config::instance()->get_option("Bookmarks");
+	$self->{bookmarks} = Filer::Config->instance()->get_option("Bookmarks");
 
-	$self->{ui}             = Filer::instance()->get_uimanager;
+	$self->{ui}             = Filer->instance()->get_uimanager;
 	$self->{bookmarks_menu} = $self->{ui}->get_widget("/ui/menubar/bookmarks-menu");
 
 	return $self;
@@ -53,7 +53,7 @@ sub set_bookmark {
 
 	$self->{bookmarks} = [keys %seen];
 
-	Filer::Config::instance()->set_option("Bookmarks", $self->{bookmarks});
+	Filer::Config->instance()->set_option("Bookmarks", $self->{bookmarks});
 }
 
 sub remove_bookmark {
@@ -66,7 +66,7 @@ sub remove_bookmark {
 
 	$self->{bookmarks} = [keys %seen];
 
-	Filer::Config::instance()->set_option("Bookmarks", $self->{bookmarks});
+	Filer::Config->instance()->set_option("Bookmarks", $self->{bookmarks});
 }
 
 sub generate_bookmarks_menu {
@@ -76,7 +76,7 @@ sub generate_bookmarks_menu {
 
 	$menuitem = Gtk2::MenuItem->new("Set Bookmark");
 	$menuitem->signal_connect("activate", sub {
-		my $pane = Filer::instance()->get_active_pane;
+		my $pane = Filer->instance()->get_active_pane;
 
 		if ($pane->count_items > 0) {
 			foreach (@{$pane->get_fileinfo_list}) {
@@ -97,7 +97,7 @@ sub generate_bookmarks_menu {
 
 	$menuitem = Gtk2::MenuItem->new("Remove Bookmark");
 	$menuitem->signal_connect("activate", sub {
-		my $pane = Filer::instance()->get_active_pane;
+		my $pane = Filer->instance()->get_active_pane;
 
 		if ($pane->count_items > 0) {
 			foreach (@{$pane->get_fileinfo_list}) {
@@ -126,13 +126,13 @@ sub generate_bookmarks_menu {
 			my $path = pop @_;
 
 			if (-e $path && -d $path) {
-				my $mode = Filer::Config::instance()->get_option('Mode');
+				my $mode = Filer::Config->instance()->get_option('Mode');
 				my $pane;
 
 				if ($mode == $EXPLORER_MODE) {
-					$pane = Filer::instance()->get_right_pane;		
+					$pane = Filer->instance()->get_right_pane;		
 				} else {
-					$pane = Filer::instance()->get_active_pane;
+					$pane = Filer->instance()->get_active_pane;
 				}
 
 				$pane->open_path($path);

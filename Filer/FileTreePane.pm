@@ -93,7 +93,7 @@ sub show_popup_menu {
 			$self->{treeselection}->select_path($p);
 		}
 
-		my $uimanager = Filer::instance()->get_uimanager;
+		my $uimanager = Filer->instance()->get_uimanager;
 		my $ui_path   = '/ui/list-popupmenu';
 
 		my $popup_menu = $uimanager->get_widget($ui_path);
@@ -110,7 +110,7 @@ sub show_popup_menu {
 		$uimanager->get_widget("$ui_path/PopupItems1/Open")->hide;
 		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->hide;
 
-		my $bookmarks = Filer::Bookmarks->new(Filer::instance());
+		my $bookmarks = Filer::Bookmarks->new(Filer->instance());
 		$uimanager->get_widget("$ui_path/Bookmarks")->set_submenu($bookmarks->generate_bookmarks_menu);
 
 		$popup_menu->show_all;
@@ -132,7 +132,7 @@ sub treeview_event_cb {
 
 		} elsif ($e->keyval == $Gtk2::Gdk::Keysyms{'Delete'}) {
 
-			Filer::instance()->delete_cb;
+			Filer->instance()->delete_cb;
 			return 1;
 		}
 	}
@@ -144,7 +144,7 @@ sub treeview_event_cb {
 			if (defined $p) {
  				$self->{treeselection}->select_path($p);
 
-# 				my $pane = Filer::instance()->get_right_pane;
+# 				my $pane = Filer->instance()->get_right_pane;
 # 				my $iter = $self->{treemodel}->get_iter($p);
 # 				my $fi   = $self->get_fileinfo($iter);
 # 
@@ -165,7 +165,7 @@ sub treeview_event_cb {
 		if (defined $p) {
 			$self->row_action($p);
 
-			my $pane = Filer::instance()->get_right_pane;
+			my $pane = Filer->instance()->get_right_pane;
 			my $iter = $self->{treemodel}->get_iter($p);
 			my $fi   = $self->get_fileinfo($iter);
 

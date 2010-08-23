@@ -153,7 +153,7 @@ sub show_popup_menu {
 	my ($self,$e) = @_;
 
  	my $item;
-	my $uimanager = Filer::instance()->get_uimanager;
+	my $uimanager = Filer->instance()->get_uimanager;
 	my $ui_path   = '/ui/list-popupmenu';
 
 	my $popup_menu = $uimanager->get_widget($ui_path);
@@ -213,7 +213,7 @@ sub treeview_event_cb {
 			return 1;
 		} elsif ($e->keyval == $Gtk2::Gdk::Keysyms{'Delete'}) {
 
-			Filer::instance()->delete_cb;
+			Filer->instance()->delete_cb;
 			return 1;
 		}
 	}

@@ -65,13 +65,13 @@ sub copy {
 		}
 
 	} else {
-		if (Filer::instance()->get_config->get_option("ConfirmCopy") == $TRUE) {
+		if (Filer->instance()->get_config->get_option("ConfirmCopy") == $TRUE) {
 			return if (Filer::Dialog->show_yesno_dialog("Copy $items_count files to $DEST?") eq 'no');
 		}
 	}
 
 	$self->_copy($FILES,$DEST);
-	Filer::instance()->refresh_cb;
+	Filer->instance()->refresh_cb;
 }
 
 sub _copy {
