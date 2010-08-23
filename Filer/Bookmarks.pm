@@ -28,9 +28,6 @@ sub new {
 
 	$self->{bookmarks} = Filer::Config->instance()->get_option("Bookmarks");
 
-	$self->{ui}             = Filer->instance()->get_uimanager;
-	$self->{bookmarks_menu} = $self->{ui}->get_widget("/ui/menubar/bookmarks-menu");
-
 	return $self;
 }
 
@@ -90,7 +87,9 @@ sub generate_bookmarks_menu {
 			$self->set_bookmark($pane->get_pwd);
 		}
 
-		$self->{bookmarks_menu}->set_submenu($self->generate_bookmarks_menu);
+    	my $ui             = Filer->instance()->get_uimanager;
+    	my $bookmarks_menu = $ui->get_widget("/ui/menubar/bookmarks-menu");
+		$bookmarks_menu->set_submenu($self->generate_bookmarks_menu);
 	});
 	$menuitem->show;
 	$bookmarks_menu->add($menuitem);
@@ -111,7 +110,9 @@ sub generate_bookmarks_menu {
 			$self->remove_bookmark($pane->get_pwd);
 		}
 
-		$self->{bookmarks_menu}->set_submenu($self->generate_bookmarks_menu);
+    	my $ui             = Filer->instance()->get_uimanager;
+    	my $bookmarks_menu = $ui->get_widget("/ui/menubar/bookmarks-menu");
+		$bookmarks_menu->set_submenu($self->generate_bookmarks_menu);
 	});
 	$menuitem->show;
 	$bookmarks_menu->add($menuitem);
