@@ -19,7 +19,6 @@ package Filer::Bookmarks;
 use strict;
 use warnings;
 
-use Filer;
 use Filer::Constants qw(:filer);
 
 sub new {
