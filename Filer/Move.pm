@@ -30,8 +30,6 @@ sub new {
 	my ($class,$filer) = @_;
 	my $self = $class->SUPER::new();
 
-	$self->{filer} = $filer;
-
 	return $self;
 }
 
@@ -67,13 +65,13 @@ sub move {
 		}
 
 	} else {
-		if ($self->{filer}->get_config->get_option("ConfirmMove") == $TRUE) {
+		if (Filer::Config::instance()->get_option("ConfirmMove") == $TRUE) {
 			return if (Filer::Dialog->show_yesno_dialog("Move $items_count files to $DEST?") eq 'no');
 		}
 	}
 
 	$self->_move($FILES,$DEST);
-	$self->{filer}->refresh_cb;
+	Filer::instance()->refresh_cb;
 }
 
 sub _move {

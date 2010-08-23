@@ -40,7 +40,7 @@ Glib->install_exception_handler(sub {
 	return 1;
 });
 
-my $filer = new Filer;
+my $filer = Filer::instance();
 $filer->init_config;
 $filer->init_main_window;
 

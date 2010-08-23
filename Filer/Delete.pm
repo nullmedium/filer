@@ -25,10 +25,8 @@ use File::Basename;
 use Filer::Constants qw(:bool);
 
 sub new {
-	my ($class,$filer) = @_;
+	my ($class) = @_;
 	my $self = $class->SUPER::new();
-
-	$self->{filer} = $filer;
 
 	return $self;
 }
@@ -38,7 +36,7 @@ sub delete {
 
 	my $items_count = scalar @{$FILES};
 
-	if ($self->{filer}->get_config->get_option("ConfirmDelete") == $TRUE) {
+	if (Filer::Config::instance()->get_option("ConfirmDelete") == $TRUE) {
 		my $message =
 		 ($items_count == 1)
 		 ? "Delete \"$FILES->[0]\"?"

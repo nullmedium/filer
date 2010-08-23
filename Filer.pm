@@ -66,25 +66,25 @@ require Filer::Move;
 require Filer::Delete;
 require Filer::Search;
 
-sub new {
-	my ($class) = @_;
-	my $self = bless {}, $class;
+my $oneTrueSelf;
 
-	return $self;
+sub instance {
+    unless (defined $oneTrueSelf) {
+        my $this = {};
+
+        $oneTrueSelf = bless $this, "Filer";
+    }
+
+	return $oneTrueSelf;
 }
 
 sub init_config {
 	my ($self) = @_;
-	$self->{config} = Filer::Config->new;
+	my $config = Filer::Config::instance();
 
-	if ($self->{config}->get_option("HonorUmask") == $FALSE) {
+	if ($config->get_option("HonorUmask") == $FALSE) {
 		umask 0000;
 	}
-}
-
-sub get_config {
-	my ($self) = @_;
-	return $self->{config};
 }
 
 sub init_main_window {
@@ -93,7 +93,7 @@ sub init_main_window {
 	$self->{main_window} = Gtk2::Window->new('toplevel');
 	$self->{main_window}->set_title("Filer $VERSION");
 
-	$self->{main_window}->resize(split ":", $self->{config}->get_option("WindowSize"));
+	$self->{main_window}->resize(split ":", Filer::Config::instance()->get_option("WindowSize"));
 #	$self->{main_window}->resize(784,606);
 
 	$self->{main_window}->signal_connect("event", sub { $self->window_event_cb(@_) });
@@ -231,29 +231,29 @@ sub init_main_window {
 		name => "ask-copying-action",
 		label => "Copying",
 		callback => sub { $self->ask_copy_cb($_[0]) },
-		is_active => $self->{config}->get_option("ConfirmCopy"),
+		is_active => Filer::Config::instance()->get_option("ConfirmCopy"),
 	},{
 		name => "ask-moving-action",
 		label => "Moving",
 		callback => sub { $self->ask_move_cb($_[0]) },
-		is_active => $self->{config}->get_option("ConfirmMove"),
+		is_active => Filer::Config::instance()->get_option("ConfirmMove"),
 	},{
 		name => "ask-deleting-action",
 		label => "Deleting",
 		callback => sub { $self->ask_delete_cb($_[0]) },
-		is_active => $self->{config}->get_option("ConfirmDelete"),
+		is_active => Filer::Config::instance()->get_option("ConfirmDelete"),
 	},{
 		name => "show-hidden-action",
 		label => "Show Hidden Files",
 		callback => sub { $self->show_hidden_files($_[0]) },
 		accelerator => "<control>H",
-		is_active => $self->{config}->get_option("ShowHiddenFiles"),
+		is_active => Filer::Config::instance()->get_option("ShowHiddenFiles"),
 	}];
 
 	$actions->add_actions($a_entries);
-	$actions->add_radio_actions($a_radio_entries, $self->{config}->get_option("Mode"), sub {
+	$actions->add_radio_actions($a_radio_entries, Filer::Config::instance()->get_option("Mode"), sub {
 		my ($action) = @_;
-		$self->{config}->set_option('Mode', $action->get_current_value);
+		Filer::Config::instance()->set_option('Mode', $action->get_current_value);
 		$self->switch_mode;
 	});
 	$actions->add_toggle_actions($a_toggle_entries);
@@ -276,9 +276,9 @@ sub init_main_window {
 	my $hpaned = Gtk2::HPaned->new();
 	my $hbox   = Gtk2::HBox->new(0,0);
 
-	$self->{treepane}  = Filer::FileTreePane->new($self,$LEFT);
-	$self->{filepane1} = Filer::FilePane->new($self,$LEFT);
-	$self->{filepane2} = Filer::FilePane->new($self,$RIGHT);
+	$self->{treepane}  = Filer::FileTreePane->new($LEFT);
+	$self->{filepane1} = Filer::FilePane->new($LEFT);
+	$self->{filepane2} = Filer::FilePane->new($RIGHT);
 
 	$hpaned->add1($self->{treepane}->get_vbox);
 	$hpaned->add2($hbox);
@@ -295,13 +295,13 @@ sub init_main_window {
 	$self->{filepane1}->open_path(
 		(defined $ARGV[0] and -d $ARGV[0])
 		? $ARGV[0]
-		: $self->{config}->get_option('PathLeft')
+		: Filer::Config::instance()->get_option('PathLeft')
 	);
 
 	$self->{filepane2}->open_path(
 		(defined $ARGV[1] and -d $ARGV[1])
 		? $ARGV[1]
-		: $self->{config}->get_option('PathRight')
+		: Filer::Config::instance()->get_option('PathRight')
 	);
 
 	$self->{main_window}->show_all;
@@ -365,7 +365,7 @@ sub window_event_cb {
 sub quit_cb {
 	my ($self) = @_;
 
-	$self->{config}->set_options(
+	Filer::Config::instance()->set_options(
 		'PathLeft'   => $self->{filepane1}->get_pwd,
 		'PathRight'  => $self->{filepane2}->get_pwd,
 		'WindowSize' => join ":", $self->{main_window}->get_size,
@@ -398,7 +398,7 @@ sub show_about_dialog {
 sub open_cb {
 	my ($self) = @_;
 
-	my $mode = $self->{config}->get_option('Mode');
+	my $mode = Filer::Config::instance()->get_option('Mode');
 	my $pane =
 		($mode == $NORTON_COMMANDER_MODE) 
 		? $self->{active_pane} 
@@ -410,7 +410,7 @@ sub open_cb {
 sub open_with_cb {
 	my ($self) = @_;
 
-	my $mode = $self->{config}->get_option('Mode');
+	my $mode = Filer::Config::instance()->get_option('Mode');
 	my $pane =
 		($mode == $NORTON_COMMANDER_MODE) 
 		? $self->{active_pane} 
@@ -428,7 +428,7 @@ sub open_terminal_cb {
 sub switch_mode {
 	my ($self) = @_;
 
-	if ($self->{config}->get_option('Mode') == $EXPLORER_MODE) {
+	if (Filer::Config::instance()->get_option('Mode') == $EXPLORER_MODE) {
 		$self->{filepane2}->get_location_bar->hide;
 
 		$self->{sync_button}->hide;
@@ -457,7 +457,7 @@ sub show_hidden_files {
 	my ($self,$action) = @_;
 
 	my $opt = ($action->get_active) ? 1 : 0;
-	$self->{config}->set_option('ShowHiddenFiles', $opt);
+	Filer::Config::instance()->set_option('ShowHiddenFiles', $opt);
 
 	$self->{pane}->[$LEFT]->set_show_hidden($opt);
 	$self->{pane}->[$RIGHT]->set_show_hidden($opt);
@@ -467,17 +467,17 @@ sub show_hidden_files {
 
 sub ask_copy_cb {
 	my ($self,$action) = @_;
-	$self->{config}->set_option('ConfirmCopy', ($action->get_active) ? 1 : 0);
+	Filer::Config::instance()->set_option('ConfirmCopy', ($action->get_active) ? 1 : 0);
 }
 
 sub ask_move_cb {
 	my ($self,$action) = @_;
-	$self->{config}->set_option('ConfirmMove', ($action->get_active) ? 1 : 0);
+	Filer::Config::instance()->set_option('ConfirmMove', ($action->get_active) ? 1 : 0);
 }
 
 sub ask_delete_cb {
 	my ($self,$action) = @_;
-	$self->{config}->set_option('ConfirmDelete', ($action->get_active) ? 1 : 0);
+	Filer::Config::instance()->set_option('ConfirmDelete', ($action->get_active) ? 1 : 0);
 }
 
 sub set_properties {
@@ -496,7 +496,7 @@ sub refresh_cb {
 
 sub go_home_cb {
 	my ($self) = @_;
-	my $opt  = $self->{config}->get_option('Mode');
+	my $opt  = Filer::Config::instance()->get_option('Mode');
 	my $pane =
 		($opt == $NORTON_COMMANDER_MODE)
 		? $self->{active_pane}
@@ -571,7 +571,7 @@ sub copy_cb {
 # 			return;
 # 		}
 # 	} else {
-# 		if ($self->{config}->get_option("ConfirmCopy") == $TRUE) {
+# 		if (Filer::Config::instance()->get_option("ConfirmCopy") == $TRUE) {
 # 			return if (Filer::Dialog->show_yesno_dialog("Copy $items_count files to $dest?") eq 'no');
 # 		}
 # 	}
@@ -618,7 +618,7 @@ sub move_cb {
 # 			return;
 # 		}
 # 	} else {
-# 		if ($self->{config}->get_option("ConfirmMove") == $TRUE) {
+# 		if (Filer::Config::instance()->get_option("ConfirmMove") == $TRUE) {
 # 			return if (Filer::Dialog->show_yesno_dialog("Move $items_count files to $dest?") eq 'no');
 # 		}
 # 	}

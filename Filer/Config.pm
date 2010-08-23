@@ -23,6 +23,8 @@ use YAML::Syck qw(LoadFile DumpFile Dump);
 
 use Filer::Constants qw(:filer);
 
+my $oneTrueSelf;
+
 my $default_config = {
 	PathLeft		=> $ENV{HOME},
 	PathRight		=> $ENV{HOME},
@@ -39,23 +41,29 @@ my $default_config = {
 	Bookmarks		=> [],
 };
 
-sub new {
-	my ($class) = @_;
-	my $self = bless {}, $class;
-	$self->{config_home} = Filer::Tools->catpath($XDG_CONFIG_HOME, "filer");
-	$self->{config_file} = Filer::Tools->catpath($self->{config_home}, "config.yml");
+sub instance {
+    unless (defined $oneTrueSelf) {
+        print "@_";
+        my $type = shift;
+        my $this = {};
 
-	if (! -e $self->{config_home}) {
- 		mkdir($self->{config_home});
-	}
+	    $this->{config_home} = Filer::Tools->catpath($XDG_CONFIG_HOME, "filer");
+	    $this->{config_file} = Filer::Tools->catpath($this->{config_home}, "config.yml");
 
-	if (! -e $self->{config_file}) {
-		$self->{config} = $default_config;
-	} else {
-		$self->{config} = LoadFile($self->{config_file});
-	}
+    	if (! -e $this->{config_home}) {
+     		mkdir($this->{config_home});
+    	}
 
-	return $self;
+    	if (! -e $this->{config_file}) {
+    		$this->{config} = $default_config;
+    	} else {
+    		$this->{config} = LoadFile($this->{config_file});
+    	}
+
+        $oneTrueSelf = bless $this, "Filer::Config";
+    }
+
+	return $oneTrueSelf;
 }
 
 sub DESTROY {

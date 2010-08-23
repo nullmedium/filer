@@ -31,14 +31,13 @@ sub target_table {
 # API methods shared between Filer::FilePane and Filer::FileTreePane
 
 sub new {
-	my ($class,$filer,$side) = @_;
+	my ($class,$side) = @_;
 	my $self = bless {}, $class;
 
 	$self->{vbox} = Gtk2::VBox->new(0,0);
-	$self->{filer} = $filer;
 	$self->{side}  = $side;
 
-	$self->{ShowHiddenFiles} = $filer->get_config->get_option("ShowHiddenFiles");
+	$self->{ShowHiddenFiles} = Filer::Config::instance()->get_option("ShowHiddenFiles");
 	
 	$self->{directory} = "";
 	
@@ -67,7 +66,7 @@ sub set_focus {
 
 sub treeview_grab_focus_cb {
 	my ($self) = @_;
-	$self->{filer}->change_active_pane($self->{side});
+	Filer::instance()->change_active_pane($self->{side});
 	return 1;
 }
 
@@ -190,11 +189,11 @@ sub drag_data_received {
 		}
 
 		if ($action eq "copy") {
-			my $copy = Filer::Copy->new($self->{filer});
+			my $copy = Filer::Copy->new(Filer::instance());
 			$copy->copy(\@items,$path);
 
 		} elsif ($action eq "move") {
-			my $move = Filer::Move->new($self->{filer});
+			my $move = Filer::Move->new(Filer::instance());
 			$move->move(\@items,$path);
 		}
 	}

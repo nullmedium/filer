@@ -26,11 +26,9 @@ use File::DirWalk;
 use Filer::Constants qw(:filer);
 
 sub new {
-	my ($class,$filer) = @_;
+	my ($class) = @_;
 	my $self = $class->SUPER::new();
 
-	$self->{filer} = $filer;
-	
 	return $self;
 }
 
@@ -66,13 +64,13 @@ sub copy {
 		}
 
 	} else {
-		if ($self->{filer}->get_config->get_option("ConfirmCopy") == $TRUE) {
+		if (Filer::instance()->get_config->get_option("ConfirmCopy") == $TRUE) {
 			return if (Filer::Dialog->show_yesno_dialog("Copy $items_count files to $DEST?") eq 'no');
 		}
 	}
 
 	$self->_copy($FILES,$DEST);
-	$self->{filer}->refresh_cb;
+	Filer::instance()->refresh_cb;
 }
 
 sub _copy {
