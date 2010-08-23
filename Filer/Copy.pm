@@ -15,7 +15,7 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::Copy;
-use base qw(Filer::CopyJobDialog);
+use base qw(Filer::JobDialog);
 
 use strict;
 use warnings;
@@ -28,7 +28,7 @@ use Filer::Constants qw(:filer);
 
 sub new {
 	my ($class) = @_;
-	my $self = $class->SUPER::new();
+	my $self = $class->SUPER::new("Copying ...","<b>Copying: \nto: </b>");
 
 	return $self;
 }

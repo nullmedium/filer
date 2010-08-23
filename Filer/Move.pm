@@ -15,7 +15,7 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::Move;
-use base qw(Filer::MoveJobDialog);
+use base qw(Filer::JobDialog);
 
 use strict;
 use warnings;
@@ -28,7 +28,7 @@ use Filer::Constants qw(:filer);
 
 sub new {
 	my ($class,$filer) = @_;
-	my $self = $class->SUPER::new();
+	my $self = $class->SUPER::new("Moving ...","<b>Moving: \nto: </b>");
 
 	return $self;
 }

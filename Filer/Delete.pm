@@ -15,7 +15,7 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::Delete;
-use base qw(Filer::DeleteJobDialog);
+use base qw(Filer::JobDialog);
 
 use strict;
 use warnings;
@@ -26,7 +26,7 @@ use Filer::Constants qw(:bool);
 
 sub new {
 	my ($class) = @_;
-	my $self = $class->SUPER::new();
+	my $self = $class->SUPER::new("Deleting ...","<b>Deleting:</b> ");
 
 	return $self;
 }

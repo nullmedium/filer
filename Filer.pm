@@ -56,10 +56,6 @@ require Filer::FileTreePane;
 
 require Filer::FileCopy;
 require Filer::JobDialog;
-require Filer::CopyMoveJobDialogCommon;
-require Filer::CopyJobDialog;
-require Filer::MoveJobDialog;
-require Filer::DeleteJobDialog;
 require Filer::Copy;
 require Filer::Move;
 require Filer::Delete;
