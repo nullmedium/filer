@@ -9,17 +9,8 @@
     </menu>
 
     <menu name="edit-menu" action="EditMenuAction">
-<!--
-      <menuitem name="Cut" action="cut-action" />
-      <menuitem name="Copy" action="copy-action" />
-      <menuitem name="Paste" action="paste-action" />
--->
       <menuitem name="Copy" action="copy-action" />
       <menuitem name="Move" action="move-action" />
-<!--
-      <separator/>
-      <menuitem name="Rename" action="rename-action" />
--->
       <menuitem name="MkDir" action="mkdir-action" />
       <menuitem name="Delete" action="delete-action" />
       <separator/>
@@ -62,17 +53,8 @@
     <placeholder name="ToolItems1">
       <toolitem name="Refresh" action="refresh-action"/>
       <separator/>
-<!--
-      <toolitem name="Cut" action="cut-action"/>
-      <toolitem name="Copy" action="copy-action"/>
-      <toolitem name="Paste" action="paste-action"/>
--->
       <toolitem name="Copy" action="copy-action"/>
       <toolitem name="Move" action="move-action"/>
-<!--
-      <separator/>
-      <toolitem name="Rename" action="rename-action"/>
--->
       <toolitem name="MkDir" action="mkdir-action"/>
       <separator/>
       <toolitem name="Delete" action="delete-action"/>
@@ -88,17 +70,8 @@
       <separator/>
       <menuitem name="MkDir" action="mkdir-action"/>
       <separator/>
-<!--
-      <menuitem name="Cut" action="cut-action"/>
-      <menuitem name="Copy" action="copy-action"/>
-      <menuitem name="Paste" action="paste-action"/>
--->
       <menuitem name="Copy" action="copy-action"/>
       <menuitem name="Move" action="move-action"/>
-<!--
-      <separator/>
-      <menuitem name="Rename" action="rename-action"/>
--->
       <separator/>
       <menuitem name="Delete" action="delete-action"/>
     </placeholder>

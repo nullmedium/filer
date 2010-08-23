@@ -160,11 +160,7 @@ sub show_popup_menu {
 
 	$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($TRUE);
 	$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($TRUE);
-# 	$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($TRUE);
 	$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive($TRUE);
-# 	$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive($TRUE);
-# 	$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($TRUE);
-# 	$uimanager->get_widget("$ui_path/PopupItems1/Paste")->set_sensitive($TRUE);
 	$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($TRUE);
 	$uimanager->get_widget("$ui_path/PopupItems1/Move")->set_sensitive($TRUE);
 	$uimanager->get_widget("$ui_path/Properties")->set_sensitive($TRUE);
@@ -181,15 +177,11 @@ sub show_popup_menu {
 	} elsif ($self->count_items > 1) {
 		$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
-#		$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/Properties")->set_sensitive($FALSE);
 	} else {
 		$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
-# 		$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive($FALSE);
-# 		$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive($FALSE);
-# 		$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Move")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/Properties")->set_sensitive($FALSE);

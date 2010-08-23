@@ -98,11 +98,7 @@ sub show_popup_menu {
 
 		my $popup_menu = $uimanager->get_widget($ui_path);
 
-# 		$uimanager->get_widget("$ui_path/PopupItems1/Rename")->set_sensitive($TRUE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive($TRUE);
-# 		$uimanager->get_widget("$ui_path/PopupItems1/Cut")->set_sensitive($TRUE);
-# 		$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($TRUE);
-# 		$uimanager->get_widget("$ui_path/PopupItems1/Paste")->set_sensitive($TRUE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($TRUE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Move")->set_sensitive($TRUE);
 		$uimanager->get_widget("$ui_path/Properties")->set_sensitive($TRUE);
