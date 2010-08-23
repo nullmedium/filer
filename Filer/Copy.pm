@@ -15,6 +15,7 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::Copy;
+use base qw(Filer::CopyJobDialog);
 
 use strict;
 use warnings;
