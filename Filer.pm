@@ -29,7 +29,6 @@ use File::Basename;
 use File::MimeInfo::Magic;
 use File::Temp;
 use File::DirWalk;
-use Stat::lsMode;
 
 use Class::Bind;
 

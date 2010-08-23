@@ -23,7 +23,6 @@ use Readonly;
 
 use File::Basename qw(basename dirname);
 use File::MimeInfo::Magic qw(mimetype describe);
-use Stat::lsMode qw(format_mode);
 
 use Filer::Constants qw(:filer :stat);
 use Filer::Tools;
@@ -177,7 +176,16 @@ sub get_gid {
 
 sub get_mode {
 	my ($self) = @_;
-	my $format = format_mode($self->get_raw_mode);
+    my $format = "";
+    my $readable = $self->is_readable();
+    my $writeable = $self->is_writeable();
+
+    if ($readable && $writeable) {
+        $format = "Read & Write";
+    } elsif ($readable && !$writeable) {
+        $format = "Read only";
+    }
+
 	return $format;
 }
 
@@ -189,6 +197,11 @@ sub exist {
 sub is_readable {
 	my ($self) = @_;
 	return (-R $self->{filepath});
+}
+
+sub is_writeable {
+	my ($self) = @_;
+	return (-W $self->{filepath});
 }
 
 sub is_symlink {
