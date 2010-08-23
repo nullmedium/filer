@@ -629,51 +629,6 @@ sub move_cb {
 # 	$self->refresh_cb;
 }
 
-# sub rename_cb {
-# 	my ($self) = @_;
-# 	my ($dialog,$hbox,$label,$entry);
-# 
-# 	my $pane = $self->{active_pane};
-# 
-# 	return if ($pane->count_items == 0);
-# 
-# 	my $fileinfo = $pane->get_fileinfo_list->[0];
-# 
-# 	$dialog = Filer::DefaultDialog->new("Rename");
-# 
-# 	$hbox = Gtk2::HBox->new(0,0);
-# 	$dialog->vbox->pack_start($hbox, $FALSE, $FALSE, 5);
-# 
-# 	$label = Gtk2::Label->new;
-# 	$label->set_text("Rename: ");
-# 	$hbox->pack_start($label, $FALSE, $FALSE, 2);
-# 
-# 	$entry = Gtk2::Entry->new;
-# 	$entry->set_text($fileinfo->get_basename);
-# 	$entry->set_activates_default($TRUE);
-# 	$hbox->pack_start($entry, $TRUE, $TRUE, 0);
-# 
-# 	$dialog->show_all;
-# 
-# 	if ($dialog->run eq 'ok') {
-# 		my $old_pwd = $pane->get_pwd;
-# 		my $old     = $fileinfo->get_path;
-# 		my $new;
-# 
-# 		if ($self->{active_pane}->get_type eq "TREE") {
-# 			$new = Filer::Tools->catpath(dirname($old_pwd), $entry->get_text);
-# 		} else {
-# 			$new = Filer::Tools->catpath($old_pwd, $entry->get_text);
-# 		}
-# 
-# 		if (!rename($old,$new)) {
-# 			Filer::Dialog->show_error_message("Rename failed: $!");
-# 		}
-# 	}
-# 
-# 	$dialog->destroy;
-# }
-
 sub delete_cb {
 	my ($self) = @_;
 	my $items       = $self->{active_pane}->get_item_list;
