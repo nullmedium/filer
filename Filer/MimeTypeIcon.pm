@@ -21,74 +21,13 @@ use warnings;
 
 use Readonly;
 
-my %fdo_icons = 
-(
-	"inode/directory"          => "folder",
-	"text/html"	           => "text-html",
-	"application/x-executable" => "application-x-executable",
-);
-
-my %inode_icons = 
-(
-	"inode/directory"   => "gnome-fs-directory",
-	"inode/blockdevice" => "gnome-fs-blockdev",
-	"inode/chardevice"  => "gnome-fs-chardev",
-	"inode/fifo"        => "gnome-fs-fifo",
-	"inode/socket"      => "gnome-fs-socket",
-);
-
-my %media_icons = (
-	application => "gnome-mime-application",
-	audio       => "gnome-mime-audio",
-	image       => "gnome-mime-image",
-	text        => "gnome-mime-text",
-	video       => "gnome-mime-video",
-);
-
 sub new {
 	my ($class,$mimetype) = @_;
 	my $self = bless {}, $class;
 
 	$self->{mimetype}  = $mimetype;	
-	$self->{icontheme} = Gtk2::IconTheme->get_default;
 
 	return $self;
-}
-
-sub lookup_icon {
-	my ($self) = @_;
-
-	my ($media,$subtype) = split "/", $self->{mimetype}; 
-	my $icon = undef;
-
-	if ($self->{icontheme}->has_icon("gnome-mime-$media-$subtype")) {
-
-		$icon = "gnome-mime-$media-$subtype";
-
-	} else {
-
-		if ($self->{icontheme}->has_icon("gnome-mime-$media")) {
-
-			$icon = "gnome-mime-$media";
-
-		} else {
-
-			if (defined $inode_icons{$self->{mimetype}} && $self->{icontheme}->has_icon($inode_icons{$self->{mimetype}})) {
-
-				$icon = $inode_icons{$self->{mimetype}};
-
-			} else {
-
-				if ($self->{icontheme}->has_icon("gnome-mime-application-octet-stream")) {
-					$icon = "gnome-mime-application-octet-stream";
-				} else {
-					$icon = undef;
-				}
-			}
-		}
-	}
-
-	return $icon;
 }
 
 sub get_pixbuf {
@@ -96,15 +35,13 @@ sub get_pixbuf {
 	my $icon;
 	my $pixbuf;
 
-	$icon   = $self->lookup_icon;
+	my ($media,$subtype) = split "/", $self->{mimetype}; 
 
-	if ($icon) {
-		$pixbuf = $self->{icontheme}->load_icon($icon, 16, 'no-svg');
-	} else {
-		my $widget = Gtk2::Invisible->new;
-		$widget->realize;
-		$pixbuf = $widget->render_icon('gtk-missing-image', 'small-toolbar');
-	}
+    if ($subtype eq "directory") {
+        $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file("$main::libpath/icons/folder.png");
+    } else {
+        $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file("$main::libpath/icons/default.png");
+    }
 
 	return $pixbuf;
 }
