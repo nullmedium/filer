@@ -35,7 +35,7 @@ our %EXPORT_TAGS = (
 
 # filer constants:
 
-Readonly $VERSION => "0.0.15-svn";
+Readonly $VERSION => "0.0.13-git";
 
 Readonly $LEFT  => 0;
 Readonly $RIGHT => 1;
