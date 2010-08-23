@@ -216,9 +216,4 @@ sub is_hidden {
 	return ($self->{basename} =~ /^\./);
 }
 
-sub is_supported_archive {
-	my ($self) = @_;
-	return Filer::Archive->is_supported_archive($self->get_mimetype);
-}
-
 1;
