@@ -54,20 +54,8 @@ sub get_path {
 
 sub get_uri {
 	my ($self) = @_;
-#	my $uri = "file://$self->{filepath}";
-# 	my $str = ""; 
-# 
-# 	foreach my $c (split //, $uri) {
-# 		if (ord($c) > 32 and ord($c) < 128 and $c ne "&" and $c ne "+" and $c ne "%") {
-# 			$str .= $c;
-# 		} else {
-# 			$str .= '%' . unpack("h", chr(ord($c) >> 4)) . unpack("h", chr(ord($c) & 0xf));
-# 		}
-# 	}
 
-	my $uri = Glib->filename_to_uri($self->{filepath}, "localhost");
-	print $uri, "\n";
-	return $uri;
+	return Glib->filename_to_uri($self->{filepath}, "localhost");
 }
 
 sub get_basename {
