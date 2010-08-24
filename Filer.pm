@@ -380,8 +380,8 @@ sub show_about_dialog {
 	$dialog->set_version($VERSION);
 	$dialog->set_copyright("Copyright (c) 2004-2010 Jens Luedicke");
 	$dialog->set_license($license);
-	$dialog->set_website("http://perldude.de/");
-	$dialog->set_website_label("http://perldude.de/");
+	$dialog->set_website("http://nullmedium.org");
+	$dialog->set_website_label("http://nullmedium.org");
 	$dialog->set_authors(
 		"Jens Luedicke <jens.luedicke\@gmail.com>",
 		"Bjoern Martensen <bjoern.martensen\@gmail.com>"
