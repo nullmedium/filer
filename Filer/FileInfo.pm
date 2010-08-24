@@ -167,11 +167,18 @@ sub get_mode {
     my $format = "";
     my $readable = $self->is_readable();
     my $writeable = $self->is_writeable();
+    my $executable = $self->is_executable();
 
-    if ($readable && $writeable) {
+    if ($executable && $self->is_file()) {
+        $format = "Executable";
+    } elsif ($readable && $writeable) {
         $format = "Read & Write";
     } elsif ($readable && !$writeable) {
         $format = "Read only";
+    } elsif (!$readable && $writeable) {
+        $format = "Write only";
+    } elsif (!$readable && !$writeable) {
+        $format = "No access";
     }
 
 	return $format;
