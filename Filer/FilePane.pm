@@ -278,7 +278,7 @@ sub update_navigation_buttons {
 
 				if ($widget->get_active) {
 					$fd->set_weight('PANGO_WEIGHT_BOLD');
-					$self->DirRead($path);
+					$self->show_directory_contents($path);
 				} else {
 					$fd->set_weight('PANGO_WEIGHT_NORMAL');
 				}
@@ -334,7 +334,7 @@ sub open_file_with {
 sub open_path {
 	my ($self,$filepath) = @_;
 
-	$self->DirRead($filepath);
+	$self->show_directory_contents($filepath);
 
 	if (defined $self->{navigation_buttons}->{$filepath}) {
 		$self->{navigation_buttons}->{$filepath}->set(active => 1);
@@ -343,7 +343,7 @@ sub open_path {
 	}
 }
 
-sub DirRead {
+sub show_directory_contents {
 	my ($self,$filepath) = @_;
 
 	$self->{filepath}  = $filepath;
@@ -370,7 +370,7 @@ sub DirRead {
 
 sub refresh {
 	my ($self) = @_;
-	$self->DirRead($self->{filepath});
+	$self->show_directory_contents($self->{filepath});
 	$self->update_navigation_buttons;
 }
 

@@ -190,7 +190,7 @@ sub treeview_row_expanded_cb {
 	my ($self,$treeview,$iter,$path) = @_;
 
 	my $fi = $self->get_fileinfo($iter);
-	$self->DirRead($fi->get_path,$iter);
+	$self->show_directory_contents($fi->get_path,$iter);
 
 	return 1;
 }
@@ -251,7 +251,7 @@ sub CreateRootNodes {
 	}
 }
 
-sub DirRead {
+sub show_directory_contents {
 	my ($self,$dir,$parent_iter) = @_;
 
 	$self->{directory} = Filer::Directory->new($dir);
