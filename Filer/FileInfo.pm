@@ -29,6 +29,13 @@ use Filer::Tools;
 
 # $File::MimeInfo::DEBUG = 1;
 
+use overload '""' => \&to_string;
+
+sub to_string {
+	my ($self) = @_;
+	return $self->{filepath};
+}
+
 sub get_homedir {
 	return Filer::FileInfo->new($HOMEDIR);
 }
