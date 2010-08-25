@@ -639,16 +639,24 @@ sub delete_cb {
 
 sub mkdir_cb {
 	my ($self) = @_;
-	my ($dialog,$hbox,$label,$entry);
 
-	$dialog = Filer::DefaultDialog->new("Rename");
+	my $dialog = Gtk2::Dialog->new(
+	    "New folder",
+		undef,
+		'modal',
+		'gtk-cancel'  => 'cancel',
+		'gtk-ok'      => 'ok'
+	);
 
-	$label = Gtk2::Label->new;
-	$label->set_text("Enter Folder Name:");
+	$dialog->set_size_request(450,150);
+	$dialog->set_position('center');
+
+	my $label = Gtk2::Label->new;
+	$label->set_text("New folder:");
 	$label->set_alignment(0.0,0.0);
 	$dialog->vbox->pack_start($label, $FALSE, $FALSE, 2);
 
-	$entry = Gtk2::Entry->new;
+	my $entry = Gtk2::Entry->new;
 	$entry->set_text("New_Folder");
 	$entry->set_activates_default($TRUE);
 	$dialog->vbox->pack_start($entry, $TRUE, $TRUE, 0);
@@ -661,11 +669,11 @@ sub mkdir_cb {
 		if (!mkdir($dir)) {
 			Filer::Dialog->show_error_message("Make directory $dir failed: $!");
 		}
+
+    	$self->refresh_cb;
 	}
 
 	$dialog->destroy;
-
-	$self->refresh_cb;
 }
 
 sub symlink_cb {
