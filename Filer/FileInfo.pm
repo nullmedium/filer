@@ -107,7 +107,7 @@ sub get_mimetype_icon {
 	my $pixbuf = $icon->get_pixbuf;
 
 	if ($self->is_hidden) {
-		$pixbuf->saturate_and_pixelate($pixbuf, 0.5, $TRUE)
+		$pixbuf->saturate_and_pixelate($pixbuf, 0.5, $FALSE)
 	}
 
 	return $pixbuf;
