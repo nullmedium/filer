@@ -141,8 +141,8 @@ sub init_main_window {
 		callback => Class::bind(\*Filer::move_cb, $self),
 	},{
 		name => "mkdir-action",
-		label => "Make Directory",
-		tooltip => "Make Directory",
+		label => "New Folder",
+		tooltip => "New Folder",
 		accelerator => "F7",
 		callback => Class::bind(\*Filer::mkdir_cb, $self),
 	},{
