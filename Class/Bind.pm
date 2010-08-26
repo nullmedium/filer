@@ -19,6 +19,8 @@ use base qw(Exporter);
 
 use Class::Bind::Arg;
 
+our $DEBUG = 0;
+
 my @symbols = qw(bind _1 _2 _3 _4 _5 _6 _7 _8 _9 _10);
 our @EXPORT = @symbols;
 
@@ -45,7 +47,10 @@ sub bind {
 
                 for my $i (1..10) {
                     if ($arg->num() == $i) {
-                        print "replacing placeholder _$i => $arguments[$i-1]\n";
+                        if ($DEBUG) {
+                            print "replacing placeholder _$i => $arguments[$i-1]\n";
+                        }
+
                         $arg = $arguments[$i-1];
                         last;
                     }
