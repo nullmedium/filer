@@ -23,6 +23,8 @@ use warnings;
 use Cwd qw(abs_path);
 use File::Basename;
 
+use Class::Bind;
+
 use Filer::Constants qw(:filer :filepane_columns);
 
 sub new {
@@ -38,17 +40,16 @@ sub new {
 
 	$self->{treeview}->set_rules_hint($TRUE);
 	$self->{treeview}->set_headers_visible($FALSE);
-	$self->{treeview}->signal_connect("grab-focus", sub { $self->treeview_grab_focus_cb(@_) });
-	$self->{treeview}->signal_connect("event", sub { $self->treeview_event_cb(@_) });
-	$self->{treeview}->signal_connect("row-expanded", sub { $self->treeview_row_expanded_cb(@_) });
-	$self->{treeview}->signal_connect("row-collapsed", sub { $self->treeview_row_collapsed_cb(@_) });
+	$self->{treeview}->signal_connect("grab-focus", bind(\*Filer::FilePaneInterface::treeview_grab_focus_cb, $self));
+	$self->{treeview}->signal_connect("event",      bind(\*Filer::FileTreePane::treeview_event_cb, $self, _1, _2, _3, _4));
+	$self->{treeview}->signal_connect("row-expanded", bind(\*Filer::FileTreePane::treeview_row_expanded_cb, $self, _1, _2, _3, _4));
+	$self->{treeview}->signal_connect("row-collapsed", bind(\*Filer::FileTreePane::treeview_row_collapsed_cb, $self, _1, _2, _3, _4));
 
 	# Drag and Drop
 	$self->{treeview}->drag_dest_set('all', ['move','copy'], $self->target_table);
 	$self->{treeview}->drag_source_set(['button1_mask','shift-mask'], ['move','copy'], $self->target_table);
-	$self->{treeview}->signal_connect("drag_data_get", sub { $self->drag_data_get(@_) });
-#	$self->{treeview}->signal_connect("drag_motion", sub { $self->drag_motion(@_) });
-	$self->{treeview}->signal_connect("drag_data_received", sub { $self->drag_data_received(@_) });
+	$self->{treeview}->signal_connect("drag_data_get", bind(\*Filer::FilePaneInterface::drag_data_get, $self, _1, _2, _3, _4));
+	$self->{treeview}->signal_connect("drag_data_received", bind(\*Filer::FilePaneInterface::drag_data_received, $self, _1, _2, _3, _4));
 
 	$self->{treeselection} = $self->{treeview}->get_selection;
 	$self->{treeselection}->set_mode("single");
