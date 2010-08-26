@@ -92,8 +92,9 @@ sub init_main_window {
 	$self->{main_window}->resize(split ":", Filer::Config->instance()->get_option("WindowSize"));
 #	$self->{main_window}->resize(784,606);
 
-	$self->{main_window}->signal_connect("event", sub { $self->window_event_cb(@_) });
-	$self->{main_window}->signal_connect("delete-event", Class::bind(\*Filer::quit_cb, $self));
+	$self->{main_window}->signal_connect("event", bind(\*Filer::window_event_cb, $self, _1, _2, _3));
+	$self->{main_window}->signal_connect("delete-event", bind(\*Filer::quit_cb, $self));
+
 	$self->{main_window}->set_icon(Filer::MimeTypeIcon->new("inode/directory")->get_pixbuf);
 
 	$self->{main_window_vbox} = Gtk2::VBox->new(0,0);
@@ -109,21 +110,21 @@ sub init_main_window {
 		name => "open-terminal-action",
 		label => "Open Terminal",
 		accelerator => "F2",
-		callback => Class::bind(\*Filer::open_terminal_cb, $self),
+		callback => bind(\*Filer::open_terminal_cb, $self),
 	},{
 		name => "open-action",
 		stock_id => "gtk-open",
-		callback => Class::bind(\*Filer::open_cb, $self),
+		callback => bind(\*Filer::open_cb, $self),
 		accelerator => "F3",
 	},{
 		name => "open-with-action",
 		label => "Open With",
-		callback => Class::bind(\*Filer::open_with_cb, $self),
+		callback => bind(\*Filer::open_with_cb, $self),
 	},{
 		name => "quit-action",
 		stock_id => "gtk-quit",
 		accelerator => "<control>Q",
-		callback => Class::bind(\*Filer::quit_cb, $self),
+		callback => bind(\*Filer::quit_cb, $self),
 	},{
 		name => "EditMenuAction",
 		label => "_Edit",
@@ -132,50 +133,50 @@ sub init_main_window {
 		label => "Copy",
 		tooltip => "Copy selected files",
 		accelerator => "F5",
-		callback => Class::bind(\*Filer::copy_cb, $self),
+		callback => bind(\*Filer::copy_cb, $self),
 	},{
 		name => "move-action",
 		label => "Move",
 		tooltip => "Move selected files",
 		accelerator => "F6",
-		callback => Class::bind(\*Filer::move_cb, $self),
+		callback => bind(\*Filer::move_cb, $self),
 	},{
 		name => "mkdir-action",
 		label => "New Folder",
 		tooltip => "New Folder",
 		accelerator => "F7",
-		callback => Class::bind(\*Filer::mkdir_cb, $self),
+		callback => bind(\*Filer::mkdir_cb, $self),
 	},{
 		name => "delete-action",
 		stock_id => "gtk-delete",
 		tooltip => "Delete files",
 		accelerator => "F8",
-		callback => Class::bind(\*Filer::delete_cb, $self),
+		callback => bind(\*Filer::delete_cb, $self),
 	},{
 		name => "symlink-action",
 		label => "Symlink",
-		callback => Class::bind(\*Filer::symlink_cb, $self),
+		callback => bind(\*Filer::symlink_cb, $self),
 	},{
 		name => "refresh-action",
 		stock_id => "gtk-refresh",
 		tooltip => "Refresh",
 		accelerator => "<control>R",
-		callback => Class::bind(\*Filer::refresh_cb, $self),
+		callback => bind(\*Filer::refresh_cb, $self),
 	},{
 		name => "search-action",
 		stock_id => "gtk-find",
 		label => "Search",
-		callback => Class::bind(\*Filer::show_search_dialog, $self),
+		callback => bind(\*Filer::show_search_dialog, $self),
 	},{
 		name => "select-action",
 		label => "Select",
 		accelerator => "KP_Add",
-		callback => Class::bind(\*Filer::show_file_selection_dialog, $self),
+		callback => bind(\*Filer::show_file_selection_dialog, $self),
 	},{
 		name => "unselect-action",
 		label => "Unselect",
 		accelerator => "KP_Subtract",
-		callback => Class::bind(\*Filer::show_file_unselection_dialog, $self),
+		callback => bind(\*Filer::show_file_unselection_dialog, $self),
 	},{
 		name => "BookmarksMenuAction",
 		label => "_Bookmarks",
@@ -194,21 +195,21 @@ sub init_main_window {
 	},{
 		name => "about-action",
 		stock_id => "gtk-about",
-		callback => Class::bind(\*Filer::show_about_dialog, $self),
+		callback => bind(\*Filer::show_about_dialog, $self),
 	},{
 		name => "home-action",
 		stock_id => "gtk-home",
 		tooltip => "Go Home",
-		callback => Class::bind(\*Filer::go_home_cb, $self),
+		callback => bind(\*Filer::go_home_cb, $self),
 	},{
 		name => "synchronize-action",
 		label => "Synchronize",
 		tooltip => "Synchronize Folders",
-		callback => Class::bind(\*Filer::synchronize_cb, $self),
+		callback => bind(\*Filer::synchronize_cb, $self),
 	},{
 		name => "properties-action",
 		stock_id => "gtk-properties",
-		callback => Class::bind(\*Filer::set_properties, $self),
+		callback => bind(\*Filer::set_properties, $self),
 	}];
 
 	my $a_radio_entries = [
@@ -226,22 +227,22 @@ sub init_main_window {
 	[{
 		name => "ask-copying-action",
 		label => "Copying",
-		callback => sub { $self->ask_copy_cb($_[0]) },
+		callback => bind(\*Filer::ask_copy_cb, $self, _1),
 		is_active => Filer::Config->instance()->get_option("ConfirmCopy"),
 	},{
 		name => "ask-moving-action",
 		label => "Moving",
-		callback => sub { $self->ask_move_cb($_[0]) },
+		callback => bind(\*Filer::ask_move_cb, $self, _1),
 		is_active => Filer::Config->instance()->get_option("ConfirmMove"),
 	},{
 		name => "ask-deleting-action",
 		label => "Deleting",
-		callback => sub { $self->ask_delete_cb($_[0]) },
+		callback => bind(\*Filer::ask_delete_cb, $self, _1),
 		is_active => Filer::Config->instance()->get_option("ConfirmDelete"),
 	},{
 		name => "show-hidden-action",
 		label => "Show Hidden Files",
-		callback => sub { $self->show_hidden_files($_[0]) },
+		callback => bind(\*Filer::show_hidden_files, $self, _1),
 		accelerator => "<control>H",
 		is_active => Filer::Config->instance()->get_option("ShowHiddenFiles"),
 	}];
