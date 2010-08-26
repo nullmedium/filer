@@ -514,7 +514,7 @@ sub show_file_selection_dialog {
 		? $self->{pane}->[$RIGHT]
 		: $self->{active_pane};
 
-	$pane->show_file_selection_dialog;
+	$pane->show_file_selection_dialog($Filer::FilePane::SELECT);
 }
 
 sub show_file_unselection_dialog {
@@ -524,7 +524,7 @@ sub show_file_unselection_dialog {
 		? $self->{pane}->[$RIGHT]
 		: $self->{active_pane};
 
-	$pane->show_file_unselection_dialog;
+	$pane->show_file_selection_dialog($Filer::FilePane::UNSELECT);
 }
 
 sub show_search_dialog {
