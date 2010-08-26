@@ -29,8 +29,8 @@ use Class::Bind;
 use Filer::Constants qw(:filer :filepane_columns);
 use Filer::ListStore;
 
-Readonly my $SELECT   => 0;
-Readonly my $UNSELECT => 1;
+Readonly our $SELECT   => 0;
+Readonly our $UNSELECT => 1;
 
 sub new {
 	my ($class,$side) = @_;
@@ -377,19 +377,15 @@ sub refresh {
 }
 
 sub show_file_selection_dialog {
-	my ($self) = @_;
-	$self->_show_file_selection_dialog($SELECT);
-}
-
-sub show_file_unselection_dialog {
-	my ($self) = @_;
-	$self->_show_file_selection_dialog($UNSELECT);
-}
-
-sub _show_file_selection_dialog {
 	my ($self,$type) = @_;
 
-	my $dialog = Filer::DefaultDialog->new;
+	my $dialog = Gtk2::Dialog->new(
+		"--",
+		undef,
+		'modal',
+		'gtk-close' => 'close',
+		'gtk-ok'    => 'ok',
+    );
 
 	my $hbox = Gtk2::HBox->new(0,0);
 	$dialog->vbox->pack_start($hbox, $FALSE, $TRUE, 5);
