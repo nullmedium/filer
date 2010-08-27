@@ -101,6 +101,65 @@ sub init_main_window {
 	$self->{main_window_vbox} = Gtk2::VBox->new(0,0);
 	$self->{main_window}->add($self->{main_window_vbox});
 
+    $self->init_actions;
+
+	$self->{menubar} = $self->{uimanager}->get_widget("/ui/menubar");
+ 	$self->{main_window_vbox}->pack_start($self->{menubar}, $FALSE, $FALSE, 0);
+
+	$self->{toolbar} = $self->{uimanager}->get_widget("/ui/toolbar");
+	$self->{toolbar}->set_style('GTK_TOOLBAR_TEXT');
+	$self->{sync_button} = $self->{uimanager}->get_widget("/ui/toolbar/Synchronize");
+	$self->{main_window_vbox}->pack_start($self->{toolbar}, $FALSE, $FALSE, 0);
+
+	my $hpaned = Gtk2::HPaned->new();
+	my $hbox   = Gtk2::HBox->new(0,0);
+
+	$self->{treepane}  = Filer::FileTreePane->new($LEFT);
+	$self->{filepane1} = Filer::FilePane->new($LEFT);
+	$self->{filepane2} = Filer::FilePane->new($RIGHT);
+
+	$hpaned->add1($self->{treepane}->get_vbox);
+	$hpaned->add2($hbox);
+	$hbox->pack_start($self->{filepane1}->get_vbox, $TRUE, $TRUE, 0);
+	$hbox->pack_start($self->{filepane2}->get_vbox, $TRUE, $TRUE, 0);
+	$self->{main_window_vbox}->pack_start($hpaned, $TRUE, $TRUE, 0);
+
+  	my $bookmarks      = Filer::Bookmarks->new($self);
+	my $bookmarks_menu = $self->{uimanager}->get_widget("/ui/menubar/bookmarks-menu");
+
+	$bookmarks_menu->set_submenu($bookmarks->generate_bookmarks_menu);
+	$bookmarks_menu->show;
+
+	$self->{filepane1}->open_path(
+		(defined $ARGV[0] and -d $ARGV[0])
+		? $ARGV[0]
+		: Filer::Config->instance()->get_option('PathLeft')
+	);
+
+	$self->{filepane2}->open_path(
+		(defined $ARGV[1] and -d $ARGV[1])
+		? $ARGV[1]
+		: Filer::Config->instance()->get_option('PathRight')
+	);
+
+	$self->{main_window}->show_all;
+
+	$self->{sync_button}->hide;
+	$self->{treepane}->get_vbox->hide;
+	$self->{filepane1}->get_vbox->hide;
+	$self->{filepane2}->get_vbox->show;
+	
+	$self->{pane}->[$LEFT]  = $self->{filepane1};
+	$self->{pane}->[$RIGHT] = $self->{filepane2};
+
+	$self->switch_mode;
+
+	$self->{pane}->[$RIGHT]->set_focus;
+}
+
+sub init_actions {
+	my ($self) = @_;
+    
 	my $actions = Gtk2::ActionGroup->new("Actions");
 
 	my $a_entries =
@@ -262,59 +321,6 @@ sub init_main_window {
 
 	my $accels = $self->{uimanager}->get_accel_group;
 	$self->{main_window}->add_accel_group($accels);
-
-	$self->{menubar} = $self->{uimanager}->get_widget("/ui/menubar");
- 	$self->{main_window_vbox}->pack_start($self->{menubar}, $FALSE, $FALSE, 0);
-
-	$self->{toolbar} = $self->{uimanager}->get_widget("/ui/toolbar");
-	$self->{toolbar}->set_style('GTK_TOOLBAR_TEXT');
-	$self->{sync_button} = $self->{uimanager}->get_widget("/ui/toolbar/Synchronize");
-	$self->{main_window_vbox}->pack_start($self->{toolbar}, $FALSE, $FALSE, 0);
-
-	my $hpaned = Gtk2::HPaned->new();
-	my $hbox   = Gtk2::HBox->new(0,0);
-
-	$self->{treepane}  = Filer::FileTreePane->new($LEFT);
-	$self->{filepane1} = Filer::FilePane->new($LEFT);
-	$self->{filepane2} = Filer::FilePane->new($RIGHT);
-
-	$hpaned->add1($self->{treepane}->get_vbox);
-	$hpaned->add2($hbox);
-	$hbox->pack_start($self->{filepane1}->get_vbox, $TRUE, $TRUE, 0);
-	$hbox->pack_start($self->{filepane2}->get_vbox, $TRUE, $TRUE, 0);
-	$self->{main_window_vbox}->pack_start($hpaned, $TRUE, $TRUE, 0);
-
-  	my $bookmarks      = Filer::Bookmarks->new($self);
-	my $bookmarks_menu = $self->{uimanager}->get_widget("/ui/menubar/bookmarks-menu");
-
-	$bookmarks_menu->set_submenu($bookmarks->generate_bookmarks_menu);
-	$bookmarks_menu->show;
-
-	$self->{filepane1}->open_path(
-		(defined $ARGV[0] and -d $ARGV[0])
-		? $ARGV[0]
-		: Filer::Config->instance()->get_option('PathLeft')
-	);
-
-	$self->{filepane2}->open_path(
-		(defined $ARGV[1] and -d $ARGV[1])
-		? $ARGV[1]
-		: Filer::Config->instance()->get_option('PathRight')
-	);
-
-	$self->{main_window}->show_all;
-
-	$self->{sync_button}->hide;
-	$self->{treepane}->get_vbox->hide;
-	$self->{filepane1}->get_vbox->hide;
-	$self->{filepane2}->get_vbox->show;
-	
-	$self->{pane}->[$LEFT]  = $self->{filepane1};
-	$self->{pane}->[$RIGHT] = $self->{filepane2};
-
-	$self->switch_mode;
-
-	$self->{pane}->[$RIGHT]->set_focus;
 }
 
 sub get_uimanager {
