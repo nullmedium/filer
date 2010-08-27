@@ -16,6 +16,8 @@
 
 package Filer;
 
+our $VERSION = '0.0.13-git';
+
 use strict;
 use warnings;
 
