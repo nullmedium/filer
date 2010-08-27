@@ -58,76 +58,78 @@ sub new {
 	$self->{navigation_box} = Gtk2::HBox->new(0,0);
 	$self->{vbox}->pack_start($self->{navigation_box}, $FALSE, $TRUE, 0);
 
-	$self->{treemodel} = Filer::ListStore->new;
-	$self->{treeview}  = Gtk2::TreeView->new($self->{treemodel});
-	$self->{treeview}->set_rules_hint($TRUE);
-	$self->{treeview}->set_enable_search($TRUE);
-
-	$self->{treeview}->signal_connect("grab-focus",           bind(\*Filer::FilePaneInterface::treeview_grab_focus_cb, $self));
-	$self->{treeview}->signal_connect("key-press-event",      bind(\*Filer::FilePane::treeview_event_cb, $self, _1, _2, _3));
-	$self->{treeview}->signal_connect("button-press-event",   bind(\*Filer::FilePane::treeview_event_cb, $self, _1, _2));
-
-	# Drag and Drop
-	$self->{treeview}->drag_dest_set('all', ['move','copy'], $self->target_table);
-	$self->{treeview}->drag_source_set(['button1_mask','shift-mask'], ['move','copy'], $self->target_table);
-	$self->{treeview}->signal_connect("drag_data_get",      bind(\*Filer::FilePaneInterface::drag_data_get,      $self, _1, _2, _3));
-	$self->{treeview}->signal_connect("drag_data_received", bind(\*Filer::FilePaneInterface::drag_data_received, $self, _1, _2, _3));
-
-	$self->{treeselection} = $self->{treeview}->get_selection;
-	$self->{treeselection}->set_mode("multiple");
-
+    $self->{treemodel} = Filer::ListStore->new;
+    $self->{treeview}  = Gtk2::TreeView->new($self->{treemodel});
+    $self->{treeview}->set_rules_hint($TRUE);
+    $self->{treeview}->set_enable_search($TRUE);
+    
+    $self->{treeview}->signal_connect("grab-focus",           bind(\*Filer::FilePaneInterface::treeview_grab_focus_cb, $self));
+    $self->{treeview}->signal_connect("key-press-event",      bind(\*Filer::FilePane::treeview_event_cb, $self, _1, _2, _3));
+    $self->{treeview}->signal_connect("button-press-event",   bind(\*Filer::FilePane::treeview_event_cb, $self, _1, _2));
+    
+    # Drag and Drop
+    $self->{treeview}->drag_dest_set('all', ['move','copy'], $self->target_table);
+    $self->{treeview}->drag_source_set(['button1_mask','shift-mask'], ['move','copy'], $self->target_table);
+    $self->{treeview}->signal_connect("drag_data_get",      bind(\*Filer::FilePaneInterface::drag_data_get,      $self, _1, _2, _3));
+    $self->{treeview}->signal_connect("drag_data_received", bind(\*Filer::FilePaneInterface::drag_data_received, $self, _1, _2, _3));
+    
+    $self->{treeselection} = $self->{treeview}->get_selection;
+    $self->{treeselection}->set_mode("multiple");
+    
 	my $scrolled_window = Gtk2::ScrolledWindow->new;
 	$scrolled_window->set_policy('automatic','automatic');
 	$scrolled_window->set_shadow_type('etched-in');
 	$scrolled_window->add($self->{treeview});
 	$self->{vbox}->pack_start($scrolled_window, $TRUE, $TRUE, 0);
 
-	# a column with a pixbuf renderer and a text renderer
-	my $col = Gtk2::TreeViewColumn->new;
-	$col->set_sort_column_id($COL_NAME);
-	$col->set_sort_indicator($TRUE);
-	$col->set_title("Name");
-	$col->set_sizing('GTK_TREE_VIEW_COLUMN_AUTOSIZE');
+    # Filename column
+	my $col0 = Gtk2::TreeViewColumn->new;
+	$col0->set_sort_column_id($COL_NAME);
+	$col0->set_sort_indicator($TRUE);
+	$col0->set_title("Name");
+	$col0->set_sizing('GTK_TREE_VIEW_COLUMN_AUTOSIZE');
 
-	my $cell0 = Gtk2::CellRendererPixbuf->new;
-	$col->pack_start($cell0, 0);
-	$col->add_attribute($cell0, pixbuf => $COL_ICON);
-
-	my $cell1 = Gtk2::CellRendererText->new;
-	$col->pack_start($cell1, 1);
-	$col->add_attribute($cell1, text => $COL_NAME);
-
-	$self->{treeview}->append_column($col);
-
-	my %cols = ();
-	$cols{$COL_SIZE} = "Size";
-# 	$cols{$COL_MODE} = "Mode";
-	$cols{$COL_TYPE} = "Type";
-	$cols{$COL_DATE} = "Date Modified";
-
-	foreach (sort keys %cols) {
-		my $cell;
-		my $col;
-
-		if ($_ == $COL_SIZE) {
-			$cell = Filer::CellRendererSize->new;
-			$cell->set(humanize => $TRUE);
-			$col  = Gtk2::TreeViewColumn->new_with_attributes($cols{$_}, $cell, size => $_);
-		} elsif ($_ == $COL_DATE) {
-			$cell = Filer::CellRendererDate->new;
-			$cell->set(dateformat => "%o %b %Y");
-# 			$cell->set(dateformat => "%x");
-			$col  = Gtk2::TreeViewColumn->new_with_attributes($cols{$_}, $cell, seconds => $_);
-		} else {
-			$cell = Gtk2::CellRendererText->new;
-			$col  = Gtk2::TreeViewColumn->new_with_attributes($cols{$_}, $cell, text => $_);
-		}
-
-		$col->set_sort_column_id($_);
- 		$col->set_sort_indicator($TRUE);
-		$col->set_sizing('GTK_TREE_VIEW_COLUMN_AUTOSIZE');
-		$self->{treeview}->append_column($col);
-	}
+    my $cell0 = Gtk2::CellRendererPixbuf->new;
+    $col0->pack_start($cell0, 0);
+    $col0->add_attribute($cell0, pixbuf => $COL_ICON);
+    
+    my $cell1 = Gtk2::CellRendererText->new;
+    $col0->pack_start($cell1, 1);
+    $col0->add_attribute($cell1, text => $COL_NAME);
+    
+    $self->{treeview}->append_column($col0);
+    
+    # Type column
+    my $cell2 = Gtk2::CellRendererText->new;
+    my $col1  = Gtk2::TreeViewColumn->new_with_attributes("Type", $cell2, text => $COL_TYPE);
+    $col1->set_sort_column_id($COL_TYPE);
+    $col1->set_sort_indicator($TRUE);
+    $col1->set_sizing('GTK_TREE_VIEW_COLUMN_AUTOSIZE');
+    $self->{treeview}->append_column($col1);
+    
+    # Size column
+    my $cell3 = Filer::CellRendererSize->new(humanize => $FALSE);
+    my $col2  = Gtk2::TreeViewColumn->new_with_attributes("Size", $cell3, size => $COL_SIZE);
+    $col2->set_sort_column_id($COL_SIZE);
+    $col2->set_sort_indicator($TRUE);
+    $col2->set_sizing('GTK_TREE_VIEW_COLUMN_AUTOSIZE');
+    $self->{treeview}->append_column($col2);
+    
+    # Mode column
+    my $cell4 = Gtk2::CellRendererText->new;
+    my $col3  = Gtk2::TreeViewColumn->new_with_attributes("Mode", $cell4, text => $COL_MODE);
+    $col3->set_sort_column_id($COL_MODE);
+    $col3->set_sort_indicator($TRUE);
+    $col3->set_sizing('GTK_TREE_VIEW_COLUMN_AUTOSIZE');
+    $self->{treeview}->append_column($col3);
+    
+    # Date column
+    my $cell5 = Filer::CellRendererDate->new(dateformat => "%Y-%m-%d");
+    my $col4  = Gtk2::TreeViewColumn->new_with_attributes("Date Modified", $cell5, seconds => $COL_DATE);
+    $col4->set_sort_column_id($COL_DATE);
+    $col4->set_sort_indicator($TRUE);
+    $col4->set_sizing('GTK_TREE_VIEW_COLUMN_AUTOSIZE');
+    $self->{treeview}->append_column($col4);
 
 	$self->{status} = Gtk2::Label->new;
 	$self->{status}->set_alignment(0.0,0.5);
