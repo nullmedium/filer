@@ -15,7 +15,6 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::Move;
-use base qw(Filer::JobDialog);
 
 use strict;
 use warnings;
@@ -28,7 +27,7 @@ use Filer::Constants qw(:filer);
 
 sub new {
 	my ($class,$filer) = @_;
-	my $self = $class->SUPER::new("Moving ...","<b>Moving: \nto: </b>");
+	my $self = bless {}, $class;
 
 	return $self;
 }
@@ -108,11 +107,16 @@ sub move_by_rename {
 sub move_by_copy_delete {
 	my ($self,$FILES,$DEST) = @_;
 
-	my $dirwalk  = new File::DirWalk;
-	my $filecopy = new Filer::FileCopy($self);
+	my $job_dialog = Filer::JobDialog->new("Moving ...","<b>Moving: \nto: </b>");
+	my $dirwalk  = File::DirWalk->new;
+	my $filecopy = Filer::FileCopy->new($job_dialog);
 
 	$dirwalk->onBeginWalk(sub {
-		return (!$self->cancelled) ? File::DirWalk::SUCCESS : File::DirWalk::ABORTED;
+		if (! $job_dialog->cancelled) {
+		  return File::DirWalk::SUCCESS;  
+		} else {
+		  return File::DirWalk::ABORTED;
+		}
 	});
 
 	$dirwalk->onLink(sub {
@@ -128,13 +132,13 @@ sub move_by_copy_delete {
 		my $dir = $_[0];
 		$DEST   = Filer::Tools->catpath($DEST, basename($dir));
 
-		if (-e $DEST and $self->overwrite_all == $FALSE) {
+		if ((-e $DEST) and (! $job_dialog->overwrite_all)) {
 		
-			if ($self->skip_all == $TRUE) {
+			if ($job_dialog->skip_all) {
 				return File::DirWalk::SUCCESS;
 			}
 	
-			my ($response,$new_my_dest) = $self->show_file_exists_dialog($dir, $DEST);
+			my ($response,$new_my_dest) = $job_dialog->show_file_exists_dialog($dir, $DEST);
 
 			if ($response != File::DirWalk::SUCCESS) {
 				return $response;				
@@ -154,7 +158,7 @@ sub move_by_copy_delete {
 		my $dir = $_[0];
 		$DEST   = abs_path(Filer::Tools->catpath($DEST, $UPDIR));
 
-		if ($self->skip_all == $TRUE) {
+		if ($job_dialog->skip_all) {
 			return File::DirWalk::SUCCESS;
 		}
 
@@ -167,13 +171,13 @@ sub move_by_copy_delete {
 		my $file = $_[0];
 		my $my_dest = Filer::Tools->catpath($DEST, basename($file));
 
-		if (-e $my_dest and $self->overwrite_all == $FALSE) {
+		if (-e $my_dest and (! $job_dialog->overwrite_all)) {
 
-			if ($self->skip_all == $TRUE) {
+			if ($job_dialog->skip_all == $TRUE) {
 				return File::DirWalk::SUCCESS;
 			}
 
-			my ($response,$new_my_dest) = $self->show_file_exists_dialog($file, $my_dest);
+			my ($response,$new_my_dest) = $job_dialog->show_file_exists_dialog($file, $my_dest);
 
 			if ($response != File::DirWalk::SUCCESS) {
 				return $response;				
@@ -188,13 +192,13 @@ sub move_by_copy_delete {
 
 		unlink($file) || return File::DirWalk::FAILED;
 
-		$self->update_progress_label("$file\n$my_dest");
+		$job_dialog->update_progress_label("$file\n$my_dest");
 
 		return File::DirWalk::SUCCESS;
  	});
 
-	$self->set_total(Filer::Tools->deep_count_bytes($FILES));
-	$self->show_job_dialog;
+	$job_dialog->set_total(Filer::Tools->deep_count_bytes($FILES));
+	$job_dialog->show_all;
 
 	foreach my $source (@{$FILES}) {
 		my $r = $dirwalk->walk($source);
@@ -208,7 +212,7 @@ sub move_by_copy_delete {
 		}
 	}
 
-	$self->destroy_job_dialog;
+	$job_dialog->destroy;
 }
 
 1;
