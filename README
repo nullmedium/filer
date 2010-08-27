@@ -1,40 +1,18 @@
-================================================================================
-README:
-================================================================================
+0. About
+
+Filer is a simple Perl/Gtk2 based file manager.
 
 1. Dependencies
 
-Filer has a few dependencies (mainly Perl modules):
+* File::BaseDir (available on CPAN)
 
-* Gtk+ 2.6.x (http://gtk.org/)
+* File::MimeInfo (available on CPAN)
 
-* shared-mime-info (http://freedesktop.org/)
+* File::DirWalk (available on CPAN)
 
-* File::BaseDir
+* Class::Bind (http://github.com/nullmedium/Class-Bind)
 
-* File::MimeInfo
-
-* Stat::lsMode
-
-* File::DirWalk
-
-* Unicode::String
-
-* Gtk2-Perl 1.080 (http://gtk2-perl.sf.net/)
-
- - ExtUtils::Depends
- - ExtUtils::PkgConfig
- - Glib
- - Gtk2
-
-If possible use the packages provided by your distribution. 
-Filer is available as a in Gentoo and Lunar Linux.
-When installing from source, please read the packages
-installation instructions:
-
-If you need to install a Perl module (as root):
-
-	$ cpan -i <module>
+* Gtk2-Perl (http://gtk2-perl.sf.net/)
 
 2. Installation
 
@@ -51,8 +29,3 @@ depending on your chosen PREFIX, filer will be installed
 as ${PREFIX}/bin/filer
 
 You may want to add ${PREFIX}/bin to your PATH
-
-If you have problems with installing Filer, please refer 
-to the Filer mailing list:
-
- * http://foo-projects.org/mailman/listinfo/filer
