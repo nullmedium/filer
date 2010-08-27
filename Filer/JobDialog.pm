@@ -47,16 +47,6 @@ sub new {
 	return $self;
 }
 
-sub show_job_dialog {
-	my ($self) = @_;
-	$self->show_all;
-}
-
-sub destroy_job_dialog {
-	my ($self) = @_;
-	$self->destroy;
-}
-
 sub cancelled {
 	my ($self) = @_;
 	return $self->{CANCELLED};

@@ -15,7 +15,6 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 package Filer::Delete;
-use base qw(Filer::JobDialog);
 
 use strict;
 use warnings;
@@ -26,8 +25,8 @@ use Filer::Constants qw(:bool);
 
 sub new {
 	my ($class) = @_;
-	my $self = $class->SUPER::new("Deleting ...","<b>Deleting:</b> ");
-
+	my $self = bless {}, $class;
+	
 	return $self;
 }
 
@@ -51,10 +50,15 @@ sub delete {
 sub _delete {
 	my ($self,$FILES) = @_;
 
-	my $dirwalk = new File::DirWalk;
+    my $job_dialog = Filer::JobDialog->new("Deleting ...","<b>Deleting:</b> ");
+	my $dirwalk = File::DirWalk->new;
 
 	$dirwalk->onBeginWalk(sub {
-		return (!$self->cancelled) ? File::DirWalk::SUCCESS : File::DirWalk::ABORTED;
+		if (! $job_dialog->cancelled) {
+		  return File::DirWalk::SUCCESS;  
+		} else {
+		  return File::DirWalk::ABORTED;
+		}
 	});
 
 	$dirwalk->onLink(sub {
@@ -70,14 +74,14 @@ sub _delete {
 	$dirwalk->onFile(sub {
 		unlink($_[0]) || return File::DirWalk::FAILED;
 
-		$self->update_progress_label($_[0]);
-		$self->set_completed($self->get_completed + 1);
+		$job_dialog->update_progress_label($_[0]);
+		$job_dialog->set_completed($job_dialog->get_completed + 1);
 
 		return File::DirWalk::SUCCESS;
 	});
 
-	$self->set_total(Filer::Tools->deep_count_files($FILES));
-	$self->show_job_dialog;
+	$job_dialog->set_total(Filer::Tools->deep_count_files($FILES));
+	$job_dialog->show_all;
 
 	foreach my $source (@{$FILES}) {
 		my $r = $dirwalk->walk($source);
@@ -91,7 +95,7 @@ sub _delete {
 		}
 	}
 
-	$self->destroy_job_dialog;
+	$job_dialog->destroy;
 }
 
 1;
