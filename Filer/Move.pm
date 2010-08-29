@@ -107,7 +107,6 @@ sub move_by_copy_delete {
 
 	my $job_dialog = Filer::JobDialog->new("Moving ...","<b>Moving: \nto: </b>");
 	my $dirwalk  = File::DirWalk->new;
-	my $filecopy = Filer::FileCopy->new($job_dialog);
 
 	$dirwalk->onBeginWalk(sub {
 		if (! $job_dialog->cancelled) {
@@ -184,7 +183,7 @@ sub move_by_copy_delete {
 			}
 		}
 
-        my $r = $filecopy->filecopy($file,$my_dest);
+        my $r = Filer::FileCopy::filecopy($job_dialog, $file, $my_dest);
         
 		if ($r != File::DirWalk::SUCCESS) {
 			return $r;
