@@ -543,42 +543,9 @@ sub copy_cb {
  	my $files = $self->{active_pane}->get_item_list;
 	my $dest  = $self->{inactive_pane}->get_pwd;
 
-# 	if ($items_count == 1) {
-# 		my $dialog = Filer::SourceTargetDialog->new("Copy");
-# 
-# 		my $label = $dialog->get_source_label;
-# 		$label->set_markup("<b>Copy: </b>");
-# 
-# 		my $source_entry = $dialog->get_source_entry;
-# 		$source_entry->set_text($files->[0]);
-# 		$source_entry->set_activates_default($TRUE);
-# 
-# 		my $target_label = $dialog->get_target_label;
-# 		$target_label->set_markup("<b>to: </b>");
-# 
-# 		my $target_entry  = $dialog->get_target_entry;
-# 		$target_entry->set_text($dest);
-# 		$target_entry->set_activates_default($TRUE);
-# 
-# 		if ($dialog->run eq 'ok') {
-# 			my $target = $target_entry->get_text;
-# 			$dest      = $target;
-# 
-# 			$dialog->destroy;
-# 		} else {
-# 			$dialog->destroy;
-# 			return;
-# 		}
-# 	} else {
-# 		if (Filer::Config->instance()->get_option("ConfirmCopy") == $TRUE) {
-# 			return if (Filer::Dialog->show_yesno_dialog("Copy $items_count files to $dest?") eq 'no');
-# 		}
-# 	}
+	Filer::Copy::copy($files, $dest);
 
-	my $copy = Filer::Copy->new($self);
-	$copy->copy($files, $dest);
-
-# 	$self->refresh_cb;
+ 	$self->refresh_cb;
 }
 
 sub move_cb {
@@ -590,42 +557,9 @@ sub move_cb {
  	my $files = $self->{active_pane}->get_item_list;
 	my $dest  = $self->{inactive_pane}->get_pwd;
 	
-# 	if ($items_count == 1) {
-# 		my $dialog = Filer::SourceTargetDialog->new("Move/Rename");
-# 
-# 		my $label = $dialog->get_source_label;
-# 		$label->set_markup("<b>Move/Rename: </b>");
-# 
-# 		my $source_entry = $dialog->get_source_entry;
-# 		$source_entry->set_text($files->[0]);
-# 		$source_entry->set_activates_default($TRUE);
-# 
-# 		my $target_label = $dialog->get_target_label;
-# 		$target_label->set_markup("<b>to: </b>");
-# 
-# 		my $target_entry  = $dialog->get_target_entry;
-# 		$target_entry->set_text($dest);
-# 		$target_entry->set_activates_default($TRUE);
-# 
-# 		if ($dialog->run eq 'ok') {
-# 			my $target = $target_entry->get_text;
-# 			$dest      = $target;
-# 
-# 			$dialog->destroy;
-# 		} else {
-# 			$dialog->destroy;
-# 			return;
-# 		}
-# 	} else {
-# 		if (Filer::Config->instance()->get_option("ConfirmMove") == $TRUE) {
-# 			return if (Filer::Dialog->show_yesno_dialog("Move $items_count files to $dest?") eq 'no');
-# 		}
-# 	}
+	Filer::Move::move($files, $dest);
 
-	my $copy = Filer::Move->new($self);
-	$copy->move($files, $dest);
-
-# 	$self->refresh_cb;
+ 	$self->refresh_cb;
 }
 
 sub delete_cb {
@@ -635,8 +569,7 @@ sub delete_cb {
 
 	return if ($items_count == 0);
 
-	my $delete = Filer::Delete->new($self);
-	$delete->delete($items);
+	Filer::Delete::delete($items);
 
 	$self->refresh_cb;
 }

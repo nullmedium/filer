@@ -189,12 +189,10 @@ sub drag_data_received {
 		}
 
 		if ($action eq "copy") {
-			my $copy = Filer::Copy->new(Filer->instance());
-			$copy->copy(\@items,$path);
+			Filer::Copy::copy(\@items,$path);
 
 		} elsif ($action eq "move") {
-			my $move = Filer::Move->new(Filer->instance());
-			$move->move(\@items,$path);
+			Filer::Move::move(\@items,$path);
 		}
 	}
 

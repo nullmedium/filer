@@ -25,15 +25,8 @@ use File::DirWalk;
 
 use Filer::Constants qw(:filer);
 
-sub new {
-	my ($class) = @_;
-	my $self = bless {}, $class;
-
-	return $self;
-}
-
 sub copy {
-	my ($self,$FILES,$DEST) = @_;
+	my ($FILES,$DEST) = @_;
 	my $items_count = scalar @{$FILES};
 
 	if ($items_count == 1) {
@@ -64,17 +57,22 @@ sub copy {
 		}
 
 	} else {
-		if (Filer->instance()->get_config->get_option("ConfirmCopy") == $TRUE) {
-			return if (Filer::Dialog->show_yesno_dialog("Copy $items_count files to $DEST?") eq 'no');
+	    my $confirm = Filer::Config->instance()->get_option("ConfirmCopy");
+	    
+		if ($confirm) {
+		    my $answer = Filer::Dialog->show_yesno_dialog("Copy $items_count files to $DEST?");
+		    
+			if ($answer eq 'no') {
+			    return;
+			}
 		}
 	}
 
-	$self->_copy($FILES,$DEST);
-	Filer->instance()->refresh_cb;
+	_copy($FILES,$DEST);
 }
 
 sub _copy {
-	my ($self,$FILES,$DEST) = @_;
+	my ($FILES,$DEST) = @_;
 
     my $job_dialog = Filer::JobDialog->new("Copying ...","<b>Copying: \nto: </b>");
 
@@ -90,13 +88,13 @@ sub _copy {
 	});
 
 	$dirwalk->onLink(sub {
-		my $file = $_[0];
+		my $file = shift;
 		symlink(readlink($file), Filer::Tools->catpath($DEST, basename($file))) || return File::DirWalk::FAILED;
 		return File::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onDirEnter(sub {
-		my $dir = $_[0];
+		my $dir = shift;
 
 		if (dirname($DEST) eq File::Spec->curdir) {
 			$DEST = Filer::Tools->catpath(dirname($dir), $DEST);
@@ -137,7 +135,7 @@ sub _copy {
 	});
 
 	$dirwalk->onFile(sub {
-		my $file    = $_[0];
+		my $file    = shift;
 		my $my_dest;
 		
 		if (dirname($DEST) eq File::Spec->curdir) {
@@ -163,10 +161,10 @@ sub _copy {
 			} else {
 				my ($response,$new_my_dest) = $job_dialog->show_file_exists_dialog($file, $my_dest);
 
-				if ($response != File::DirWalk::SUCCESS) {
-					return $response;				
-				} else {
+				if ($response == File::DirWalk::SUCCESS) {
 					$my_dest = $new_my_dest;
+				} else {
+					return $response;				
 				}
 			}
 		}
