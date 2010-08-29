@@ -23,7 +23,7 @@ use warnings;
 use Filer::Constants qw(:bool :mode_t);
 
 sub new {
-	my ($class,$filer) = @_;
+	my $class = shift;
 	
 	my $self = $class->SUPER::new(
 		"Set File Properties",
@@ -34,7 +34,7 @@ sub new {
 	);
 	$self = bless $self, $class;
 
-	$self->{active_pane} = $filer->get_active_pane;
+	$self->{active_pane} = Filer::instance()->get_active_pane;
 
 	my ($table,$frame,$label,$button,$vbox);
 

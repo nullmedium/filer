@@ -22,7 +22,7 @@ use warnings;
 use Filer::Constants qw(:filer);
 
 sub new {
-	my ($class,$filer) = @_;
+	my $class = shift;
 	my $self = bless {}, $class;
 
 	$self->{bookmarks} = Filer::Config->instance()->get_option("Bookmarks");
