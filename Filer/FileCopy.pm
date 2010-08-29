@@ -21,17 +21,8 @@ use warnings;
 
 use Fcntl;
 
-sub new {
-	my ($class,$job) = @_;
-	my $self = bless {}, $class;
-
-	$self->{job} = $job;
-
-	return $self;
-}
-
 sub filecopy {
-	my ($self,$source,$dest) = @_;
+	my ($job,$source,$dest) = @_;
 
 	return if ($source eq $dest);
 
@@ -45,13 +36,13 @@ sub filecopy {
 
 	my ($r,$w,$t);
 
-	while (($r = sysread($in_fh, $buf, $buf_size)) && !$self->{job}->cancelled) {
+	while (($r = sysread($in_fh, $buf, $buf_size)) && !$job->cancelled) {
 
 		for ($w = 0; $w < $r; $w += $t) {
 			$t = syswrite($out_fh, $buf, $r - $w, $w)
 				or return File::DirWalk::FAILED;
 
-			$self->{job}->set_completed($self->{job}->get_completed + $t);
+			$job->set_completed($job->get_completed + $t);
 		}
 	}
 

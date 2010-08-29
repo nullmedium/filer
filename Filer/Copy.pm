@@ -77,7 +77,6 @@ sub _copy {
     my $job_dialog = Filer::JobDialog->new("Copying ...","<b>Copying: \nto: </b>");
 
 	my $dirwalk  = new File::DirWalk;
-	my $filecopy = new Filer::FileCopy($job_dialog);
 
 	$dirwalk->onBeginWalk(sub {
 		if (! $job_dialog->cancelled) {
@@ -171,7 +170,7 @@ sub _copy {
 
 		$job_dialog->update_progress_label("$file\n$my_dest");
 
- 		return $filecopy->filecopy($file,$my_dest);
+ 		return Filer::FileCopy::filecopy($job_dialog, $file, $my_dest);
  	});
 
 	$job_dialog->set_total(Filer::Tools->deep_count_bytes($FILES));
