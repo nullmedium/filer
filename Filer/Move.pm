@@ -25,15 +25,8 @@ use File::Basename qw(dirname basename);
 
 use Filer::Constants qw(:filer);
 
-sub new {
-	my ($class,$filer) = @_;
-	my $self = bless {}, $class;
-
-	return $self;
-}
-
 sub move {
-	my ($self,$FILES,$DEST) = @_;
+	my ($FILES,$DEST) = @_;
 	my $items_count = scalar @{$FILES};
 
 	if ($items_count == 1) {
@@ -64,28 +57,33 @@ sub move {
 		}
 
 	} else {
-		if (Filer::Config->instance()->get_option("ConfirmMove") == $TRUE) {
-			return if (Filer::Dialog->show_yesno_dialog("Move $items_count files to $DEST?") eq 'no');
+	    my $confirm = Filer::Config->instance()->get_option("ConfirmMove");
+	    
+		if ($confirm) {
+		    my $answer = Filer::Dialog->show_yesno_dialog("Move $items_count files to $DEST?");
+		    
+			if ($answer eq 'no') {
+			    return;
+			}
 		}
 	}
 
-	$self->_move($FILES,$DEST);
-	Filer->instance()->refresh_cb;
+	_move($FILES,$DEST);
 }
 
 sub _move {
-	my ($self,$FILES,$DEST) = @_;
+	my ($FILES,$DEST) = @_;
 
 	# don't try the copy + delete method for moving if rename was successful:
-	if ($self->move_by_rename($FILES,$DEST)) {
+	if (move_by_rename($FILES,$DEST)) {
 		return;
 	}
 
-	$self->move_by_copy_delete($FILES,$DEST);
+	move_by_copy_delete($FILES,$DEST);
 }
 
 sub move_by_rename {
-	my ($self,$FILES,$DEST) = @_;
+	my ($FILES,$DEST) = @_;
 
 	foreach my $source (@{$FILES}) {
 		my $my_dest;
@@ -105,7 +103,7 @@ sub move_by_rename {
 }
 
 sub move_by_copy_delete {
-	my ($self,$FILES,$DEST) = @_;
+	my ($FILES,$DEST) = @_;
 
 	my $job_dialog = Filer::JobDialog->new("Moving ...","<b>Moving: \nto: </b>");
 	my $dirwalk  = File::DirWalk->new;
@@ -120,7 +118,7 @@ sub move_by_copy_delete {
 	});
 
 	$dirwalk->onLink(sub {
-		my $file = $_[0];
+		my $file = shift;
 
 		symlink(readlink($file), Filer::Tools->catpath($DEST, basename($file))) || return File::DirWalk::FAILED;
 		unlink($file) || return File::DirWalk::FAILED;
@@ -129,7 +127,7 @@ sub move_by_copy_delete {
 	});
 
 	$dirwalk->onDirEnter(sub {
-		my $dir = $_[0];
+		my $dir = shift;
 		$DEST   = Filer::Tools->catpath($DEST, basename($dir));
 
 		if ((-e $DEST) and (! $job_dialog->overwrite_all)) {
@@ -140,10 +138,10 @@ sub move_by_copy_delete {
 	
 			my ($response,$new_my_dest) = $job_dialog->show_file_exists_dialog($dir, $DEST);
 
-			if ($response != File::DirWalk::SUCCESS) {
-				return $response;				
-			} else {
+			if ($response == File::DirWalk::SUCCESS) {
 				$DEST = $new_my_dest;
+			} else {
+				return $response;				
 			}
 		}
 
@@ -155,7 +153,7 @@ sub move_by_copy_delete {
 	});
 
 	$dirwalk->onDirLeave(sub {
-		my $dir = $_[0];
+		my $dir = shift;
 		$DEST   = abs_path(Filer::Tools->catpath($DEST, $UPDIR));
 
 		if ($job_dialog->skip_all) {
@@ -168,7 +166,7 @@ sub move_by_copy_delete {
 	});
 
 	$dirwalk->onFile(sub {
-		my $file = $_[0];
+		my $file = shift;
 		my $my_dest = Filer::Tools->catpath($DEST, basename($file));
 
 		if (-e $my_dest and (! $job_dialog->overwrite_all)) {
@@ -179,14 +177,16 @@ sub move_by_copy_delete {
 
 			my ($response,$new_my_dest) = $job_dialog->show_file_exists_dialog($file, $my_dest);
 
-			if ($response != File::DirWalk::SUCCESS) {
-				return $response;				
-			} else {
+			if ($response == File::DirWalk::SUCCESS) {
 				$my_dest = $new_my_dest;
+			} else {
+				return $response;				
 			}
 		}
 
-		if ((my $r = $filecopy->filecopy($file,$my_dest)) != File::DirWalk::SUCCESS) {
+        my $r = $filecopy->filecopy($file,$my_dest);
+        
+		if ($r != File::DirWalk::SUCCESS) {
 			return $r;
 		}
 

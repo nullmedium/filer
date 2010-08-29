@@ -23,32 +23,31 @@ use File::Basename;
 
 use Filer::Constants qw(:bool);
 
-sub new {
-	my ($class) = @_;
-	my $self = bless {}, $class;
-	
-	return $self;
-}
-
 sub delete {
-	my ($self,$FILES) = @_;
+	my ($FILES) = @_;
 
-	my $items_count = scalar @{$FILES};
+    my $confirm = Filer::Config->instance()->get_option("ConfirmDelete");
 
-	if (Filer::Config->instance()->get_option("ConfirmDelete") == $TRUE) {
+	if ($confirm) {
+    	my $items_count = scalar @{$FILES};
+
 		my $message =
 		 ($items_count == 1)
 		 ? "Delete \"$FILES->[0]\"?"
 		 : "Delete $items_count selected files?";
 
-		return if (Filer::Dialog->show_yesno_dialog($message) eq 'no');
+        my $answer = Filer::Dialog->show_yesno_dialog($message);
+
+		if ($answer eq 'no') {
+		    return;
+		}
 	}
 
-	$self->_delete($FILES);
+	_delete($FILES);
 }
 
 sub _delete {
-	my ($self,$FILES) = @_;
+	my ($FILES) = @_;
 
     my $job_dialog = Filer::JobDialog->new("Deleting ...","<b>Deleting:</b> ");
 	my $dirwalk = File::DirWalk->new;
@@ -62,19 +61,22 @@ sub _delete {
 	});
 
 	$dirwalk->onLink(sub {
-		unlink($_[0]) || return File::DirWalk::FAILED;
+        my $file = shift;
+		unlink($file) || return File::DirWalk::FAILED;
 		return File::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onDirLeave(sub {
-		rmdir($_[0]) || return File::DirWalk::FAILED;
+        my $dir = shift;
+		rmdir($dir) || return File::DirWalk::FAILED;
 		return File::DirWalk::SUCCESS;
 	});
 
 	$dirwalk->onFile(sub {
-		unlink($_[0]) || return File::DirWalk::FAILED;
+	    my $file = shift;
+		unlink($file) || return File::DirWalk::FAILED;
 
-		$job_dialog->update_progress_label($_[0]);
+		$job_dialog->update_progress_label($file);
 		$job_dialog->set_completed($job_dialog->get_completed + 1);
 
 		return File::DirWalk::SUCCESS;
