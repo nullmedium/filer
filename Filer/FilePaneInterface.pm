@@ -144,13 +144,6 @@ sub set_show_hidden {
 	$self->refresh;
 }
 
-# sub drag_begin {
-# 	my $self = shift;
-# 	my ($widget,$context) = @_;
-# 
-# 	$context->status('move',);
-# }
-
 sub drag_data_get {
 	my $self = shift;
 	my ($widget,$context,$data,$info,$time) = @_;
@@ -200,41 +193,5 @@ sub drag_data_received {
 
 	$self->refresh;
 }
-
-# sub drag_motion {
-# 	my $self = shift;
-# 	my ($widget,$context,$x,$y,$time,$data) = @_;
-# 	my $action = $context->action;
-# 
-# 	my ($p) = $widget->get_dest_row_at_pos($x,$y);
-# 	my $path;
-# 
-# 	if (defined $p) {
-# 		$path = $self->get_path_by_treepath($p);
-# 
-# 		if (-d $path) {
-# 			$context->status('move',$time);
-# 			return $TRUE;
-# 		} else {
-# 			$context->status([],$time);
-# 			return $FALSE;
-# 		}
-# 	}
-# 
-# 	return $FALSE;
-# }
-
-################################################################################
-
-# package Gtk2::TreeStore;
-# 
-# sub insert_with_values {
-# 	my ($self,$parent_iter,$pos,%cols) = @_;
-# 
-# 	my $iter = $self->insert($parent_iter, $pos);
-# 	$self->set($iter, %cols);
-# 
-# 	return $iter;
-# }
 
 1;
