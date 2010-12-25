@@ -53,8 +53,14 @@ sub deep_count_files {
 	my $count = 0;
 
 	for (@{$files}) {
-		my $fi = Filer::FileInfo->new($_);
-		$count += _deep_count_files($fi->get_path);
+    	my $dirwalk = new File::DirWalk;
+
+    	$dirwalk->onFile(sub {
+    		++$count;
+    		return 1;
+    	});
+
+    	$dirwalk->walk($_);
 	}
 
 	return $count;
@@ -65,42 +71,16 @@ sub deep_count_bytes {
 	my $count = 0;
 
 	for (@{$FILES}) {
-		my $fi = Filer::FileInfo->new($_);
-		$count += _deep_count_bytes($fi->get_path);
+    	my $dirwalk = new File::DirWalk;
+
+    	$dirwalk->onFile(sub {
+    		my ($file) = @_;
+    		$count += -s $file;
+    		return 1;
+    	});
+
+    	$dirwalk->walk($_);
 	}
-
-	return $count;
-}
-
-sub _deep_count_files {
-	my ($path) = @_;
-
-	my $dirwalk = new File::DirWalk;
-	my $count = 0;
-
-	$dirwalk->onFile(sub {
-		++$count;
-		return 1;
-	});
-
-	$dirwalk->walk($path);
-
-	return $count;
-}
-
-sub _deep_count_bytes {
-	my ($path) = @_;
-	
-	my $dirwalk = new File::DirWalk;
-	my $count = 0;
-
-	$dirwalk->onFile(sub {
-		my ($file) = @_;
-		$count += -s $file;
-		return 1;
-	});
-
-	$dirwalk->walk($path);
 
 	return $count;
 }
