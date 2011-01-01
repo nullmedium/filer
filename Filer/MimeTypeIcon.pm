@@ -32,12 +32,9 @@ sub new {
 
 sub get_pixbuf {
 	my ($self) = @_;
-	my $icon;
 	my $pixbuf;
 
-	my ($media,$subtype) = split "/", $self->{mimetype}; 
-
-    if ($subtype eq "directory") {
+    if ($self->{mimetype} eq "inode/directory") {
         $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file("$main::libpath/icons/folder.png");
     } else {
         $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file("$main::libpath/icons/default.png");
