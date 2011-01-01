@@ -41,7 +41,6 @@ require Filer::Bookmarks;
 require Filer::Directory;
 require Filer::FileInfo;
 require Filer::MimeTypeIcon;
-require Filer::MimeTypeHandler;
 require Filer::Tools;
 
 require Filer::Dialog;
@@ -176,10 +175,6 @@ sub init_actions {
 		stock_id => "gtk-open",
 		callback => bind(\&Filer::open_cb, $self),
 		accelerator => "F3",
-	},{
-		name => "open-with-action",
-		label => "Open With",
-		callback => bind(\&Filer::open_with_cb, $self),
 	},{
 		name => "quit-action",
 		stock_id => "gtk-quit",

@@ -105,7 +105,6 @@ sub show_popup_menu {
 		$uimanager->get_widget("$ui_path/Properties")->set_sensitive($TRUE);
 
 		$uimanager->get_widget("$ui_path/PopupItems1/Open")->hide;
-		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->hide;
 
 		my $bookmarks = Filer::Bookmarks->new(Filer->instance());
 		$uimanager->get_widget("$ui_path/Bookmarks")->set_submenu($bookmarks->generate_bookmarks_menu);

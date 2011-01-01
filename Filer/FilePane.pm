@@ -163,7 +163,6 @@ sub show_popup_menu {
 	my $popup_menu = $uimanager->get_widget($ui_path);
 
 	$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($TRUE);
-	$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($TRUE);
 	$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive($TRUE);
 	$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($TRUE);
 	$uimanager->get_widget("$ui_path/PopupItems1/Move")->set_sensitive($TRUE);
@@ -172,19 +171,11 @@ sub show_popup_menu {
 	my $bookmarks = Filer::Bookmarks->new;
 	$uimanager->get_widget("$ui_path/Bookmarks")->set_submenu($bookmarks->generate_bookmarks_menu);
 
-	if ($self->count_items == 1) {
-		my $fi = $self->get_fileinfo_list->[0];
-
-		if ($fi->is_dir) {
-			$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
-		}
-	} elsif ($self->count_items > 1) {
+    if ($self->count_items > 1) {
 		$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($FALSE);
-		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/Properties")->set_sensitive($FALSE);
 	} else {
 		$uimanager->get_widget("$ui_path/PopupItems1/Open")->set_sensitive($FALSE);
-		$uimanager->get_widget("$ui_path/PopupItems1/Open With")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Delete")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Copy")->set_sensitive($FALSE);
 		$uimanager->get_widget("$ui_path/PopupItems1/Move")->set_sensitive($FALSE);
@@ -311,19 +302,6 @@ sub open_file {
 
 	if ($fileinfo->is_dir) {
 		$self->open_path($filepath);
-
-	} elsif ($fileinfo->is_executable) {
-
-		Filer::Tools->exec($filepath);
-
-	} else {
-		my $handler = $fileinfo->get_mimetype_handler;
-
-		if ($handler) {
-			Filer::Tools->exec("$handler '$filepath'");
-		} else {
-			$self->open_file_with($fileinfo);
-		}
 	}
 }
 

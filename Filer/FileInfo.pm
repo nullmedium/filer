@@ -86,24 +86,9 @@ sub get_mimetype {
 	return $self->{mimetype};
 }
 
-sub get_mimetype_handler {
-	my ($self) = @_;
-
-	my $mh = Filer::MimeTypeHandler->new;
-	return $mh->get_mimetype_handler($self->get_mimetype);
-}
-
-sub set_mimetype_handler {
-	my ($self,$handler) = @_;
-
-	my $mh = Filer::MimeTypeHandler->new;
-	return $mh->set_mimetype_handler($self->get_mimetype,$handler);
-}
-
 sub get_mimetype_icon {
 	my ($self) = @_;
 	my $icon = Filer::MimeTypeIcon->new($self->get_mimetype);
-
 	my $pixbuf = $icon->get_pixbuf;
 
 	if ($self->is_hidden) {

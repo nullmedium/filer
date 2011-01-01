@@ -3,7 +3,6 @@
     <menu name="file-menu" action="FileMenuAction">
       <menuitem name="OpenTerminal" action="open-terminal-action" />
       <menuitem name="Open" action="open-action" />
-      <menuitem name="OpenWith" action="open-with-action" />
       <separator/>
       <menuitem name="Quit" action="quit-action" />
     </menu>
@@ -66,7 +65,6 @@
   <popup name="list-popupmenu">
     <placeholder name="PopupItems1">
       <menuitem name="Open" action="open-action"/>
-      <menuitem name="Open With" action="open-with-action"/>
       <separator/>
       <menuitem name="MkDir" action="mkdir-action"/>
       <separator/>
