@@ -108,7 +108,7 @@ sub new {
     $self->{treeview}->append_column($col1);
     
     # Size column
-    my $cell3 = Filer::CellRendererSize->new(humanize => $FALSE);
+    my $cell3 = Filer::CellRendererSize->new(humanize => $TRUE);
     my $col2  = Gtk2::TreeViewColumn->new_with_attributes("Size", $cell3, size => $COL_SIZE);
     $col2->set_sort_column_id($COL_SIZE);
     $col2->set_sort_indicator($TRUE);
