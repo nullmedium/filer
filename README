@@ -10,8 +10,6 @@ Filer is a simple Perl/Gtk2 based file manager.
 
 * File::DirWalk (available on CPAN)
 
-* Class::Bind (http://github.com/nullmedium/Class-Bind)
-
 * Gtk2-Perl (http://gtk2-perl.sf.net/)
 
 2. Installation
