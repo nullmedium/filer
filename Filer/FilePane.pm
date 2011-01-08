@@ -24,8 +24,6 @@ use Readonly;
 use Cwd qw(abs_path);
 use File::Basename;
 
-use Class::Bind;
-
 use Filer::Constants qw(:filer :filepane_columns);
 use Filer::ListStore;
 
@@ -63,15 +61,15 @@ sub new {
     $self->{treeview}->set_rules_hint($TRUE);
     $self->{treeview}->set_enable_search($TRUE);
     
-    $self->{treeview}->signal_connect("grab-focus",           bind(\&Filer::FilePaneInterface::treeview_grab_focus_cb, $self));
-    $self->{treeview}->signal_connect("key-press-event",      bind(\&Filer::FilePane::treeview_event_cb, $self, _1, _2, _3));
-    $self->{treeview}->signal_connect("button-press-event",   bind(\&Filer::FilePane::treeview_event_cb, $self, _1, _2));
+    $self->{treeview}->signal_connect("grab-focus",           sub { $self->treeview_grab_focus_cb(); });
+    $self->{treeview}->signal_connect("key-press-event",      sub { $self->treeview_event_cb($_[0], $_[1], $_[2]); });
+    $self->{treeview}->signal_connect("button-press-event",   sub { $self->treeview_event_cb($_[0], $_[1]); });
     
     # Drag and Drop
     $self->{treeview}->drag_dest_set('all', ['move','copy'], $self->target_table);
     $self->{treeview}->drag_source_set(['button1_mask','shift-mask'], ['move','copy'], $self->target_table);
-    $self->{treeview}->signal_connect("drag_data_get",      bind(\&Filer::FilePaneInterface::drag_data_get,      $self, _1, _2, _3));
-    $self->{treeview}->signal_connect("drag_data_received", bind(\&Filer::FilePaneInterface::drag_data_received, $self, _1, _2, _3));
+    $self->{treeview}->signal_connect("drag_data_get",      sub { $self->drag_data_get($_[0], $_[1], $_[2]); });
+    $self->{treeview}->signal_connect("drag_data_received", sub { $self->drag_data_received($_[0], $_[1], $_[2]); });
     
     $self->{treeselection} = $self->{treeview}->get_selection;
     $self->{treeselection}->set_mode("multiple");
